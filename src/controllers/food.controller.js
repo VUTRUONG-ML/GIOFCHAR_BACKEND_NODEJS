@@ -50,6 +50,10 @@ const createFood = async (req, res) => {
       .json({ message: "Create food successful", foodId: result.insertId });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
+
+    if (err.code === "ER_DUP_ENTRY")
+      return res.status(409).json({ message: "Food name already exists" });
+
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
@@ -107,6 +111,10 @@ const updateFoodById = async (req, res) => {
     res.status(200).json({ message: "Update food successful" });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
+
+    if (err.code === "ER_DUP_ENTRY")
+      return res.status(409).json({ message: "Food name already exists" });
+
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
