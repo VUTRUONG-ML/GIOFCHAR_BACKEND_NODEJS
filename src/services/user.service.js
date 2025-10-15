@@ -31,7 +31,6 @@ const createUser = async (userName, email, phone, address, password) => {
                                         VALUES (?, ?, ?, ?, ?)`,
       [userName, email, phone, address, password]
     );
-    console.log(result);
     return { insertId: result.insertId };
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);
