@@ -4,6 +4,7 @@ const userRoutes = require("./routes/user.route");
 const categoryRoutes = require("./routes/category.route");
 const foodRoutes = require("./routes/food.route");
 const cartRoutes = require("./routes/cart.route");
+const orderRoutes = require("./routes/order.route");
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -11,6 +12,7 @@ const port = process.env.PORT || 8081;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use("/api/orders", orderRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/foods", foodRoutes);
 app.use("/api/categories", categoryRoutes);
