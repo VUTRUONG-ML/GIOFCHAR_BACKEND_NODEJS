@@ -3,6 +3,7 @@ const checkAdmin = (req, res, next) => {
 };
 
 const checkSelfOrAdmin = (req, res, next) => {
+  // sau này sẽ check user đó đăng nhập rồi lấy ra user id của chính user đó
   next();
   //middleware này sử dụng khi chỉ muốn cho người xem ordersByUserId là admin hoặc chính user có các order đó
   //   const { role, id } = req.user;
