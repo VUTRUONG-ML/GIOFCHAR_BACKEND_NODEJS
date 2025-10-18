@@ -1,6 +1,15 @@
 const pool = require("../config/db");
 const cartItemService = require("./cartItem.service");
 
+const getAllCarts = async () => {
+  try {
+    const [carts] = await pool.execute("SELECT * FROM carts");
+    return carts;
+  } catch (err) {
+    throw err;
+  }
+};
+
 const getCartByUserId = async (userId) => {
   try {
     const [carts] = await pool.execute("SELECT * FROM carts WHERE userID = ?", [
@@ -67,6 +76,7 @@ const clearCart = async (cartId) => {
 };
 
 module.exports = {
+  getAllCarts,
   getCartByUserId,
   createCart,
   addToCart,

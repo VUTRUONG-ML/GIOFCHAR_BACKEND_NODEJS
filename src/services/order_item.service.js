@@ -23,6 +23,21 @@ const getOrderItemsByOrderId = async (orderId) => {
   }
 };
 
+const createOrderItem = async (connection, orderValues) => {
+  // orderValues : array[[orderID, foodID, quantity, totalPrice]]
+  try {
+    // muốn thêm nhiều dòng dữ liệu thì dùng query
+    const [result] = await connection.query(
+      "INSERT INTO order_items (orderID, foodID, quantity, totalPrice) VALUES ?",
+      [orderValues]
+    );
+    return result.insertId;
+  } catch (err) {
+    throw err;
+  }
+};
+
 module.exports = {
   getOrderItemsByOrderId,
+  createOrderItem,
 };

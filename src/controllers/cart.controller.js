@@ -1,6 +1,15 @@
 const cartService = require("../services/cart.service");
 const cartItemService = require("../services/cartItem.service");
 
+const getAllCarts = async (req, res) => {
+  try {
+    const carts = await cartService.getAllCarts();
+    res.status(200).json({ carts: carts });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 const getAllCartItems = async (req, res) => {
   const cartId = req.cartId;
   try {
@@ -60,6 +69,7 @@ const clearCart = async (req, res) => {
 };
 
 module.exports = {
+  getAllCarts,
   getAllCartItems,
   addFoodToCart,
   deleteCartItem,

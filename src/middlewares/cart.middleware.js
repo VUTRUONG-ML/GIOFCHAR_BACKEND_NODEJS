@@ -2,7 +2,7 @@ const cartService = require("../services/cart.service");
 const cartItemService = require("../services/cartItem.service");
 
 const ensureCart = async (req, res, next) => {
-  const userId = req.params.userId; // sau này đổi lại thành req.userId
+  const userId = req.params.userId; // sau này đổi lại thành req.userId - viết middleware auth
   try {
     let cartId;
     const carts = await cartService.getCartByUserId(userId);

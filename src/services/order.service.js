@@ -40,7 +40,21 @@ const getOrdersByUserId = async (userId) => {
   }
 };
 
+const createOrder = async (connection, userId, address) => {
+  try {
+    const [result] = await connection.execute(
+      `INSERT INTO orders (userID, address) VALUES (?, ?)`,
+      [userId, address]
+    );
+
+    return result.insertId;
+  } catch (err) {
+    throw err;
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrdersByUserId,
+  createOrder,
 };
