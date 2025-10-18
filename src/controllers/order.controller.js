@@ -85,9 +85,63 @@ const createOrder = async (req, res) => {
   }
 };
 
+const updateOrderStatus = async (req, res) => {
+  const orderId = req.params.orderId;
+  const status = req.body.status;
+  if (
+    !status ||
+    (status !== "delivering" &&
+      status !== "unconfirmed" &&
+      status !== "cancelled" &&
+      status !== "delivered")
+  ) {
+    return res.status(400).json({ message: "Missing or incorrect status" });
+  }
+  try {
+    const result = await orderService.updateOrderStatus(orderId, status);
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Order not found" });
+    res.status(200).json({ message: "Update order status successful" });
+  } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const cancelOrder = async (req, res) => {
+  const orderId = req.params.orderId;
+  const status = "cancelled";
+  try {
+    const result = await orderService.updateOrderStatus(orderId, status);
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Order not found" });
+    res.status(200).json({ message: "Cancel order successful" });
+  } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const deleteOrder = async (req, res) => {
+  const orderId = req.params.orderId;
+  try {
+    const result = await orderService.deleteOrder(orderId);
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Order not found" });
+
+    res.status(200).json({ message: "Delete order successful" });
+  } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 module.exports = {
   getAllOrders,
   getOrdersByUserId,
   getOrderItemsByOrderId,
   createOrder,
+  updateOrderStatus,
+  cancelOrder,
+  deleteOrder,
 };

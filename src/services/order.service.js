@@ -53,8 +53,34 @@ const createOrder = async (connection, userId, address) => {
   }
 };
 
+const updateOrderStatus = async (orderId, status) => {
+  try {
+    const [result] = await pool.execute(
+      "UPDATE orders o SET status = ? WHERE id = ?",
+      [status, orderId]
+    );
+    return result;
+  } catch (err) {
+    throw err;
+  }
+};
+
+const deleteOrder = async (orderId) => {
+  try {
+    const [result] = await pool.execute("DELETE FROM orders WHERE id = ?", [
+      orderId,
+    ]);
+
+    return result;
+  } catch (err) {
+    throw err;
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrdersByUserId,
   createOrder,
+  updateOrderStatus,
+  deleteOrder,
 };
