@@ -21,6 +21,25 @@ const getAllOrders = async () => {
   }
 };
 
+const getOrderById = async (orderId) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+        o.id AS orderId,
+        o.status,
+        o.paymentStatus,
+        o.address AS deliveryAddress,
+        o.createdAt AS time
+      FROM orders o 
+      WHERE id = ?`,
+      [orderId]
+    );
+    return rows;
+  } catch (err) {
+    throw err;
+  }
+};
+
 const getOrdersByUserId = async (userId) => {
   try {
     const [rows] = await pool.execute(
@@ -83,4 +102,5 @@ module.exports = {
   createOrder,
   updateOrderStatus,
   deleteOrder,
+  getOrderById,
 };

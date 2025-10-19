@@ -5,6 +5,7 @@ const categoryRoutes = require("./routes/category.route");
 const foodRoutes = require("./routes/food.route");
 const cartRoutes = require("./routes/cart.route");
 const orderRoutes = require("./routes/order.route");
+const paymentRoutes = require("./routes/payment.route");
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -12,6 +13,7 @@ const port = process.env.PORT || 8081;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use("/api/payments", paymentRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/foods", foodRoutes);
