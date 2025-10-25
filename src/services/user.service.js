@@ -65,10 +65,22 @@ const deleteUserById = async (userId) => {
   }
 };
 
+const getUserByEmail = async (email) => {
+  try {
+    const [result] = await pool.execute(`SELECT * FROM users WHERE email = ?`, [
+      email,
+    ]);
+    return result.length > 0 ? result[0] : null;
+  } catch (err) {
+    throw err;
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   createUser,
   updateUserById,
   deleteUserById,
+  getUserByEmail,
 };

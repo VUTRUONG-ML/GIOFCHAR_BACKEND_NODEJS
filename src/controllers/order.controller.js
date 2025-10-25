@@ -2,6 +2,7 @@ const orderService = require("../services/order.service");
 const orderItemService = require("../services/order_item.service");
 const cartItemService = require("../services/cartItem.service");
 const cartService = require("../services/cart.service");
+const { calculateOrderValues } = require("../utils/order.util");
 const pool = require("../config/db");
 
 const getAllOrders = async (req, res) => {
@@ -51,17 +52,19 @@ const createOrder = async (req, res) => {
   try {
     await connection.beginTransaction(); // Khởi tạo transaction
 
+    //Tao order
     const orderId = await orderService.createOrder(connection, userId, address);
+
+    //Lay ve cartItem cua nguoi dung hien tai
     const cartItems = await cartItemService.getCartItemsByCartId(cartId);
     if (cartItems.length === 0)
       return res.status(400).json({ message: "Empty cart items" });
 
-    let totalPriceOrder = 0;
-    const orderValues = cartItems.map((item) => {
-      const totalPriceItem = item.quantity * item.price;
-      totalPriceOrder += totalPriceItem;
-      return [orderId, item.foodId, item.quantity, totalPriceItem];
-    });
+    // Tinh cac gia tri de dua vao tao orderItem
+    const { orderValues, totalPriceOrder } = calculateOrderValues(
+      cartItems,
+      orderId
+    );
 
     const result = await orderItemService.createOrderItem(
       connection,

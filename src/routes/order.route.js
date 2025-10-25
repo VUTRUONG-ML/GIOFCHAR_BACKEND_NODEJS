@@ -13,7 +13,7 @@ router.put(
   orderController.updateOrderStatus
 );
 router.post(
-  "/my/:userId",
+  "/cod/:userId",
   cartMiddleware.ensureCart,
   orderController.createOrder
 );
