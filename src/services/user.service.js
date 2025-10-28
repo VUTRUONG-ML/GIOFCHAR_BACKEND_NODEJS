@@ -14,10 +14,17 @@ const getAllUsers = async () => {
 const getUserById = async (userId) => {
   try {
     // For pool initialization, see above
-    const [users] = await pool.execute("SELECT * FROM users WHERE id = ?", [
-      userId,
-    ]);
-    return users;
+    const [users] = await pool.execute(
+      `SELECT 
+        userName,
+        email,
+        phone,
+        address,
+        role 
+      FROM users WHERE id = ?`,
+      [userId]
+    );
+    return users.length > 0 ? users[0] : null;
   } catch (err) {
     console.log(">>>>> Service error", err);
     throw err;

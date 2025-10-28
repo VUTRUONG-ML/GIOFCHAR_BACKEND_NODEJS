@@ -71,11 +71,12 @@ const insertCartItem = async (cartId, foodId, quantity) => {
   }
 };
 
-const deleteCartItem = async (cartItemId) => {
+const deleteCartItem = async (cartItemId, cartId) => {
   try {
-    const [result] = await pool.execute("DELETE FROM cart_items WHERE id = ?", [
-      cartItemId,
-    ]);
+    const [result] = await pool.execute(
+      "DELETE FROM cart_items WHERE id = ? AND cartID = ?",
+      [cartItemId, cartId]
+    );
     return result;
   } catch (err) {
     throw err;

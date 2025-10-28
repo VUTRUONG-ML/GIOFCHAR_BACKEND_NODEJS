@@ -1,4 +1,5 @@
 const authService = require("../services/auth.service");
+const userService = require("../services/user.service");
 
 const registerApi = async (req, res) => {
   const { userName, email, phone, password } = req.body;
@@ -46,7 +47,20 @@ const loginApi = async (req, res) => {
   }
 };
 
+const getAccount = async (req, res) => {
+  const userId = req.user.userId;
+  try {
+    const user = await userService.getUserById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user });
+  } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 module.exports = {
   registerApi,
   loginApi,
+  getAccount,
 };

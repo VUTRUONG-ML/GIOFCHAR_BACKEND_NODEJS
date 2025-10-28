@@ -6,7 +6,9 @@ const getAllCarts = async (req, res) => {
     const carts = await cartService.getAllCarts();
     res.status(200).json({ carts: carts });
   } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    const status = err.statusCode || 500;
+    const message = status === 500 ? "Internal server error" : err.message;
+    return res.status(status).json({ message });
   }
 };
 
@@ -39,10 +41,11 @@ const addFoodToCart = async (req, res) => {
 };
 
 const deleteCartItem = async (req, res) => {
+  const cartId = req.cartId;
   const cartItemId = req.params.cartItemId;
 
   try {
-    const result = await cartItemService.deleteCartItem(cartItemId);
+    const result = await cartItemService.deleteCartItem(cartItemId, cartId);
 
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Cart item not found" });
