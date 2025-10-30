@@ -96,6 +96,18 @@ const deleteOrder = async (orderId) => {
   }
 };
 
+const getOrderByIdAndUser = async (orderId, userId) => {
+  try {
+    const [result] = await pool.execute(
+      "SELECT * FROM orders WHERE id = ? AND userID = ?",
+      [orderId, userId]
+    );
+    return result.length > 0 ? result[0] : null;
+  } catch (err) {
+    throw err;
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrdersByUserId,
@@ -103,4 +115,5 @@ module.exports = {
   updateOrderStatus,
   deleteOrder,
   getOrderById,
+  getOrderByIdAndUser,
 };

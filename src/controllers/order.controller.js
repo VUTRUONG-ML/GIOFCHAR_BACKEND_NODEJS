@@ -16,7 +16,7 @@ const getAllOrders = async (req, res) => {
 };
 
 const getOrdersByUserId = async (req, res) => {
-  const userId = req.params.userId;
+  const userId = req.user.userId;
   try {
     const orders = await orderService.getOrdersByUserId(userId);
     res.status(200).json({ total: orders.length, orders });
@@ -41,7 +41,7 @@ const getOrderItemsByOrderId = async (req, res) => {
 
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
-  const userId = req.params.userId; // sau này sẽ lấy từ middleware req.userId
+  const userId = req.user.userId; // sau này sẽ lấy từ middleware req.userId
   const cartId = req.cartId; // từ middleware
   const address = req.body.address;
   if (!address)
