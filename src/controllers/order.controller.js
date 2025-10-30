@@ -50,15 +50,14 @@ const createOrder = async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    await connection.beginTransaction(); // Khởi tạo transaction
-
-    //Tao order
-    const orderId = await orderService.createOrder(connection, userId, address);
-
     //Lay ve cartItem cua nguoi dung hien tai
     const cartItems = await cartItemService.getCartItemsByCartId(cartId);
     if (cartItems.length === 0)
       return res.status(400).json({ message: "Empty cart items" });
+
+    await connection.beginTransaction(); // Khởi tạo transaction
+    //Tao order
+    const orderId = await orderService.createOrder(connection, userId, address);
 
     // Tinh cac gia tri de dua vao tao orderItem
     const { orderValues, totalPriceOrder } = calculateOrderValues(
