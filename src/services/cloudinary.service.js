@@ -11,10 +11,10 @@ const uploadImage = async (imagePath, options) => {
   try {
     // Upload the image
     const result = await cloudinary.uploader.upload(imagePath, options);
-    console.log(result);
-    return result.public_id;
+    return result;
   } catch (error) {
     console.error(error);
+    throw error;
   }
 };
 

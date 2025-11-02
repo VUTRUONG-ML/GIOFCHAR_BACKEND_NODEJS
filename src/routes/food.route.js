@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
+const upload = require("../config/multer");
+const uploadToCloudinary = require("../middlewares/uploadCloudinary");
 const { verifyToken } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
 
@@ -25,7 +27,9 @@ router.post(
   "/",
   verifyToken,
   checkAdmin,
+  upload.single("imageFood"),
   checkCategory,
+  uploadToCloudinary,
   foodController.createFood
 );
 router.get("/", verifyToken, foodController.getAllFoods);

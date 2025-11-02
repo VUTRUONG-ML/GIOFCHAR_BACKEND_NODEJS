@@ -25,11 +25,19 @@ const createFood = async (req, res) => {
     stock,
     isActive,
     categoryID,
-    image,
   } = req.body;
 
+  const imageUrl = req.cloudinaryImage?.secure_url || null;
+  const imagePublicId = req.cloudinaryImage?.public_id || null;
   if (!foodName || !foodDescription || !price || !categoryID)
     return res.status(400).json({ message: "Missing field" });
+
+  const isActiveValue =
+    isActive === true || isActive === "true"
+      ? 1
+      : isActive === false || isActive === "false"
+      ? 0
+      : 1;
 
   try {
     const result = await foodService.createFood(
@@ -40,9 +48,10 @@ const createFood = async (req, res) => {
       discount,
       rating,
       stock,
-      isActive,
+      isActiveValue,
       categoryID,
-      image
+      imageUrl,
+      imagePublicId
     );
 
     res

@@ -21,7 +21,8 @@ const createFood = async (
   stock,
   isActive,
   categoryID,
-  image
+  image,
+  imagePublicId
 ) => {
   try {
     const [result] = await pool.execute(
@@ -35,9 +36,10 @@ const createFood = async (
             stock,
             isActive,
             categoryID,
-            image
+            image,
+            imagePublicId
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )`,
       [
         foodName,
@@ -50,6 +52,7 @@ const createFood = async (
         isActive ?? true,
         categoryID,
         image || "",
+        imagePublicId || "",
       ]
     );
 
