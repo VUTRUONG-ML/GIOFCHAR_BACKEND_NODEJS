@@ -13,11 +13,24 @@ const uploadImage = async (imagePath, options) => {
     const result = await cloudinary.uploader.upload(imagePath, options);
     return result;
   } catch (error) {
-    console.error(error);
     throw error;
+  }
+};
+
+const deleteImage = async (publicId) => {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+      invalidate: true,
+    });
+    return result;
+  } catch (err) {
+    console.error("Failed to delete image from Cloudinary:", err.message);
+    throw err;
   }
 };
 
 module.exports = {
   uploadImage,
+  deleteImage,
 };

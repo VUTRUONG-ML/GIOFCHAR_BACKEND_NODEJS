@@ -2,17 +2,23 @@ const express = require("express");
 const router = express.Router();
 
 const upload = require("../config/multer");
-const uploadToCloudinary = require("../middlewares/uploadCloudinary");
+const {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} = require("../middlewares/cloudinary.middleware");
 const { verifyToken } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
 
 const foodController = require("../controllers/food.controller");
 const checkCategory = require("../middlewares/checkCategory");
+const checkFood = require("../middlewares/checkFood");
 
 router.delete(
   "/:foodId",
   verifyToken,
   checkAdmin,
+  checkFood,
+  deleteFromCloudinary,
   foodController.deleteFoodById
 );
 router.put(

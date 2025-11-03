@@ -1,7 +1,10 @@
-const { uploadImage } = require("../services/cloudinary.service");
+const { uploadImage, deleteImage } = require("../services/cloudinary.service");
 const fs = require("fs");
 const uploadToCloudinary = async (req, res, next) => {
-  if (!req.file) return res.status(404).json({ message: "No image upload" });
+  if (!req.file) {
+    console.log("No image upload");
+    return next();
+  }
   try {
     const result = await uploadImage(req.file.path, {
       folder: "GIOFCHAR_BACKEND_NODEJS_SQL",
@@ -13,11 +16,20 @@ const uploadToCloudinary = async (req, res, next) => {
       if (err) console.error("Error deleting temp file:", err);
     });
     req.cloudinaryImage = result;
-    next();
   } catch (err) {
     console.error("Cloudinary upload failed:", err);
-    res.status(500).json({ message: "Server failed to upload image" });
   }
+  next();
 };
 
-module.exports = uploadToCloudinary;
+const deleteFromCloudinary = async (req, res, next) => {
+  const publicId = req.food.imagePublicId;
+  try {
+    const result = await deleteImage(publicId);
+  } catch (err) {
+    console.error(err);
+  }
+  next();
+};
+
+module.exports = { uploadToCloudinary, deleteFromCloudinary };

@@ -12,7 +12,9 @@ const checkFoodExists = async (req, res, next) => {
 
     if (!foods.length)
       return res.status(404).json({ message: "Food not found" });
-    next(); // Cho phép đi tiếp nếu category tồn tại
+    req.food = foods[0];
+    console.log(req.food);
+    next();
   } catch (err) {
     console.error(">>>>> MIDDLEWARE ERROR:", err.message);
     return res
