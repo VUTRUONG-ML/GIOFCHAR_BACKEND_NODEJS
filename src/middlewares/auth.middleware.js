@@ -9,7 +9,7 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded; // {userId, role}
     return next();
   } catch (err) {
     console.log(">>>>> AUTH MIDDLE WARE ERROR", err);

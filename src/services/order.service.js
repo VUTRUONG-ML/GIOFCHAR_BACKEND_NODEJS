@@ -1,10 +1,12 @@
 const pool = require("../config/db");
+const { generateOrderCode } = require("../utils/order.util");
 
 const getAllOrders = async () => {
   try {
     const [rows] = await pool.execute(`
       SELECT
         o.id AS orderId,
+        o.orderCode,
         o.status,
         o.paymentStatus,
         o.address AS deliveryAddress,
@@ -26,6 +28,7 @@ const getOrderById = async (orderId) => {
     const [rows] = await pool.execute(
       `SELECT
         o.id AS orderId,
+        o.orderCode,
         o.status,
         o.paymentStatus,
         o.address AS deliveryAddress,
@@ -45,6 +48,7 @@ const getOrdersByUserId = async (userId) => {
     const [rows] = await pool.execute(
       `SELECT
         o.id AS orderId,
+        o.orderCode,
         o.status,
         o.paymentStatus,
         o.address AS deliveryAddress,
@@ -65,6 +69,14 @@ const createOrder = async (connection, userId, address) => {
       `INSERT INTO orders (userID, address) VALUES (?, ?)`,
       [userId, address]
     );
+
+    const orderId = result.insertId;
+    const orderCode = generateOrderCode(orderId);
+
+    await connection.execute("UPDATE orders SET orderCode = ? WHERE id = ?", [
+      orderCode,
+      orderId,
+    ]);
 
     return result.insertId;
   } catch (err) {

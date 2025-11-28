@@ -7,7 +7,13 @@ const calculateOrderValues = (cartItems, orderId) => {
   });
   return { orderValues, totalPriceOrder };
 };
+function generateOrderCode(orderId) {
+  const year = new Date().getFullYear();
+  const padded = orderId.toString().padStart(6, "0");
+  return `DH${year}-${padded}`;
+}
 
 module.exports = {
   calculateOrderValues,
+  generateOrderCode,
 };

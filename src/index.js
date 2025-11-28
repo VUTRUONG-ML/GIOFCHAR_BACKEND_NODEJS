@@ -1,16 +1,19 @@
-require("dotenv").config();
-const express = require("express");
-const userRoutes = require("./routes/user.route");
-const categoryRoutes = require("./routes/category.route");
-const foodRoutes = require("./routes/food.route");
-const cartRoutes = require("./routes/cart.route");
-const orderRoutes = require("./routes/order.route");
-const paymentRoutes = require("./routes/payment.route");
-const authRoutes = require("./routes/auth.route");
+import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
+import userRoutes from "./routes/user.route.js";
+import categoryRoutes from "./routes/category.route.js";
+import foodRoutes from "./routes/food.route.js";
+import cartRoutes from "./routes/cart.route.js";
+import orderRoutes from "./routes/order.route.js";
+import paymentRoutes from "./routes/payment.route.js";
+import authRoutes from "./routes/auth.route.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
 
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
