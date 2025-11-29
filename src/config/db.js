@@ -15,7 +15,7 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
 
-  timezone: "+07:00",
+  dateStrings: true,
 });
 
 module.exports = pool;

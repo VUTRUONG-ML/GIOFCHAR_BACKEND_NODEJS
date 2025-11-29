@@ -2,6 +2,7 @@ const orderService = require("../services/order.service");
 const orderItemService = require("../services/order_item.service");
 const cartItemService = require("../services/cartItem.service");
 const cartService = require("../services/cart.service");
+const paymentService = require("../services/payment.service");
 const { calculateOrderValues } = require("../utils/order.util");
 const pool = require("../config/db");
 
@@ -32,7 +33,53 @@ const getOrderItemsByOrderId = async (req, res) => {
     const items = await orderItemService.getOrderItemsByOrderId(orderId);
     if (items.length === 0)
       return res.status(404).json({ message: "Order not found" });
-    res.status(200).json({ total: items.length, items });
+
+    // gộp các trường dùng chung
+
+    const {
+      createdAt,
+      orderCode,
+      status,
+      userName,
+      email,
+      paymentType,
+      paymentStatus,
+      address,
+    } = items[0];
+
+    const itemList = items.map(
+      ({
+        orderCode,
+        createdAt,
+        status,
+        userName,
+        email,
+        paymentType,
+        paymentStatus,
+        address,
+        ...rest
+      }) => rest
+    );
+
+    //tinh tong tien cua order
+    const amountOrder = itemList.reduce(
+      (sum, item) => sum + Number(item.totalPriceOnOneItem),
+      0
+    );
+
+    res.status(200).json({
+      totalItem: items.length,
+      orderCode,
+      createdAt,
+      orderStatus: status,
+      address,
+      amountOrder,
+      userName,
+      email,
+      paymentType,
+      paymentStatus,
+      items: itemList,
+    });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR getOrderItemsByOrderId", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -71,6 +118,16 @@ const createOrder = async (req, res) => {
     );
     await connection.commit();
 
+    const paymentTypeDefault = "COD";
+    const transactionDefault = "COD";
+    const paymentStatusDefault = "pending";
+    await paymentService.createPayment(
+      orderId,
+      paymentTypeDefault,
+      totalPriceOrder,
+      transactionDefault,
+      paymentStatusDefault
+    );
     await cartService.clearCart(cartId);
 
     res.status(200).json({

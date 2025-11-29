@@ -36,7 +36,7 @@ router.post(
   orderController.createOrder
 );
 router.get(
-  "/:orderId/items",
+  "/:orderId/detail",
   verifyToken,
   authorizeOrderAccess,
   orderController.getOrderItemsByOrderId

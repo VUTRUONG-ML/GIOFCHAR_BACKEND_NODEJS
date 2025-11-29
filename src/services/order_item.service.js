@@ -4,17 +4,32 @@ const getOrderItemsByOrderId = async (orderId) => {
   try {
     const [rows] = await pool.execute(
       `SELECT
+        o.id AS orderId,
+        o.orderCode,
+        o.createdAt,
+        o.address,
+        o.status,
+        
         oi.id AS orderItemId,
+        oi.quantity,
+        oi.totalPrice as totalPriceOnOneItem,
+        
         f.id AS foodId,
         f.foodName,
-        f.price,
-        oi.quantity,
         f.image,
-        oi.totalPrice,
-        oi.orderID
-      FROM order_items oi 
+        f.price,
+        
+        u.userName,
+        u.email,
+        
+        p.paymentType,
+        p.status as paymentStatus
+      FROM orders o
+      JOIN users u ON o.userID = u.id 
+      JOIN order_items oi ON o.id = oi.orderID
       JOIN foods f ON oi.foodID = f.id 
-      WHERE orderID = ?`,
+      JOIN payments p ON o.id = p.orderID
+      WHERE o.id = ?`,
       [orderId]
     );
     return rows;

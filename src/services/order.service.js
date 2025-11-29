@@ -14,9 +14,14 @@ const getAllOrders = async () => {
         u.id AS userId,
         u.userName,
         u.email,
-        u.phone
+        u.phone,
+        SUM(oi.quantity ) as totalQuantity,
+        SUM(oi.totalPrice ) as amount
       FROM orders o 
-      LEFT JOIN users u ON o.userID = u.id`);
+      LEFT JOIN users u ON o.userID = u.id
+      JOIN order_items oi  ON o.id = oi.orderID
+      GROUP BY o.id
+      ORDER BY o.createdAt `);
     return rows;
   } catch (err) {
     throw err;
