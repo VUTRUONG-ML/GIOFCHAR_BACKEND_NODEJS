@@ -10,9 +10,8 @@ const checkFoodExists = async (req, res, next) => {
   try {
     const foods = await foodService.getFoodById(foodId);
 
-    if (!foods.length)
-      return res.status(404).json({ message: "Food not found" });
-    req.food = foods[0];
+    if (!foods) return res.status(404).json({ message: "Food not found" });
+    req.food = foods;
     console.log(req.food);
     next();
   } catch (err) {

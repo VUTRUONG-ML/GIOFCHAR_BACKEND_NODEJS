@@ -6,7 +6,7 @@ const getAllCategories = async (req, res) => {
     if (!categories.length)
       return res.status(404).json({ message: "Empty categories list" });
 
-    res.status(200).json(categories);
+    res.status(200).json({ quantity: categories.length, categories });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });

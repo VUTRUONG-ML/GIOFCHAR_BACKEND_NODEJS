@@ -3,7 +3,15 @@ const pool = require("../config/db");
 const getAllCategories = async () => {
   try {
     // For pool initialization, see above
-    const [categories] = await pool.execute("SELECT * FROM categories");
+    const [categories] = await pool.execute(`
+      SELECT 
+        c.id AS categoryID,
+        c.categoryName,
+        c.categoryDescription,
+        COUNT(f.id) as quantityFood
+      FROM categories c 
+      LEFT JOIN foods f ON c.id = f.categoryID
+      GROUP BY c.id`);
     return categories;
   } catch (err) {
     console.log(">>>>> Service error", err.message);
