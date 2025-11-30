@@ -49,8 +49,7 @@ const createUser = async (req, res) => {
 
     if (err.code === "ER_DUP_ENTRY") {
       let field = "";
-      if (err.message.includes("userName")) field = "username";
-      else if (err.message.includes("email")) field = "email";
+      if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
       return res.status(409).json({
@@ -63,7 +62,7 @@ const createUser = async (req, res) => {
 };
 
 const updateUserById = async (req, res) => {
-  const userId = req.params.userId;
+  const userId = req.userId;
   const { userName, email, phone, address } = req.body;
   if (!userName || !email || !phone || !address) {
     return res.status(400).json({ message: "Missing field" });
@@ -86,8 +85,7 @@ const updateUserById = async (req, res) => {
 
     if (err.code === "ER_DUP_ENTRY") {
       let field = "";
-      if (err.message.includes("userName")) field = "username";
-      else if (err.message.includes("email")) field = "email";
+      if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
       return res.status(409).json({
@@ -95,6 +93,22 @@ const updateUserById = async (req, res) => {
       });
     }
 
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const updateUserByAdmin = async (req, res) => {
+  const userId = req.params.userId;
+  const { isActive } = req.body;
+
+  try {
+    const result = userService.updateActiveUserById(userId, isActive);
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Update isActive user successful" });
+  } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
@@ -115,6 +129,7 @@ const deleteUserById = async (req, res) => {
 };
 
 module.exports = {
+  updateUserByAdmin,
   getAllUsers,
   getUserById,
   createUser,

@@ -72,6 +72,21 @@ const updateUserById = async (userId, userName, email, phone, address) => {
   }
 };
 
+const updateActiveUserById = async (userId, active) => {
+  try {
+    const [result] = await pool.execute(
+      `UPDATE users 
+        SET isActive = ?
+        WHERE id = ?`,
+      [active, userId]
+    );
+    return result;
+  } catch (err) {
+    console.log(">>>>> SERVICE ERROR", err.message);
+    throw err;
+  }
+};
+
 const deleteUserById = async (userId) => {
   try {
     const [result] = await pool.execute(`DELETE FROM users WHERE id = ?`, [
@@ -97,6 +112,7 @@ const getUserByEmail = async (email) => {
 
 module.exports = {
   getAllUsersWithOrderCount,
+  updateActiveUserById,
   getUserById,
   createUser,
   updateUserById,

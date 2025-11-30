@@ -10,7 +10,13 @@ router.delete(
   checkAdmin,
   userController.deleteUserById
 );
-router.put("/:userId", verifyToken, checkAdmin, userController.updateUserById);
+router.put(
+  "/:userId",
+  verifyToken,
+  checkAdmin,
+  userController.updateUserByAdmin
+);
+router.put("/updateMyInfo", verifyToken, userController.updateUserById);
 router.post("/", verifyToken, checkAdmin, userController.createUser);
 router.get("/:userId", userController.getUserById);
 router.get("/", verifyToken, checkAdmin, userController.getAllUsers);

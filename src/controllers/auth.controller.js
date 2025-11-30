@@ -18,8 +18,7 @@ const registerApi = async (req, res) => {
 
     if (err.code === "ER_DUP_ENTRY") {
       let field = "";
-      if (err.message.includes("userName")) field = "username";
-      else if (err.message.includes("email")) field = "email";
+      if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
       return res.status(409).json({
