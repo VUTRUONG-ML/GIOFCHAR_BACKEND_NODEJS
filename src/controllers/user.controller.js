@@ -2,11 +2,11 @@ const userService = require("../services/user.service");
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await userService.getAllUsers();
+    const users = await userService.getAllUsersWithOrderCount();
     if (userService.length === 0)
       return res.status(404).json({ message: "Empty Users list" });
 
-    res.status(200).json(users);
+    res.status(200).json({ totalUser: users.length, users });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });

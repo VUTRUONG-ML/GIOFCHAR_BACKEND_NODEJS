@@ -1,9 +1,21 @@
 const pool = require("../config/db");
 
-const getAllUsers = async () => {
+const getAllUsersWithOrderCount = async () => {
   try {
     // For pool initialization, see above
-    const [users] = await pool.execute("SELECT * FROM users");
+    const [users] = await pool.execute(`
+      SELECT 
+        u.id as userId,
+        u.userName,
+        u.email,
+        u.phone,
+        u.createdAt as registerDate,
+        u.isActive as isActiveAccount,
+        
+        COUNT(o.id) AS orderCount
+      FROM users u
+      LEFT JOIN orders o ON o.userID = u.id
+      GROUP BY u.id`);
     return users;
   } catch (err) {
     console.log(">>>>> Service error", err.message);
@@ -84,7 +96,7 @@ const getUserByEmail = async (email) => {
 };
 
 module.exports = {
-  getAllUsers,
+  getAllUsersWithOrderCount,
   getUserById,
   createUser,
   updateUserById,
