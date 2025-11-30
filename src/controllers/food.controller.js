@@ -1,5 +1,18 @@
 const foodService = require("../services/food.service");
 
+const getAllFoodsAdmin = async (req, res) => {
+  try {
+    const foods = await foodService.getAllFoodsAdmin();
+
+    if (!foods.length)
+      return res.status(404).json({ message: "Empty Foods list" });
+
+    res.status(200).json({ quantity: foods.length, foods });
+  } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 const getAllFoods = async (req, res) => {
   try {
     const foods = await foodService.getAllFoods();
@@ -7,7 +20,7 @@ const getAllFoods = async (req, res) => {
     if (!foods.length)
       return res.status(404).json({ message: "Empty Foods list" });
 
-    res.status(200).json(foods);
+    res.status(200).json({ quantity: foods.length, foods });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -71,8 +84,7 @@ const getFoodById = async (req, res) => {
   const foodId = req.params.foodId;
   try {
     const foods = await foodService.getFoodById(foodId);
-    if (!foods.length)
-      return res.status(404).json({ message: "Food not found" });
+    if (!foods) return res.status(404).json({ message: "Food not found" });
 
     res.status(200).json(foods);
   } catch (err) {
@@ -146,6 +158,7 @@ const deleteFoodById = async (req, res) => {
 
 module.exports = {
   getAllFoods,
+  getAllFoodsAdmin,
   createFood,
   getFoodById,
   updateFoodById,

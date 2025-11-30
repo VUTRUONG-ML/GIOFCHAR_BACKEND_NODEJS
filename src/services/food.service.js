@@ -1,9 +1,34 @@
 const pool = require("../config/db");
 
+const getAllFoodsAdmin = async () => {
+  try {
+    // For pool initialization, see above
+    const [foods] = await pool.execute(`
+      SELECT 
+        f.id as foodId,
+        foodName, 
+        foodDescription,
+        ingredients,
+        price,
+        stock,
+        isActive,
+        image,
+        f.categoryID,
+        
+        c.categoryName
+      FROM foods f
+      JOIN categories c ON f.categoryID = c.id`);
+    return foods;
+  } catch (err) {
+    console.log(">>>>> Service error", err.message);
+    throw err;
+  }
+};
+
 const getAllFoods = async () => {
   try {
     // For pool initialization, see above
-    const [foods] = await pool.execute("SELECT * FROM foods");
+    const [foods] = await pool.execute(`SELECT * FROM foods`);
     return foods;
   } catch (err) {
     console.log(">>>>> Service error", err.message);
@@ -69,7 +94,7 @@ const getFoodById = async (foodId) => {
     const [foods] = await pool.execute("SELECT * FROM foods WHERE id = ?", [
       foodId,
     ]);
-    return foods;
+    return foods.length > 0 ? foods[0] : null;
   } catch (err) {
     console.log(">>>>> Service error", err.message);
     throw err;
@@ -131,6 +156,7 @@ const deleteFoodById = async (foodId) => {
 
 module.exports = {
   getAllFoods,
+  getAllFoodsAdmin,
   createFood,
   getFoodById,
   updateFoodById,

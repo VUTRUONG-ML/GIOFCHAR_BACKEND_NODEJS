@@ -13,13 +13,20 @@ const foodController = require("../controllers/food.controller");
 const checkCategory = require("../middlewares/checkCategory");
 const checkFood = require("../middlewares/checkFood");
 
+router.get(
+  "/foodsAdmin",
+  verifyToken,
+  checkAdmin,
+  foodController.getAllFoodsAdmin
+); // admin xem
+
 router.delete(
   "/:foodId",
   verifyToken,
   checkAdmin,
   checkFood,
-  deleteFromCloudinary,
-  foodController.deleteFoodById
+  deleteFromCloudinary, // delete image on cloudinary
+  foodController.deleteFoodById // delete food
 );
 router.put(
   "/:foodId",
@@ -38,5 +45,6 @@ router.post(
   uploadToCloudinary,
   foodController.createFood
 );
-router.get("/", verifyToken, foodController.getAllFoods);
+router.get("/", verifyToken, foodController.getAllFoods); // client xem
+
 module.exports = router;
