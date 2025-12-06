@@ -56,8 +56,10 @@ const updateCategoryById = async (req, res) => {
   const { categoryName, categoryDescription } = req.body;
   const categoryId = req.params.categoryId;
 
-  if (!categoryName || !categoryDescription)
-    return res.status(400).json({ message: "Missing field" });
+  if (!categoryName || !categoryDescription) {
+    const field = !categoryName ? "name" : "desc";
+    return res.status(400).json({ message: "Missing field " + field });
+  }
 
   try {
     const result = await categoryService.updateCategoryById(

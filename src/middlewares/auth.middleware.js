@@ -13,7 +13,7 @@ const verifyToken = (req, res, next) => {
     return next();
   } catch (err) {
     console.log(">>>>> AUTH MIDDLE WARE ERROR", err);
-    return res.status(403).json({ message: "Invalid or expired token" });
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 

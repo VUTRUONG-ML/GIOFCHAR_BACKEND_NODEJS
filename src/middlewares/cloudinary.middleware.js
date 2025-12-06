@@ -15,7 +15,7 @@ const uploadToCloudinary = async (req, res, next) => {
     fs.unlink(req.file.path, (err) => {
       if (err) console.error("Error deleting temp file:", err);
     });
-    req.cloudinaryImage = result;
+    req.cloudinaryImage = result; // secure_url,public_id
   } catch (err) {
     console.error("Cloudinary upload failed:", err);
   }

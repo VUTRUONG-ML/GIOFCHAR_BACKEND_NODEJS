@@ -1,4 +1,5 @@
 const foodService = require("../services/food.service");
+const safeDeleteCloudinary = require("../utils/safeCloudinary");
 
 const getAllFoodsAdmin = async (req, res) => {
   try {
@@ -42,8 +43,10 @@ const createFood = async (req, res) => {
 
   const imageUrl = req.cloudinaryImage?.secure_url || null;
   const imagePublicId = req.cloudinaryImage?.public_id || null;
-  if (!foodName || !foodDescription || !price || !categoryID)
+  if (!foodName || !foodDescription || !price || !categoryID) {
+    if (imagePublicId) await safeDeleteCloudinary(imagePublicId);
     return res.status(400).json({ message: "Missing field" });
+  }
 
   const isActiveValue =
     isActive === true || isActive === "true"
@@ -72,6 +75,8 @@ const createFood = async (req, res) => {
       .json({ message: "Create food successful", foodId: result.insertId });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
+
+    if (imagePublicId) await safeDeleteCloudinary(imagePublicId);
 
     if (err.code === "ER_DUP_ENTRY")
       return res.status(409).json({ message: "Food name already exists" });
