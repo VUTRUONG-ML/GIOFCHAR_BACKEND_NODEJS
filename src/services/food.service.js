@@ -91,9 +91,23 @@ const createFood = async (
 const getFoodById = async (foodId) => {
   try {
     // For pool initialization, see above
-    const [foods] = await pool.execute("SELECT * FROM foods WHERE id = ?", [
-      foodId,
-    ]);
+    const [foods] = await pool.execute(
+      `SELECT 
+        f.id as foodId,
+        foodName, 
+        foodDescription,
+        price,
+        stock,
+        isActive,
+        image,
+        f.categoryID,
+        
+        c.categoryName
+      FROM foods f
+      JOIN categories c ON f.categoryID = c.id
+      WHERE f.id = ?`,
+      [foodId]
+    );
     return foods.length > 0 ? foods[0] : null;
   } catch (err) {
     console.log(">>>>> Service error", err.message);
