@@ -12,12 +12,13 @@ const uploadToCloudinary = async (req, res, next) => {
       unique_filename: false,
       overwrite: true,
     });
-    fs.unlink(req.file.path, (err) => {
-      if (err) console.error("Error deleting temp file:", err);
-    });
     req.cloudinaryImage = result; // secure_url,public_id
   } catch (err) {
     console.error("Cloudinary upload failed:", err);
+  } finally {
+    fs.unlink(req.file.path, (err) => {
+      if (err) console.error("Error deleting temp file:", err);
+    });
   }
   next();
 };
@@ -34,4 +35,30 @@ const deleteFromCloudinary = async (req, res, next) => {
   next();
 };
 
-module.exports = { uploadToCloudinary, deleteFromCloudinary };
+// middleware xóa ảnh trên cloudinary khi mà sau khi upload cloudinary rồi thì gặp lỗi ở controller ko tạo food được
+const cleanupCloudinary = async (req, res, next) => {
+  const oldJson = res.json;
+  console.log("Đã vào cleanup");
+  res.json = async function (data) {
+    const publicIdImg = req.cloudinaryImage?.public_id;
+    if (res.statusCode >= 400 && publicIdImg) {
+      console.log("Tồn tại");
+      try {
+        await deleteImage(publicIdImg);
+        console.log(">>>> Đã cleanup thành công");
+      } catch (error) {
+        console.error("Rollback failed:", error.message);
+      }
+    }
+
+    return oldJson.apply(res, arguments);
+  };
+
+  next();
+};
+
+module.exports = {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+  cleanupCloudinary,
+};

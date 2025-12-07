@@ -5,6 +5,7 @@ const upload = require("../config/multer");
 const {
   uploadToCloudinary,
   deleteFromCloudinary,
+  cleanupCloudinary,
 } = require("../middlewares/cloudinary.middleware");
 const { verifyToken } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
@@ -41,8 +42,10 @@ router.post(
   verifyToken,
   checkAdmin,
   upload.single("imageFood"),
-  checkCategory,
   uploadToCloudinary,
+  cleanupCloudinary, // xóa ảnh nếu có lỗi xảy ra khi res.json() ở 2 controller sau
+
+  checkCategory,
   foodController.createFood
 );
 router.get("/", verifyToken, foodController.getAllFoods); // client xem
