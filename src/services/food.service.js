@@ -100,6 +100,7 @@ const getFoodById = async (foodId) => {
         stock,
         isActive,
         image,
+        imagePublicId,
         f.categoryID,
         
         c.categoryName
@@ -118,25 +119,24 @@ const getFoodById = async (foodId) => {
 const updateFoodById = async (
   foodName,
   foodDescription,
-  ingredients,
   price,
-  discount,
-  rating,
+  discount, //
+  rating, //
   stock,
   isActive,
   categoryID,
   image,
+  imagePublicId,
   foodId
 ) => {
   try {
     const [result] = await pool.execute(
       `UPDATE foods 
-            SET foodName = ?,foodDescription = ?,ingredients = ?,price = ?,discount = ?,rating = ?,stock = ?,isActive = ?,categoryID = ?,image = ?
+            SET foodName = ?,foodDescription = ?,price = ?,discount = ?,rating = ?,stock = ?,isActive = ?,categoryID = ?,image = ?, imagePublicId = ?
             WHERE id = ?`,
       [
         foodName,
         foodDescription,
-        ingredients || "",
         price,
         discount ?? 0,
         rating ?? 0,
@@ -144,6 +144,7 @@ const updateFoodById = async (
         isActive ?? true,
         categoryID,
         image || "",
+        imagePublicId || "",
         foodId,
       ]
     );

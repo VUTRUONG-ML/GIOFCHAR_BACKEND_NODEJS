@@ -1,4 +1,5 @@
 const foodService = require("../services/food.service");
+const safeDeleteCloudinary = require("../utils/safeCloudinary");
 const getAllFoodsAdmin = async (req, res) => {
   try {
     const foods = await foodService.getAllFoodsAdmin();
@@ -98,36 +99,55 @@ const updateFoodById = async (req, res) => {
   const {
     foodName,
     foodDescription,
-    ingredients,
     price,
     discount,
     rating,
     stock,
     isActive,
     categoryID,
-    image,
   } = req.body;
+
+  let image = req.food?.image; // img cũ
+  let imagePublicId = req.food?.imagePublicId; // imagePublicId cũ
+  let oldPublicId = req.food?.imagePublicId; // lưu lại để xóa
+
+  if (req.cloudinaryImage) {
+    // nếu tồn tại ảnh mà người dùng up lên có nghĩa là ảnh mới
+    image = req.cloudinaryImage?.secure_url || null;
+    imagePublicId = req.cloudinaryImage?.public_id || null;
+  }
 
   if (!foodName || !foodDescription || !price || !categoryID)
     return res.status(400).json({ message: "Missing field" });
 
+  const isActiveValue =
+    isActive === true || isActive === "true"
+      ? 1
+      : isActive === false || isActive === "false"
+      ? 0
+      : 1;
   try {
     const result = await foodService.updateFoodById(
       foodName,
       foodDescription,
-      ingredients,
       price,
       discount,
       rating,
       stock,
-      isActive,
+      isActiveValue,
       categoryID,
       image,
+      imagePublicId,
       foodId
     );
 
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Food not found" });
+
+    if (req.cloudinaryImage && oldPublicId) {
+      // sau khi update xong nếu tồn tại cloudinaryImage thì có nghĩa là cần phải xóa publicId cũ
+      await safeDeleteCloudinary(oldPublicId);
+    }
 
     res.status(200).json({ message: "Update food successful" });
   } catch (err) {

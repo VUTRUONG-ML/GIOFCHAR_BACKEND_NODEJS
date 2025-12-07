@@ -33,6 +33,12 @@ router.put(
   "/:foodId",
   verifyToken,
   checkAdmin,
+
+  upload.single("imageFood"),
+  uploadToCloudinary,
+  cleanupCloudinary,
+
+  checkFood,
   checkCategory,
   foodController.updateFoodById
 );
