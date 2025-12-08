@@ -25,7 +25,6 @@ const uploadToCloudinary = async (req, res, next) => {
 
 const deleteFromCloudinary = async (req, res, next) => {
   const publicId = req.food.imagePublicId;
-  console.log("check imageId", publicId);
   if (!publicId) return next();
   try {
     const result = await deleteImage(publicId);

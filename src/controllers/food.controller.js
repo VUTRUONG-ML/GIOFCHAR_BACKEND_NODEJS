@@ -4,9 +4,6 @@ const getAllFoodsAdmin = async (req, res) => {
   try {
     const foods = await foodService.getAllFoodsAdmin();
 
-    if (!foods.length)
-      return res.status(404).json({ message: "Empty Foods list" });
-
     res.status(200).json({ quantity: foods.length, foods });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
@@ -121,9 +118,9 @@ const updateFoodById = async (req, res) => {
     return res.status(400).json({ message: "Missing field" });
 
   const isActiveValue =
-    isActive === true || isActive === "true"
+    isActive === true || isActive === "true" || isActive === "1"
       ? 1
-      : isActive === false || isActive === "false"
+      : isActive === false || isActive === "false" || isActive === "0"
       ? 0
       : 1;
   try {
@@ -145,7 +142,7 @@ const updateFoodById = async (req, res) => {
       return res.status(404).json({ message: "Food not found" });
 
     if (req.cloudinaryImage && oldPublicId) {
-      // sau khi update xong nếu tồn tại cloudinaryImage thì có nghĩa là cần phải xóa publicId cũ
+      // sau khi update xong nếu tồn tại cloudinaryImage thì có nghĩa là người dùng đã up ảnh mới cần phải xóa publicId cũ
       await safeDeleteCloudinary(oldPublicId);
     }
 
@@ -162,16 +159,24 @@ const updateFoodById = async (req, res) => {
 
 const deleteFoodById = async (req, res) => {
   const foodId = req.params.foodId;
-
+  const publicId = req.food?.imagePublicId;
   try {
     const result = await foodService.deleteFoodById(foodId);
 
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Food not found" });
 
+    if (publicId) {
+      await safeDeleteCloudinary(publicId);
+    }
     res.status(200).json({ message: "Delete food successful" });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
+    if (err.code === "ER_ROW_IS_REFERENCED_2") {
+      return res
+        .status(400)
+        .json({ message: "The food has been used in the order" });
+    }
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };

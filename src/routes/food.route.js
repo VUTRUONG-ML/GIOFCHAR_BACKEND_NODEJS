@@ -4,7 +4,6 @@ const router = express.Router();
 const upload = require("../config/multer");
 const {
   uploadToCloudinary,
-  deleteFromCloudinary,
   cleanupCloudinary,
 } = require("../middlewares/cloudinary.middleware");
 const { verifyToken } = require("../middlewares/auth.middleware");
@@ -26,7 +25,6 @@ router.delete(
   verifyToken,
   checkAdmin,
   checkFood,
-  deleteFromCloudinary, // delete image on cloudinary
   foodController.deleteFoodById // delete food
 );
 router.put(
