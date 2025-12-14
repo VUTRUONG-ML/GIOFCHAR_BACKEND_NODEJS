@@ -3,7 +3,25 @@ require("dotenv").config();
 
 const orderService = require("../services/order.service");
 
-const verifyToken = (req, res, next) => {
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers?.authorization;
+  if (!authHeader) return next();
+
+  const token = authHeader.split(" ")[1];
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // { userId, role }
+  } catch (err) {
+    // token sai coi như guest
+    console.log("Optional auth failed:", err.message);
+  }
+
+  next();
+};
+
+const requireAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "Access token missing" });
 
@@ -36,6 +54,6 @@ const authorizeOrderAccess = async (req, res, next) => {
 };
 
 module.exports = {
-  verifyToken,
+  requireAuth,
   authorizeOrderAccess,
 };

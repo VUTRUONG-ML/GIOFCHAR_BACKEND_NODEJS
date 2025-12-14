@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  verifyToken,
+  requireAuth,
   authorizeOrderAccess,
 } = require("../middlewares/auth.middleware");
 
@@ -12,36 +12,36 @@ const orderController = require("../controllers/order.controller");
 
 router.delete(
   "/:orderId",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   orderController.deleteOrder
 );
 
 router.put(
   "/:orderId/cancel",
-  verifyToken,
+  requireAuth,
   authorizeOrderAccess,
   orderController.cancelOrder
 );
 router.put(
   "/:orderId/status",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   orderController.updateOrderStatus
 );
 router.post(
   "/cod",
-  verifyToken,
-  cartMiddleware.ensureCart,
+  requireAuth,
+  cartMiddleware.resolveCart,
   orderController.createOrder
 );
 router.get(
   "/:orderId/detail",
-  verifyToken,
+  requireAuth,
   authorizeOrderAccess,
   orderController.getOrderItemsByOrderId
 );
-router.get("/user/my-orders", verifyToken, orderController.getOrdersByUserId);
+router.get("/user/my-orders", requireAuth, orderController.getOrdersByUserId);
 router.get(
   "/user/:userId",
   userMiddleware.checkAdmin,
@@ -49,7 +49,7 @@ router.get(
 );
 router.get(
   "/",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   orderController.getAllOrders
 );

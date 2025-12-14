@@ -6,7 +6,7 @@ const {
   uploadToCloudinary,
   cleanupCloudinary,
 } = require("../middlewares/cloudinary.middleware");
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { requireAuth } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
 
 const foodController = require("../controllers/food.controller");
@@ -15,21 +15,21 @@ const checkFood = require("../middlewares/checkFood");
 
 router.get(
   "/foodsAdmin",
-  verifyToken,
+  requireAuth,
   checkAdmin,
   foodController.getAllFoodsAdmin
 ); // admin xem
 
 router.delete(
   "/:foodId",
-  verifyToken,
+  requireAuth,
   checkAdmin,
   checkFood,
   foodController.deleteFoodById // delete food
 );
 router.put(
   "/:foodId",
-  verifyToken,
+  requireAuth,
   checkAdmin,
 
   upload.single("imageFood"),
@@ -40,10 +40,10 @@ router.put(
   checkCategory,
   foodController.updateFoodById
 );
-router.get("/:foodId", verifyToken, foodController.getFoodById);
+router.get("/:foodId", requireAuth, foodController.getFoodById);
 router.post(
   "/",
-  verifyToken,
+  requireAuth,
   checkAdmin,
   upload.single("imageFood"),
   uploadToCloudinary,
@@ -52,6 +52,6 @@ router.post(
   checkCategory,
   foodController.createFood
 );
-router.get("/", verifyToken, foodController.getAllFoods); // client xem
+router.get("/", requireAuth, foodController.getAllFoods); // client xem
 
 module.exports = router;

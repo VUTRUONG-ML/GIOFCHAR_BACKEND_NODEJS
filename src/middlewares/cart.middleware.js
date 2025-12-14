@@ -1,26 +1,30 @@
-const cartService = require("../services/cart.service");
-const cartItemService = require("../services/cartItem.service");
+import { v4 as uuidv4 } from "uuid";
+import cartService from "../services/cart.service.js";
 
-const ensureCart = async (req, res, next) => {
-  const userId = req.user.userId;
+export const resolveCart = async (req, res, next) => {
   try {
-    let cartId;
-    const carts = await cartService.getCartByUserId(userId);
-    if (carts.length) {
-      cartId = carts[0].id;
+    let cart;
+
+    if (req.user) {
+      const userId = req.user.userId;
+      console.log("vao userid", userId);
+      cart = await cartService.ensureCart({ userId });
     } else {
-      const result = await cartService.createCart(userId);
-      cartId = result.insertId;
+      console.log("vao guest");
+      let guestToken = req.headers["x-guest-token"];
+      if (!guestToken) {
+        guestToken = uuidv4();
+        res.setHeader("X-Guest-Token", guestToken);
+      }
+      cart = await cartService.ensureCart({ guestToken });
     }
 
-    req.cartId = cartId;
+    req.cartId = cart.id;
     next();
-  } catch (err) {
-    console.log(">>>>> MIDDLEWARE ERROR", err.message);
+  } catch (error) {
+    console.log(">>>>> MIDDLEWARE ERROR", error.message);
     res
       .status(500)
-      .json({ message: "Failed to get or create cart", error: err.message });
+      .json({ message: "Failed to get or create cart", error: error.message });
   }
 };
-
-module.exports = { ensureCart };

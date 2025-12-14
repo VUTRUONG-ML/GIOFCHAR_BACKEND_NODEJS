@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { validateCartOwner } = require("./cart.validators");
 const cartItemService = require("./cartItem.service");
 
 const getAllCarts = async () => {
@@ -10,26 +11,41 @@ const getAllCarts = async () => {
   }
 };
 
-const getCartByUserId = async (userId) => {
-  try {
-    const [carts] = await pool.execute("SELECT * FROM carts WHERE userID = ?", [
-      userId,
-    ]);
+const getCart = async ({ userId, guestToken }) => {
+  validateCartOwner({ userId, guestToken });
 
-    return carts;
+  const field = userId ? "userID" : "guestToken";
+  const value = userId ?? guestToken;
+  try {
+    const [carts] = await pool.execute(
+      `SELECT * FROM carts WHERE ${field} = ?`,
+      [value]
+    );
+
+    return carts.length > 0 ? carts[0] : null;
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);
     throw err;
   }
 };
 
-const createCart = async (userId) => {
+const createCart = async ({ userId, guestToken }) => {
+  validateCartOwner({ userId, guestToken });
+
+  const field = userId ? "userID" : "guestToken";
+  const value = userId ?? guestToken;
+
   try {
     const [result] = await pool.execute(
-      "INSERT INTO carts (userID) VALUES (?)",
-      [userId]
+      `INSERT INTO carts (${field}) VALUES (?)`,
+      [value]
     );
-    return result;
+
+    const [rows] = await pool.execute("SELECT * FROM carts WHERE id = ?", [
+      result.insertId,
+    ]);
+
+    return rows.length > 0 ? rows[0] : null;
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);
     throw err;
@@ -75,10 +91,24 @@ const clearCart = async (cartId) => {
   }
 };
 
+const ensureCart = async ({ userId, guestToken }) => {
+  console.log("check service", userId);
+  validateCartOwner({ userId, guestToken });
+  try {
+    let cart = await getCart({ userId, guestToken });
+    if (!cart) cart = await createCart({ userId, guestToken });
+    return cart;
+  } catch (error) {
+    console.log(">>>> SERVICE ERROR", error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllCarts,
-  getCartByUserId,
+  getCart,
   createCart,
   addToCart,
   clearCart,
+  ensureCart,
 };

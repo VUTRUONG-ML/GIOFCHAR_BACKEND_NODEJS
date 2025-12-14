@@ -2,38 +2,38 @@ const express = require("express");
 const router = express.Router();
 
 const paymentController = require("../controllers/payment.controller");
-const { verifyToken } = require("../middlewares/auth.middleware");
+const { requireAuth } = require("../middlewares/auth.middleware");
 const userMiddleware = require("../middlewares/user.middleware");
 const orderMiddleware = require("../middlewares/order.middleware");
 
 router.delete(
   "/:paymentId",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   paymentController.deletePayment
 );
 router.put(
   "/:paymentId",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   paymentController.updatePayment
 );
 router.post(
   "/",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   orderMiddleware.checkOrderExists,
   paymentController.createPayment
 );
 router.get(
   "/:paymentId",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   paymentController.getPaymentById
 );
 router.get(
   "/",
-  verifyToken,
+  requireAuth,
   userMiddleware.checkAdmin,
   paymentController.getAllPayments
 );
