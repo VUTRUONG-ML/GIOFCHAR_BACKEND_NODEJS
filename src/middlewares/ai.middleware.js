@@ -28,10 +28,12 @@ const detectUserMessage = async (req, res, next) => {
   const { message } = req.body;
   const { chat } = req.session;
 
+  // Nếu vẫn còn trong phiên chat trước đó chưa kết thúc
+  if (chat.intent) return next();
+
   try {
     const intentResult = await aiService.detectIntent(message);
     chat.intent = intentResult.intent;
-    req.intentResult = intentResult;
   } catch (error) {
     return res
       .status(500)
@@ -42,8 +44,8 @@ const detectUserMessage = async (req, res, next) => {
 };
 
 const handleIntentRouting = async (req, res, next) => {
-  const { intent } = req.intentResult;
   const { chat } = req.session;
+  const { intent } = chat;
   const CHAT_HISTORY = req.session.chat.history;
 
   if (intent !== "goi_y_mon") return next();

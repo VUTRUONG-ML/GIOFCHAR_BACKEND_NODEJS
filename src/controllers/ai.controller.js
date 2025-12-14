@@ -3,8 +3,8 @@ const aiService = require("../services/ai.service");
 const { filterFood } = require("../services/food.service");
 
 const handleIntentData = async (req, res, next) => {
-  const { intent } = req.intentResult;
   const chat = req.session.chat;
+  const { intent } = chat;
 
   try {
     let data = null;
@@ -35,11 +35,7 @@ const handleIntentData = async (req, res, next) => {
 
     const reply = await aiService.answer({ intent, data });
 
-    req.session.chat = {
-      intent: null,
-      slots: null,
-      history: [],
-    };
+    req.session.chat = null;
 
     return res.json({ intent, reply });
   } catch (error) {
