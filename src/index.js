@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
+import session from "express-session";
 import userRoutes from "./routes/user.route.js";
 import categoryRoutes from "./routes/category.route.js";
 import foodRoutes from "./routes/food.route.js";
@@ -9,6 +10,7 @@ import cartRoutes from "./routes/cart.route.js";
 import orderRoutes from "./routes/order.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import authRoutes from "./routes/auth.route.js";
+import botChatRoutes from "./routes/botChat.route.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -17,6 +19,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { maxAge: 5 * 60 * 1000 }, // 5p
+  })
+);
+
+app.use("/api/botchat", botChatRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/orders", orderRoutes);
