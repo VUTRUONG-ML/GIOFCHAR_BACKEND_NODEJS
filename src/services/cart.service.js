@@ -55,7 +55,7 @@ const createCart = async ({ userId, guestToken }) => {
 const addToCart = async (foodId, quantity, cartId) => {
   // Kiểm tra foodId đã có trong cartId chưa
   try {
-    const cartItems = await cartItemService.findCartItem(cartId, foodId);
+    const cartItems = await cartItemService.findCartItem({ cartId, foodId });
     if (!cartItems) {
       await cartItemService.insertCartItem(cartId, foodId, quantity);
       return {
@@ -92,7 +92,6 @@ const clearCart = async (cartId) => {
 };
 
 const ensureCart = async ({ userId, guestToken }) => {
-  console.log("check service", userId);
   validateCartOwner({ userId, guestToken });
   try {
     let cart = await getCart({ userId, guestToken });

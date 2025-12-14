@@ -25,15 +25,17 @@ const getCartItemsByCartId = async (cartId) => {
   }
 };
 
-const findCartItem = async (cartId, foodId) => {
+const findCartItem = async ({ cartId, foodId, cartItemId }) => {
   // tìm cartItem có cartID và foodID
+  const field = cartItemId ? "ci.id" : "ci.foodID";
+  const value = cartItemId ?? foodId;
   try {
     const [result] = await pool.execute(
       `
         SELECT *
         FROM cart_items ci 
-        WHERE ci.cartID = ? AND ci.foodID = ?`,
-      [cartId, foodId]
+        WHERE ci.cartID = ? AND ${field} = ?`,
+      [cartId, value]
     );
     return result.length ? result[0] : null;
   } catch (err) {

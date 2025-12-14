@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 
 const cartController = require("../controllers/cart.controller");
-const { resolveCart } = require("../middlewares/cart.middleware");
+const {
+  resolveCart,
+  itemBelongOwn,
+} = require("../middlewares/cart.middleware");
 const { requireAuth } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
 const checkFood = require("../middlewares/checkFood");
@@ -12,6 +15,7 @@ router.delete(
   "/:cartItemId",
   requireAuth,
   resolveCart,
+  itemBelongOwn,
   cartController.deleteCartItem
 );
 router.post(
