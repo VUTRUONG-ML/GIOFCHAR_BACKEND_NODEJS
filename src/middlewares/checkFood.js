@@ -12,7 +12,6 @@ const checkFoodExists = async (req, res, next) => {
 
     if (!food) return res.status(404).json({ message: "Food not found" });
     req.food = food;
-    console.log(req.food);
     next();
   } catch (err) {
     console.error(">>>>> MIDDLEWARE ERROR:", err.message);

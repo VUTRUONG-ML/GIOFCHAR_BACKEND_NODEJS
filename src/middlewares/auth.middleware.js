@@ -4,10 +4,7 @@ require("dotenv").config();
 const orderService = require("../services/order.service");
 
 const optionalAuth = (req, res, next) => {
-  const authHeader = req.headers?.authorization;
-  if (!authHeader) return next();
-
-  const token = authHeader.split(" ")[1];
+  const token = req.headers?.authorization?.split(" ")[1];
   if (!token) return next();
 
   try {
@@ -30,7 +27,7 @@ const requireAuth = (req, res, next) => {
     req.user = decoded; // {userId, role}
     return next();
   } catch (err) {
-    console.log(">>>>> AUTH MIDDLE WARE ERROR", err);
+    console.log(">>>>> AUTH MIDDLE WARE ERROR", err.message);
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
@@ -56,4 +53,5 @@ const authorizeOrderAccess = async (req, res, next) => {
 module.exports = {
   requireAuth,
   authorizeOrderAccess,
+  optionalAuth,
 };

@@ -11,14 +11,14 @@ const getAllCarts = async () => {
   }
 };
 
-const getCart = async ({ userId, guestToken }) => {
+const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
   validateCartOwner({ userId, guestToken });
-
+  const isLock = forUpdate ? "FOR UPDATE" : "";
   const field = userId ? "userID" : "guestToken";
   const value = userId ?? guestToken;
   try {
-    const [carts] = await pool.execute(
-      `SELECT * FROM carts WHERE ${field} = ?`,
+    const [carts] = await conn.execute(
+      `SELECT * FROM carts WHERE ${field} = ? ${isLock}`,
       [value]
     );
 
@@ -55,9 +55,12 @@ const createCart = async ({ userId, guestToken }) => {
 const addToCart = async (foodId, quantity, cartId) => {
   // Kiểm tra foodId đã có trong cartId chưa
   try {
-    const cartItems = await cartItemService.findCartItem({ cartId, foodId });
-    if (!cartItems) {
-      await cartItemService.insertCartItem(cartId, foodId, quantity);
+    const cartItem = await cartItemService.findCartItem(
+      { cartId, foodId },
+      pool
+    );
+    if (!cartItem) {
+      await cartItemService.insertCartItem(cartId, foodId, quantity, pool);
       return {
         message: "Added new item to cart",
         cartId: cartId,
@@ -65,7 +68,7 @@ const addToCart = async (foodId, quantity, cartId) => {
         quantity,
       };
     } else {
-      await cartItemService.updateCartItemQuantity(cartItems.id, quantity);
+      await cartItemService.updateCartItemQuantity(cartItem.id, quantity, pool);
       return {
         message: "Updated quantity item successful",
         cartId: cartId,
@@ -79,9 +82,76 @@ const addToCart = async (foodId, quantity, cartId) => {
   }
 };
 
-const clearCart = async (cartId) => {
+const mergeGuestCartToUser = async ({ userId, guestToken }) => {
+  const connection = await pool.getConnection();
   try {
-    const [result] = await pool.execute("DELETE FROM carts WHERE id = ?", [
+    await connection.beginTransaction();
+    const cartUser = await getCart(
+      { userId },
+      { conn: connection, forUpdate: true }
+    );
+    const cartGuest = await getCart(
+      { guestToken },
+      { conn: connection, forUpdate: true }
+    );
+    if (!cartGuest) {
+      await connection.commit();
+      return;
+    }
+    if (!cartUser) {
+      // Trường hợp sau khi người dùng thêm giỏ hàng rồi đang nhập nhưng tài khoản chưa có giỏ hàng
+      const [result] = await connection.execute(
+        `UPDATE carts SET userID = ?, guestToken = NULL WHERE guestToken = ?`,
+        [userId, guestToken]
+      );
+    } else {
+      const guestItems = await cartItemService.getCartItemsByCartId(
+        cartGuest.id,
+        connection
+      );
+      for (const guestItem of guestItems) {
+        //Kiểm tra trong cartUser đã có foodId này chưa
+        const existed = await cartItemService.findCartItem(
+          {
+            cartId: cartUser.id,
+            foodId: guestItem.foodId,
+          },
+          connection
+        );
+        if (existed) {
+          // nếu có rồi
+          await cartItemService.updateCartItemQuantity(
+            existed.id,
+            guestItem.quantity,
+            connection
+          );
+        } else {
+          //Nếu chưa có
+          await cartItemService.insertCartItem(
+            cartUser.id,
+            guestItem.foodId,
+            guestItem.quantity,
+            connection
+          );
+        }
+      }
+      await clearCart(cartGuest.id, connection);
+    }
+    await connection.commit();
+    console.log(">>>>> Merge cart success");
+    return;
+  } catch (error) {
+    await connection.rollback();
+    console.log(">>>>> SERVICE ERROR merge cart:", error.message);
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
+const clearCart = async (cartId, conn) => {
+  try {
+    const [result] = await conn.execute("DELETE FROM carts WHERE id = ?", [
       cartId,
     ]);
 
@@ -94,7 +164,7 @@ const clearCart = async (cartId) => {
 const ensureCart = async ({ userId, guestToken }) => {
   validateCartOwner({ userId, guestToken });
   try {
-    let cart = await getCart({ userId, guestToken });
+    let cart = await getCart({ userId, guestToken }, { conn: pool });
     if (!cart) cart = await createCart({ userId, guestToken });
     return cart;
   } catch (error) {
@@ -110,4 +180,5 @@ module.exports = {
   addToCart,
   clearCart,
   ensureCart,
+  mergeGuestCartToUser,
 };

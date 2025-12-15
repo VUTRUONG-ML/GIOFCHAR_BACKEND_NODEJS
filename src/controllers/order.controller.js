@@ -98,7 +98,7 @@ const createOrder = async (req, res) => {
 
   try {
     //Lay ve cartItem cua nguoi dung hien tai
-    const cartItems = await cartItemService.getCartItemsByCartId(cartId);
+    const cartItems = await cartItemService.getCartItemsByCartId(cartId, pool);
     if (cartItems.length === 0)
       return res.status(400).json({ message: "Empty cart items" });
 
@@ -116,7 +116,6 @@ const createOrder = async (req, res) => {
       connection,
       orderValues
     );
-    await connection.commit();
 
     const paymentTypeDefault = "COD";
     const transactionDefault = "COD";
@@ -128,7 +127,9 @@ const createOrder = async (req, res) => {
       transactionDefault,
       paymentStatusDefault
     );
-    await cartService.clearCart(cartId);
+    await cartService.clearCart(cartId, connection);
+
+    await connection.commit();
 
     res.status(200).json({
       message: "Create order successful",

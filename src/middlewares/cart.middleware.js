@@ -1,20 +1,20 @@
 import { v4 as uuidv4 } from "uuid";
-import cartService from "../services/cart.service.js";
+import cartService, { mergeGuestCartToUser } from "../services/cart.service.js";
 import { findCartItem } from "../services/cartItem.service.js";
+import pool from "../config/db.js";
 
 export const resolveCart = async (req, res, next) => {
   try {
     let cart;
+    let guestToken = req.headers["x-guest-token"];
 
     if (req.user) {
       const userId = req.user.userId;
-
       cart = await cartService.ensureCart({ userId });
     } else {
-      let guestToken = req.headers["x-guest-token"];
       if (!guestToken) {
         guestToken = uuidv4();
-        res.setHeader("X-Guest-Token", guestToken);
+        res.setHeader("x-guest-token", guestToken);
       }
       cart = await cartService.ensureCart({ guestToken });
     }
@@ -33,7 +33,7 @@ export const itemBelongOwn = async (req, res, next) => {
   const cartId = req.cartId;
   const { cartItemId } = req.params;
   try {
-    const cartItem = await findCartItem({ cartId, cartItemId });
+    const cartItem = await findCartItem({ cartId, cartItemId }, pool);
     if (!cartItem) {
       return res.status(403).json({ message: "You do not have access" });
     }

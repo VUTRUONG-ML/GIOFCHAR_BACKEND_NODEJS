@@ -1,10 +1,10 @@
 const pool = require("../config/db");
 
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
-const getCartItemsByCartId = async (cartId) => {
+const getCartItemsByCartId = async (cartId, conn) => {
   // trả về toàn bộ food bên trong một giỏ hàng
   try {
-    const [cartItems] = await pool.execute(
+    const [cartItems] = await conn.execute(
       `SELECT 
             ci.id AS cartItemsId, 
             f.id  AS foodId,
@@ -25,12 +25,12 @@ const getCartItemsByCartId = async (cartId) => {
   }
 };
 
-const findCartItem = async ({ cartId, foodId, cartItemId }) => {
+const findCartItem = async ({ cartId, foodId, cartItemId }, conn) => {
   // tìm cartItem có cartID và foodID
   const field = cartItemId ? "ci.id" : "ci.foodID";
   const value = cartItemId ?? foodId;
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `
         SELECT *
         FROM cart_items ci 
@@ -44,10 +44,10 @@ const findCartItem = async ({ cartId, foodId, cartItemId }) => {
   }
 };
 
-const updateCartItemQuantity = async (cartItemId, quantity) => {
+const updateCartItemQuantity = async (cartItemId, quantity, conn) => {
   // Nếu món ăn tồn tại trong cart
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       "UPDATE cart_items SET quantity = quantity + ? WHERE id = ?",
       [quantity, cartItemId]
     );
@@ -59,9 +59,9 @@ const updateCartItemQuantity = async (cartItemId, quantity) => {
 };
 
 // -> Lấy cartID của người dùng hiện tại -> thêm vào food cho cartID đó thông qua bảng cart_items
-const insertCartItem = async (cartId, foodId, quantity) => {
+const insertCartItem = async (cartId, foodId, quantity, conn) => {
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `INSERT INTO cart_items (cartID, foodID, quantity)
         VALUES (?, ?, ?)`,
       [cartId, foodId, quantity]

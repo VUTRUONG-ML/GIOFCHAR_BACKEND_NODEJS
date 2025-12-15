@@ -1,6 +1,6 @@
 const cartService = require("../services/cart.service");
 const cartItemService = require("../services/cartItem.service");
-
+const pool = require("../config/db");
 const getAllCarts = async (req, res) => {
   try {
     const carts = await cartService.getAllCarts();
@@ -16,7 +16,7 @@ const getAllCarts = async (req, res) => {
 const getAllCartItems = async (req, res) => {
   const cartId = req.cartId;
   try {
-    const cartItems = await cartItemService.getCartItemsByCartId(cartId);
+    const cartItems = await cartItemService.getCartItemsByCartId(cartId, pool);
     if (!cartItems.length)
       return res.status(200).json({ message: "Empty carts", cartItems });
 
@@ -61,7 +61,7 @@ const deleteCartItem = async (req, res) => {
 const clearCart = async (req, res) => {
   const cartId = req.cartId;
   try {
-    const result = await cartService.clearCart(cartId);
+    const result = await cartService.clearCart(cartId, pool);
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Cart not found" });
 

@@ -1,4 +1,5 @@
 const authService = require("../services/auth.service");
+const { mergeGuestCartToUser } = require("../services/cart.service");
 const userService = require("../services/user.service");
 
 const registerApi = async (req, res) => {
@@ -34,8 +35,17 @@ const loginApi = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ message: "Missing field" });
+  const guestToken = req.headers["x-guest-token"];
   try {
     const result = await authService.login(email, password);
+
+    if (guestToken) {
+      mergeGuestCartToUser({ userId: result.user.id, guestToken }).catch(
+        (err) => {
+          console.log(">>>>> Merge cart failed:", err.message);
+        }
+      );
+    }
 
     res.status(200).json({ message: "Login successful", data: result });
   } catch (err) {
