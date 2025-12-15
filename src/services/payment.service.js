@@ -36,6 +36,7 @@ const updatePaymentById = async (paymentId, paymentStatus, paymentType) => {
 };
 
 const createPayment = async (
+  conn,
   orderID,
   paymentType,
   amount,
@@ -43,7 +44,7 @@ const createPayment = async (
   paymentStatus
 ) => {
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
         VALUES (?, ?, ?, ?, ?)`,
       [orderID, paymentType, amount, transactionId, paymentStatus]

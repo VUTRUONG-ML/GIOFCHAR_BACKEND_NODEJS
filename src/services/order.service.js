@@ -9,19 +9,18 @@ const getAllOrders = async () => {
         o.orderCode,
         o.status,
         o.paymentStatus,
+        o.customerName,
+        o.email,
+        o.phone,
         o.address AS deliveryAddress,
         o.createdAt AS time,
-        u.id AS userId,
-        u.userName,
-        u.email,
-        u.phone,
+
         SUM(oi.quantity ) as totalQuantity,
         SUM(oi.totalPrice ) as amount
       FROM orders o 
-      LEFT JOIN users u ON o.userID = u.id
       JOIN order_items oi  ON o.id = oi.orderID
       GROUP BY o.id
-      ORDER BY o.createdAt `);
+      ORDER BY o.createdAt`);
     return rows;
   } catch (err) {
     throw err;
@@ -68,11 +67,18 @@ const getOrdersByUserId = async (userId) => {
   }
 };
 
-const createOrder = async (connection, userId, address) => {
+const createOrder = async (
+  connection,
+  userId,
+  customerName,
+  email,
+  phone,
+  address
+) => {
   try {
     const [result] = await connection.execute(
-      `INSERT INTO orders (userID, address) VALUES (?, ?)`,
-      [userId, address]
+      `INSERT INTO orders (userID, customerName, email, phone, address) VALUES (?, ?, ?, ?, ?)`,
+      [userId, customerName, email, phone, address]
     );
 
     const orderId = result.insertId;

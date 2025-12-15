@@ -44,6 +44,7 @@ router.get(
 router.get("/user/my-orders", requireAuth, orderController.getOrdersByUserId);
 router.get(
   "/user/:userId",
+  requireAuth,
   userMiddleware.checkAdmin,
   orderController.getOrdersByUserId
 );

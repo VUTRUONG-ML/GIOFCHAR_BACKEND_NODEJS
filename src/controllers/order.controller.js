@@ -40,8 +40,9 @@ const getOrderItemsByOrderId = async (req, res) => {
       createdAt,
       orderCode,
       status,
-      userName,
+      customerName,
       email,
+      phone,
       paymentType,
       paymentStatus,
       address,
@@ -52,8 +53,9 @@ const getOrderItemsByOrderId = async (req, res) => {
         orderCode,
         createdAt,
         status,
-        userName,
+        customerName,
         email,
+        phone,
         paymentType,
         paymentStatus,
         address,
@@ -74,7 +76,8 @@ const getOrderItemsByOrderId = async (req, res) => {
       orderStatus: status,
       address,
       amountOrder,
-      userName,
+      customerName,
+      phone,
       email,
       paymentType,
       paymentStatus,
@@ -90,9 +93,9 @@ const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
   const userId = req.user.userId; // sau này sẽ lấy từ middleware req.userId
   const cartId = req.cartId; // từ middleware
-  const address = req.body.address;
-  if (!address)
-    return res.status(400).json({ message: "Missing field address" });
+  const { customerName, email, phone, address } = req.body;
+  if (!address || !customerName || !email || !phone)
+    return res.status(400).json({ message: "Missing field" });
 
   const connection = await pool.getConnection();
 
@@ -104,7 +107,14 @@ const createOrder = async (req, res) => {
 
     await connection.beginTransaction(); // Khởi tạo transaction
     //Tao order
-    const orderId = await orderService.createOrder(connection, userId, address);
+    const orderId = await orderService.createOrder(
+      connection,
+      userId,
+      customerName,
+      email,
+      phone,
+      address
+    );
 
     // Tinh cac gia tri de dua vao tao orderItem
     const { orderValues, totalPriceOrder } = calculateOrderValues(
@@ -112,15 +122,13 @@ const createOrder = async (req, res) => {
       orderId
     );
 
-    const result = await orderItemService.createOrderItem(
-      connection,
-      orderValues
-    );
+    await orderItemService.createOrderItem(connection, orderValues);
 
     const paymentTypeDefault = "COD";
     const transactionDefault = "COD";
     const paymentStatusDefault = "pending";
     await paymentService.createPayment(
+      connection,
       orderId,
       paymentTypeDefault,
       totalPriceOrder,

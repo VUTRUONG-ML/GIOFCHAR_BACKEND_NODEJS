@@ -7,6 +7,9 @@ const getOrderItemsByOrderId = async (orderId) => {
         o.id AS orderId,
         o.orderCode,
         o.createdAt,
+        o.customerName,
+        o.email,
+        o.phone,
         o.address,
         o.status,
         
@@ -19,13 +22,9 @@ const getOrderItemsByOrderId = async (orderId) => {
         f.image,
         f.price,
         
-        u.userName,
-        u.email,
-        
         p.paymentType,
         p.status as paymentStatus
       FROM orders o
-      JOIN users u ON o.userID = u.id 
       JOIN order_items oi ON o.id = oi.orderID
       JOIN foods f ON oi.foodID = f.id 
       JOIN payments p ON o.id = p.orderID
