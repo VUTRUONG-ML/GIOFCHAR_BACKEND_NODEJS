@@ -5,6 +5,7 @@ const cartService = require("../services/cart.service");
 const paymentService = require("../services/payment.service");
 const { calculateOrderValues } = require("../utils/order.util");
 const pool = require("../config/db");
+const { deductStockForOrder } = require("../services/food.service");
 
 const getAllOrders = async (req, res) => {
   try {
@@ -100,12 +101,19 @@ const createOrder = async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
+    await connection.beginTransaction(); // Khởi tạo transaction
+
     //Lay ve cartItem cua nguoi dung hien tai
-    const cartItems = await cartItemService.getCartItemsByCartId(cartId, pool);
+    const cartItems = await cartItemService.getCartItemsByCartId(
+      cartId,
+      connection
+    );
     if (cartItems.length === 0)
       return res.status(400).json({ message: "Empty cart items" });
 
-    await connection.beginTransaction(); // Khởi tạo transaction
+    // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
+    await deductStockForOrder(connection, cartItems);
+
     //Tao order
     const orderId = await orderService.createOrder(
       connection,
@@ -147,6 +155,19 @@ const createOrder = async (req, res) => {
   } catch (err) {
     await connection.rollback(); // rollback nếu lỗi
     console.error(">>>>> CONTROLLER ERROR Transaction failed:", err);
+
+    if (err.message === "OUT_OF_STOCK") {
+      return res
+        .status(409)
+        .json({ message: "Some products are out of stock." });
+    }
+
+    if (err.message === "QUANTITY_ORDER_NEGATIVE") {
+      return res.status(400).json({
+        message: "The quantity of products ordered must not be negative.",
+      });
+    }
+
     res.status(500).json({ message: "Server error", error: err.message });
   } finally {
     connection.release();

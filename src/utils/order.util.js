@@ -3,10 +3,12 @@ const calculateOrderValues = (cartItems, orderId) => {
   const orderValues = cartItems.map((item) => {
     const totalPriceItem = item.quantity * item.price;
     totalPriceOrder += totalPriceItem;
+    if (item.quantity < 0) throw new Error("QUANTITY_ORDER_NEGATIVE");
     return [orderId, item.foodId, item.quantity, totalPriceItem];
   });
   return { orderValues, totalPriceOrder };
 };
+
 function generateOrderCode(orderId) {
   const year = new Date().getFullYear();
   const padded = orderId.toString().padStart(6, "0");

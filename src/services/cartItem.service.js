@@ -6,13 +6,13 @@ const getCartItemsByCartId = async (cartId, conn) => {
   try {
     const [cartItems] = await conn.execute(
       `SELECT 
-            ci.id AS cartItemsId, 
-            f.id  AS foodId,
-            f.foodName,
-            f.image,
-            f.price,
-            ci.quantity,
-            ci.cartID AS cartID
+          ci.id AS cartItemsId, 
+          f.id  AS foodId,
+          f.foodName,
+          f.image,
+          f.price,
+          ci.quantity,
+          ci.cartID AS cartID
         FROM cart_items ci 
         JOIN foods f ON ci.foodID = f.id 
         WHERE ci.cartID = ?`,

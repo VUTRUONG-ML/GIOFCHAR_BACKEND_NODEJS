@@ -223,6 +223,50 @@ const filterFood = async (preference, budget, quantity) => {
   }
 };
 
+const getStock = async (conn, foodId, { forUpdate = false }) => {
+  try {
+    const isLock = forUpdate ? "FOR UPDATE" : "";
+    const [result] = await conn.execute(
+      `SELECT stock FROM foods WHERE id = ? ${isLock}`,
+      [foodId]
+    );
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR get stock:", error.message);
+    throw error;
+  }
+};
+
+const updateStock = async (conn, foodId, quantityOrder) => {
+  try {
+    const [result] = await conn.execute(
+      `
+      UPDATE foods
+      SET stock = stock - ?
+      WHERE id = ? AND stock >= ?
+      `,
+      [quantityOrder, foodId, quantityOrder]
+    );
+    return result.affectedRows === 1 ? true : false;
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR update stock:", error.message);
+    throw error;
+  }
+};
+
+const deductStockForOrder = async (conn, cartItems) => {
+  try {
+    for (const item of cartItems) {
+      const updated = await updateStock(conn, item.foodId, item.quantity);
+      if (!updated) throw new Error("OUT_OF_STOCK");
+    }
+    return true;
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR deduct stock:", error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllFoods,
   getAllFoodsAdmin,
@@ -232,4 +276,7 @@ module.exports = {
   deleteFoodById,
   searchFood,
   filterFood,
+  getStock,
+  updateStock,
+  deductStockForOrder,
 };
