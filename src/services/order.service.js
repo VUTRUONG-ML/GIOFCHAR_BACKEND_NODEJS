@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const { generateOrderCode } = require("../utils/order.util");
+const { switchCustomer } = require("../utils/switchCustomer");
 const { validateOwner } = require("./validators");
 
 const getAllOrders = async () => {
@@ -131,11 +132,12 @@ const deleteOrder = async (orderId) => {
   }
 };
 
-const getOrderByIdAndUser = async (orderId, userId) => {
+const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
   try {
+    const { field, value } = switchCustomer({ userId, guestToken });
     const [result] = await pool.execute(
-      "SELECT * FROM orders WHERE id = ? AND userID = ?",
-      [orderId, userId]
+      `SELECT * FROM orders WHERE id = ? AND ${field} = ?`,
+      [orderId, value]
     );
     return result.length > 0 ? result[0] : null;
   } catch (err) {

@@ -11,6 +11,7 @@ const userMiddleware = require("../middlewares/user.middleware");
 const cartMiddleware = require("../middlewares/cart.middleware");
 const orderController = require("../controllers/order.controller");
 
+// Xóa order dành cho admin
 router.delete(
   "/:orderId",
   requireAuth,
@@ -18,18 +19,23 @@ router.delete(
   orderController.deleteOrder
 );
 
+// Hủy order dành cho user và khách
 router.put(
   "/:orderId/cancel",
-  requireAuth,
+  optionalAuth,
   authorizeOrderAccess,
   orderController.cancelOrder
 );
+
+// Cập nhật trạng thái order dành cho admin
 router.put(
   "/:orderId/status",
   requireAuth,
   userMiddleware.checkAdmin,
   orderController.updateOrderStatus
 );
+
+// Tạo order dành cho user
 router.post(
   "/user/cod",
   requireAuth,
@@ -37,6 +43,7 @@ router.post(
   orderController.createOrder
 );
 
+// Tạo order dành cho khách
 router.post(
   "/guest/cod",
   optionalAuth,
@@ -44,13 +51,18 @@ router.post(
   orderController.createOrder
 );
 
+// Xem chi tiết item bên trong orderid có thể là khách, user, admin
 router.get(
   "/:orderId/detail",
-  requireAuth,
+  optionalAuth,
   authorizeOrderAccess,
   orderController.getOrderItemsByOrderId
 );
+
+// Xem tất cả order của chính bản thân dành cho user
 router.get("/user/my-orders", requireAuth, orderController.getOrdersByUserId);
+
+// Xem tất cả order của user đó dành cho admin
 router.get(
   "/user/:userId",
   requireAuth,

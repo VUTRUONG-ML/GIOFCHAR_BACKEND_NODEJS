@@ -38,11 +38,14 @@ const requireAuth = (req, res, next) => {
 };
 
 const authorizeOrderAccess = async (req, res, next) => {
-  const userId = req.user.userId;
+  const { userId, guestToken } = req.user;
   const { orderId } = req.params;
   if (req.user.role === "admin") return next();
   try {
-    const order = await orderService.getOrderByIdAndUser(orderId, userId);
+    const order = await orderService.getOrderByIdAndUser(orderId, {
+      userId,
+      guestToken,
+    });
     if (!order)
       return res.status(403).json({ message: "You do not have access" });
 
