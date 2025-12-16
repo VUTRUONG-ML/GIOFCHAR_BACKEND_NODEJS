@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const { generateOrderCode } = require("../utils/order.util");
+const { validateOwner } = require("./validators");
 
 const getAllOrders = async () => {
   try {
@@ -69,16 +70,27 @@ const getOrdersByUserId = async (userId) => {
 
 const createOrder = async (
   connection,
-  userId,
+  { userId, guestToken },
   customerName,
   email,
   phone,
   address
 ) => {
   try {
+    validateOwner({ userId, guestToken });
+
+    let field, value;
+    if (userId) {
+      field = "userID";
+      value = userId;
+    } else {
+      field = "guestToken";
+      value = guestToken;
+    }
+
     const [result] = await connection.execute(
-      `INSERT INTO orders (userID, customerName, email, phone, address) VALUES (?, ?, ?, ?, ?)`,
-      [userId, customerName, email, phone, address]
+      `INSERT INTO orders (${field}, customerName, email, phone, address) VALUES (?, ?, ?, ?, ?)`,
+      [value, customerName, email, phone, address]
     );
 
     const orderId = result.insertId;

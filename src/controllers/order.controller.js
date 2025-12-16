@@ -92,7 +92,7 @@ const getOrderItemsByOrderId = async (req, res) => {
 
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
-  const userId = req.user.userId; // sau này sẽ lấy từ middleware req.userId
+  const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
   const cartId = req.cartId; // từ middleware
   const { customerName, email, phone, address } = req.body;
   if (!address || !customerName || !email || !phone)
@@ -117,7 +117,7 @@ const createOrder = async (req, res) => {
     //Tao order
     const orderId = await orderService.createOrder(
       connection,
-      userId,
+      { userId, guestToken },
       customerName,
       email,
       phone,

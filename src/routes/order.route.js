@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   requireAuth,
   authorizeOrderAccess,
+  optionalAuth,
 } = require("../middlewares/auth.middleware");
 
 const userMiddleware = require("../middlewares/user.middleware");
@@ -30,11 +31,19 @@ router.put(
   orderController.updateOrderStatus
 );
 router.post(
-  "/cod",
+  "/user/cod",
   requireAuth,
   cartMiddleware.resolveCart,
   orderController.createOrder
 );
+
+router.post(
+  "/guest/cod",
+  optionalAuth,
+  cartMiddleware.resolveCart,
+  orderController.createOrder
+);
+
 router.get(
   "/:orderId/detail",
   requireAuth,

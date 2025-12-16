@@ -5,11 +5,10 @@ import pool from "../config/db.js";
 
 export const resolveCart = async (req, res, next) => {
   try {
+    const { guestToken: incomingGuestToken, userId } = req.user ?? {};
     let cart;
-    let guestToken = req.headers["x-guest-token"];
-
-    if (req.user) {
-      const userId = req.user.userId;
+    let guestToken = incomingGuestToken;
+    if (userId) {
       cart = await cartService.ensureCart({ userId });
     } else {
       if (!guestToken) {

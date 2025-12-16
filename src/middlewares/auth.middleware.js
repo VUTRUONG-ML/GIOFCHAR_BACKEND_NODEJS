@@ -5,14 +5,19 @@ const orderService = require("../services/order.service");
 
 const optionalAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
-  if (!token) return next();
+  if (!token) {
+    const guestToken = req.headers["x-guest-token"];
+    req.user = { userId: null, guestToken, role: "user" };
+    return next();
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { userId, role }
+    req.user = { ...decoded, guestToken: null }; // { userId, role }
   } catch (err) {
     // token sai coi như guest
     console.log("Optional auth failed:", err.message);
+    req.user = { userId: null, guestToken, role: "user" };
   }
 
   next();
@@ -24,7 +29,7 @@ const requireAuth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // {userId, role}
+    req.user = { ...decoded, guestToken: null }; // {userId, role}
     return next();
   } catch (err) {
     console.log(">>>>> AUTH MIDDLE WARE ERROR", err.message);

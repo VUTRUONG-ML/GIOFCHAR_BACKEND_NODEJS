@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { validateCartOwner } = require("./cart.validators");
+const { validateOwner } = require("./validators");
 const cartItemService = require("./cartItem.service");
 
 const getAllCarts = async () => {
@@ -12,7 +12,7 @@ const getAllCarts = async () => {
 };
 
 const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
-  validateCartOwner({ userId, guestToken });
+  validateOwner({ userId, guestToken });
   const isLock = forUpdate ? "FOR UPDATE" : "";
   const field = userId ? "userID" : "guestToken";
   const value = userId ?? guestToken;
@@ -30,7 +30,7 @@ const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
 };
 
 const createCart = async ({ userId, guestToken }) => {
-  validateCartOwner({ userId, guestToken });
+  validateOwner({ userId, guestToken });
 
   const field = userId ? "userID" : "guestToken";
   const value = userId ?? guestToken;
@@ -162,7 +162,7 @@ const clearCart = async (cartId, conn) => {
 };
 
 const ensureCart = async ({ userId, guestToken }) => {
-  validateCartOwner({ userId, guestToken });
+  validateOwner({ userId, guestToken });
   try {
     let cart = await getCart({ userId, guestToken }, { conn: pool });
     if (!cart) cart = await createCart({ userId, guestToken });
