@@ -95,4 +95,24 @@ Lấy thông tin tài khoản hiện tại (yêu cầu đăng nhập)
 }
 ```
 
+## 5. Botchat APIs
+
+### POST /botchat
+Chatbot tư vấn / hỗ trợ khách hàng
+#### Body
+```json
+{
+  "message": "string"
+}
+```
+
+#### Response(200)
+```json
+{
+  "intent": "string",
+  "reply": "string"
+}
+```
+
+
 
