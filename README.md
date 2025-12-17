@@ -239,3 +239,143 @@ Xóa toàn bộ sản phẩm trong giỏ hàng
   "message": "Clear cart successful"
 }
 ```
+
+## 7. Category APIs
+
+### 7.1 GET /categories
+
+Lấy danh sách danh mục sản phẩm  
+(Có thể đăng nhập hoặc không đăng nhập)
+
+> Headers: Authorization (optional), x-guest-token
+
+#### Response (200) – Admin
+
+```json
+{
+  "quantity": "number",
+  "categories": [
+    {
+      "categoryID": "number",
+      "categoryName": "string",
+      "categoryDescription": "string",
+      "quantityFood": "number"
+    }
+  ]
+}
+```
+
+#### Response (200) - Client
+
+```json
+{
+  "quantity": "number",
+  "categories": [
+    {
+      "categoryID": "number",
+      "categoryName": "string"
+    }
+  ]
+}
+```
+
+### 7.2 GET /categories/:categoryId
+
+Lấy chi tiết thông tin danh mục theo ID  
+(Chỉ dành cho Admin)
+
+> Headers: Authorization
+
+#### Params
+
+| Key        | Type   |
+| ---------- | ------ |
+| categoryId | number |
+
+#### Response (200)
+
+```json
+{
+  "id": "number",
+  "categoryName": "string",
+  "categoryDescription": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### 7.3 POST /categories
+
+Tạo mới danh mục  
+(Chỉ dành cho Admin)
+
+> Headers: Authorization
+
+#### Body
+
+```json
+{
+  "categoryName": "string",
+  "categoryDescription": "string"
+}
+```
+
+#### Response (201)
+
+```json
+{
+  "message": "Create category successful",
+  "categoryId": "number"
+}
+```
+
+### 7.4 PUT /categories/:categoryId
+
+Cập nhật thông tin danh mục
+(Chỉ dành cho Admin)
+
+> Headers: Authorization
+
+#### Params
+
+| Key        | Type   |
+| ---------- | ------ |
+| categoryId | number |
+
+#### Body
+
+```json
+{
+  "categoryName": "string",
+  "categoryDescription": "string"
+}
+```
+
+#### Response (201)
+
+```json
+{
+  "message": "Update category successful"
+}
+```
+
+### 7.5 DELETE /categories/:categoryId
+
+Xóa danh mục theo ID
+(Chỉ dành cho Admin)
+
+> Headers: Authorization
+
+#### Params
+
+| Key        | Type   |
+| ---------- | ------ |
+| categoryId | number |
+
+#### Response (200)
+
+```json
+{
+  "message": "Delete category successful"
+}
+```

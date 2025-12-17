@@ -17,8 +17,8 @@ router.put(
   checkAdmin,
   categoryController.updateCategoryById
 );
-router.get("/:categoryId", requireAuth, categoryController.getCategoryById);
 router.post("/", requireAuth, checkAdmin, categoryController.createCategory);
+router.get("/:categoryId", requireAuth, categoryController.getCategoryById);
 router.get("/", optionalAuth, categoryController.getAllCategories);
 
 module.exports = router;
