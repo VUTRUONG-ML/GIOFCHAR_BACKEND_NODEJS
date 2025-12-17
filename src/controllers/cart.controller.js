@@ -20,7 +20,7 @@ const getAllCartItems = async (req, res) => {
     if (!cartItems.length)
       return res.status(200).json({ message: "Empty carts", cartItems });
 
-    res.status(200).json(cartItems);
+    res.status(200).json({ message: "Success", cartItems });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
