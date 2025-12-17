@@ -50,11 +50,11 @@ const createCategory = async (req, res) => {
 const getCategoryById = async (req, res) => {
   const categoryId = req.params.categoryId;
   try {
-    const categories = await categoryService.getCategoryById(categoryId);
-    if (!categories.length)
+    const category = await categoryService.getCategoryById(categoryId);
+    if (!category)
       return res.status(404).json({ message: "Category not found" });
 
-    res.status(200).json(categories);
+    res.status(200).json(category);
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });

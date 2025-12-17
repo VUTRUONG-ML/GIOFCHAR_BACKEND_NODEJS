@@ -80,15 +80,15 @@ const getFoodById = async (req, res) => {
   const foodId = req.params.foodId;
   const { role } = req.user;
   try {
-    let foods;
+    let food;
     if (role === "admin") {
-      foods = await foodService.getFoodById(foodId, { isAdmin: true });
+      food = await foodService.getFoodById(foodId, { isAdmin: true });
     } else {
-      foods = await foodService.getFoodById(foodId, {});
+      food = await foodService.getFoodById(foodId, {});
     }
-    if (!foods) return res.status(404).json({ message: "Food not found" });
+    if (!food) return res.status(404).json({ message: "Food not found" });
 
-    res.status(200).json(foods);
+    res.status(200).json(food);
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });

@@ -39,7 +39,7 @@ const getCategoryById = async (categoryId) => {
       "SELECT * FROM categories WHERE id = ?",
       [categoryId]
     );
-    return categories;
+    return categories.length > 0 ? categories[0] : null;
   } catch (err) {
     console.log(">>>> SERVICE ERROR", err.message);
     throw err;

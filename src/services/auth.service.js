@@ -39,7 +39,7 @@ const login = async (email, password) => {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
     return {
       access_token: token,
       user: userWithoutPassword,

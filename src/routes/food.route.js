@@ -46,6 +46,6 @@ router.post(
   foodController.createFood
 );
 
-router.get("/", optionalAuth, foodController.getAllFoods); // client xem
+router.get("/", optionalAuth, foodController.getAllFoods);
 
 module.exports = router;
