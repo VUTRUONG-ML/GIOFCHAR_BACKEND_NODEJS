@@ -499,8 +499,6 @@ Tạo mới món ăn
 | categoryID      | Text | ID danh mục         |
 | imageFood       | File | Ảnh món ăn          |
 
----
-
 #### Response (201) – Success
 
 ```json
@@ -525,8 +523,6 @@ Cập nhật thông tin món ăn
 | ------ | ------ | ----------- |
 | foodId | number | ID món ăn   |
 
----
-
 #### Body (form-data)
 
 | Key             | Type | Required | Description              |
@@ -538,8 +534,6 @@ Cập nhật thông tin món ăn
 | isActive        | Text | No       | Trạng thái hiển thị      |
 | categoryID      | Text | No       | ID danh mục              |
 | imageFood       | File | No       | Ảnh món ăn (có thể null) |
-
----
 
 #### Response (200) – Success
 
@@ -556,20 +550,266 @@ Xóa món ăn
 
 > Headers: Authorization
 
----
-
 #### Params
 
 | Param  | Type   | Description |
 | ------ | ------ | ----------- |
 | foodId | number | ID món ăn   |
 
----
-
 #### Response (200) – Success
 
 ```json
 {
   "message": "Delete food successful"
+}
+```
+
+---
+
+## 9. Order APIs
+
+### 9.1 GET /orders
+
+Lấy danh sách tất cả đơn hàng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization
+
+#### Response (200) – Success
+
+```json
+{
+  "total": "number",
+  "orders": [
+    {
+      "orderId": "number",
+      "orderCode": "string",
+      "status": "string",
+      "paymentStatus": "string",
+      "customerName": "string",
+      "email": "string",
+      "phone": "string",
+      "deliveryAddress": "string",
+      "time": "string",
+      "totalQuantity": "number",
+      "amount": "number"
+    }
+  ]
+}
+```
+
+### 9.2 GET /orders/user/:userId
+
+Xem tất cả đơn hàng của một người dùng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization
+
+#### Params
+
+| Param  | Type   | Description   |
+| ------ | ------ | ------------- |
+| userId | number | ID người dùng |
+
+#### Response (200) – Success
+
+```json
+{
+  "total": "number",
+  "orders": [
+    {
+      "orderId": "number",
+      "orderCode": "string",
+      "status": "string",
+      "paymentStatus": "string",
+      "deliveryAddress": "string",
+      "time": "string"
+    }
+  ]
+}
+```
+
+### 9.3 GET /orders/user/my-orders
+
+Xem tất cả đơn hàng của chính người dùng hiện tại  
+(Yêu cầu đăng nhập)
+
+> Headers: Authorization
+
+#### Response (200) – Success
+
+```json
+{
+  "total": "number",
+  "orders": [
+    {
+      "orderId": "number",
+      "orderCode": "string",
+      "status": "string",
+      "paymentStatus": "string",
+      "deliveryAddress": "string",
+      "time": "string"
+    }
+  ]
+}
+```
+
+### 9.4 GET /orders/:orderId/detail
+
+Xem chi tiết các sản phẩm trong đơn hàng  
+(Khách / User / Admin đều có thể truy cập nếu được cấp quyền)
+
+> Headers:
+>
+> - Authorization (optional)
+> - x-guest-token (optional)
+
+#### Params
+
+| Param   | Type   | Description |
+| ------- | ------ | ----------- |
+| orderId | number | ID đơn hàng |
+
+#### Response (200) – Success
+
+```json
+{
+  "totalItem": "number",
+  "orderCode": "string",
+  "createdAt": "string",
+  "orderStatus": "string",
+  "address": "string",
+  "amountOrder": "number",
+  "customerName": "string",
+  "phone": "string",
+  "email": "string",
+  "paymentType": "string",
+  "paymentStatus": "string",
+  "items": [
+    {
+      "orderId": "number",
+      "orderItemId": "number",
+      "quantity": "number",
+      "totalPriceOnOneItem": "number",
+      "foodId": "number",
+      "foodName": "string",
+      "image": "string",
+      "price": "number"
+    }
+  ]
+}
+```
+
+### 9.5 POST /orders/user/cod
+
+Tạo đơn hàng (thanh toán COD) dành cho người dùng đã đăng nhập
+
+> Headers: Authorization
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Create order successful",
+  "orderId": "number",
+  "totalPriceOrder": "number"
+}
+```
+
+### 9.6 POST /orders/guest/cod
+
+Tạo đơn hàng (thanh toán COD) dành cho khách
+(Không cần đăng nhập)
+
+> Headers: x-guest-token
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Create order successful",
+  "orderId": "number",
+  "totalPriceOrder": "number"
+}
+```
+
+### 9.7 PUT /orders/:orderId/cancel
+
+Hủy đơn hàng  
+(Dành cho khách và người dùng – chỉ được hủy khi có quyền truy cập đơn hàng)
+
+> Headers:
+>
+> - Authorization (optional)
+> - x-guest-token (optional)
+
+#### Params
+
+| Param   | Type   | Description |
+| ------- | ------ | ----------- |
+| orderId | number | ID đơn hàng |
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Cancel order successful"
+}
+```
+
+### 9.8 PUT /orders/:orderId/status
+
+Cập nhật trạng thái đơn hàng
+(Chỉ dành cho admin)
+
+> Headers: Authorization (optional)
+
+#### Params
+
+| Param   | Type   | Description |
+| ------- | ------ | ----------- |
+| orderId | number | ID đơn hàng |
+
+#### Body
+
+```json
+{
+  "status": "string"
+}
+```
+
+##### status hợp lệ
+
+- `unconfirmed`
+- `delivering`
+- `delivered`
+- `cancelled`
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Update order successful"
+}
+```
+
+### 9.9 DELETE /orders/:orderId
+
+Xóa đơn hàng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization
+
+#### Params
+
+| Param   | Type   | Description |
+| ------- | ------ | ----------- |
+| orderId | number | ID đơn hàng |
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Delete order successful"
 }
 ```
