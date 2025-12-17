@@ -8,7 +8,6 @@ const getAllFoodsAdmin = async () => {
         f.id as foodId,
         foodName, 
         foodDescription,
-        ingredients,
         price,
         stock,
         isActive,
@@ -27,8 +26,21 @@ const getAllFoodsAdmin = async () => {
 
 const getAllFoods = async () => {
   try {
-    // For pool initialization, see above
-    const [foods] = await pool.execute(`SELECT * FROM foods`);
+    const [foods] = await pool.execute(`
+      SELECT 
+        f.id as foodId,
+        foodName, 
+        price,
+        discount,
+        rating,
+        isActive,
+        image,
+        f.categoryID,
+        
+        c.categoryName
+      FROM foods f
+      JOIN categories c ON f.categoryID = c.id
+    `);
     return foods;
   } catch (err) {
     console.log(">>>>> Service error", err.message);
@@ -88,7 +100,10 @@ const createFood = async (
   }
 };
 
-const getFoodById = async (foodId) => {
+const getFoodById = async (foodId, { isAdmin = false }) => {
+  const field = isAdmin
+    ? "stock, imagePublicId,"
+    : "discount, rating, ingredients,";
   try {
     // For pool initialization, see above
     const [foods] = await pool.execute(
@@ -96,11 +111,10 @@ const getFoodById = async (foodId) => {
         f.id as foodId,
         foodName, 
         foodDescription,
+        ${field}
         price,
-        stock,
         isActive,
         image,
-        imagePublicId,
         f.categoryID,
         
         c.categoryName

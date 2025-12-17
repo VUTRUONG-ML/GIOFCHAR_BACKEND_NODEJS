@@ -5,9 +5,10 @@ const orderService = require("../services/order.service");
 
 const optionalAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
+  const guestToken = req.headers["x-guest-token"];
+
   if (!token) {
-    const guestToken = req.headers["x-guest-token"];
-    req.user = { userId: null, guestToken, role: "user" };
+    req.user = { userId: null, guestToken: guestToken ?? null, role: "user" };
     return next();
   }
 
@@ -16,8 +17,8 @@ const optionalAuth = (req, res, next) => {
     req.user = { ...decoded, guestToken: null }; // { userId, role }
   } catch (err) {
     // token sai coi như guest
-    console.log("Optional auth failed:", err.message);
-    req.user = { userId: null, guestToken, role: "user" };
+    console.log(">>>>> Optional auth failed:", err.message);
+    req.user = { userId: null, guestToken: guestToken ?? null, role: "user" };
   }
 
   next();

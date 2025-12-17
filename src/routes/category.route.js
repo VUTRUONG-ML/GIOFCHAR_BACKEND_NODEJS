@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { requireAuth } = require("../middlewares/auth.middleware");
+const { requireAuth, optionalAuth } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
 const categoryController = require("../controllers/category.controller");
 
@@ -19,6 +19,6 @@ router.put(
 );
 router.get("/:categoryId", requireAuth, categoryController.getCategoryById);
 router.post("/", requireAuth, checkAdmin, categoryController.createCategory);
-router.get("/", requireAuth, categoryController.getAllCategories);
+router.get("/", optionalAuth, categoryController.getAllCategories);
 
 module.exports = router;

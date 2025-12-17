@@ -1,18 +1,16 @@
 const foodService = require("../services/food.service");
 const safeDeleteCloudinary = require("../utils/safeCloudinary");
-const getAllFoodsAdmin = async (req, res) => {
-  try {
-    const foods = await foodService.getAllFoodsAdmin();
 
-    res.status(200).json({ quantity: foods.length, foods });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
 const getAllFoods = async (req, res) => {
+  const { role } = req.user;
   try {
-    const foods = await foodService.getAllFoods();
+    let foods;
+
+    if (role === "admin") {
+      foods = await foodService.getAllFoodsAdmin();
+    } else {
+      foods = await foodService.getAllFoods();
+    }
 
     if (!foods.length)
       return res.status(404).json({ message: "Empty Foods list" });
@@ -80,8 +78,14 @@ const createFood = async (req, res) => {
 
 const getFoodById = async (req, res) => {
   const foodId = req.params.foodId;
+  const { role } = req.user;
   try {
-    const foods = await foodService.getFoodById(foodId);
+    let foods;
+    if (role === "admin") {
+      foods = await foodService.getFoodById(foodId, { isAdmin: true });
+    } else {
+      foods = await foodService.getFoodById(foodId, {});
+    }
     if (!foods) return res.status(404).json({ message: "Food not found" });
 
     res.status(200).json(foods);
@@ -183,7 +187,6 @@ const deleteFoodById = async (req, res) => {
 
 module.exports = {
   getAllFoods,
-  getAllFoodsAdmin,
   createFood,
   getFoodById,
   updateFoodById,
