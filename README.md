@@ -240,6 +240,8 @@ Xóa toàn bộ sản phẩm trong giỏ hàng
 }
 ```
 
+---
+
 ## 7. Category APIs
 
 ### 7.1 GET /categories
@@ -377,5 +379,197 @@ Xóa danh mục theo ID
 ```json
 {
   "message": "Delete category successful"
+}
+```
+
+---
+
+## 8. Food APIs
+
+### 8.1 GET /foods
+
+Lấy danh sách món ăn  
+(Có thể đăng nhập hoặc không đăng nhập)
+
+> Headers: Authorization (optional)
+
+#### Response (200) – Admin
+
+```json
+{
+  "quantity": "number",
+  "foods": [
+    {
+      "foodId": "number",
+      "foodName": "string",
+      "foodDescription": "string",
+      "price": "number",
+      "stock": "number",
+      "isActive": "number",
+      "image": "string",
+      "categoryID": "number",
+      "categoryName": "string"
+    }
+  ]
+}
+```
+
+#### Response (200) – Client
+
+```json
+{
+  "quantity": "number",
+  "foods": [
+    {
+      "foodId": "number",
+      "foodName": "string",
+      "price": "number",
+      "discount": "number",
+      "rating": "number",
+      "isActive": "number",
+      "image": "string",
+      "categoryID": "number",
+      "categoryName": "string"
+    }
+  ]
+}
+```
+
+### 8.2 GET /foods/:foodId
+
+Lấy chi tiết thông tin món ăn  
+(Có thể đăng nhập hoặc không đăng nhập)
+
+> Headers: Authorization (optional)
+
+#### Response (200) – Admin
+
+```json
+{
+  "foodId": "number",
+  "foodName": "string",
+  "foodDescription": "string",
+  "stock": "number",
+  "imagePublicId": "string",
+  "price": "number",
+  "isActive": "number",
+  "image": "string",
+  "categoryID": "number",
+  "categoryName": "string"
+}
+```
+
+#### Response (200) - Client
+
+```json
+{
+  "foodId": "number",
+  "foodName": "string",
+  "foodDescription": "string",
+  "discount": "number",
+  "rating": "number",
+  "ingredients": "string",
+  "price": "number",
+  "isActive": "number",
+  "image": "string",
+  "categoryID": "number",
+  "categoryName": "string"
+}
+```
+
+### 8.3 POST /foods
+
+Tạo mới món ăn  
+(Chỉ dành cho admin)
+
+> Headers: Authorization  
+> Content-Type: multipart/form-data
+
+#### Body (form-data)
+
+| Key             | Type | Description         |
+| --------------- | ---- | ------------------- |
+| foodName        | Text | Tên món ăn          |
+| foodDescription | Text | Mô tả món ăn        |
+| price           | Text | Giá món ăn          |
+| discount        | Text | Giảm giá (%)        |
+| rating          | Text | Đánh giá            |
+| stock           | Text | Số lượng tồn        |
+| isActive        | Text | Trạng thái hiển thị |
+| categoryID      | Text | ID danh mục         |
+| imageFood       | File | Ảnh món ăn          |
+
+---
+
+#### Response (201) – Success
+
+```json
+{
+  "message": "Create food successful",
+  "foodId": "number"
+}
+```
+
+### 8.4 PUT /foods/:foodId
+
+Cập nhật thông tin món ăn  
+(Chỉ dành cho admin)
+
+> Headers: Authorization  
+> Content-Type: multipart/form-data  
+> imageFood: **optional**
+
+#### Params
+
+| Param  | Type   | Description |
+| ------ | ------ | ----------- |
+| foodId | number | ID món ăn   |
+
+---
+
+#### Body (form-data)
+
+| Key             | Type | Required | Description              |
+| --------------- | ---- | -------- | ------------------------ |
+| foodName        | Text | No       | Tên món ăn               |
+| foodDescription | Text | No       | Mô tả món ăn             |
+| price           | Text | No       | Giá món ăn               |
+| stock           | Text | No       | Số lượng tồn             |
+| isActive        | Text | No       | Trạng thái hiển thị      |
+| categoryID      | Text | No       | ID danh mục              |
+| imageFood       | File | No       | Ảnh món ăn (có thể null) |
+
+---
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Update food successful"
+}
+```
+
+### 8.5 DELETE /foods/:foodId
+
+Xóa món ăn  
+(Chỉ dành cho admin)
+
+> Headers: Authorization
+
+---
+
+#### Params
+
+| Param  | Type   | Description |
+| ------ | ------ | ----------- |
+| foodId | number | ID món ăn   |
+
+---
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Delete food successful"
 }
 ```

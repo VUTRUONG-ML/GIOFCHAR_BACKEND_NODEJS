@@ -7,9 +7,9 @@ const checkCategoryExists = async (req, res, next) => {
   }
 
   try {
-    const categories = await categoryService.getCategoryById(categoryID);
+    const category = await categoryService.getCategoryById(categoryID);
 
-    if (!categories.length)
+    if (!category)
       return res.status(404).json({ message: "Category not found" });
     next(); // Cho phép đi tiếp nếu category tồn tại
   } catch (err) {

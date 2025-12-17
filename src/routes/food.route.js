@@ -33,7 +33,6 @@ router.put(
   checkCategory,
   foodController.updateFoodById
 );
-router.get("/:foodId", optionalAuth, foodController.getFoodById);
 router.post(
   "/",
   requireAuth,
@@ -45,7 +44,7 @@ router.post(
   checkCategory,
   foodController.createFood
 );
-
+router.get("/:foodId", optionalAuth, foodController.getFoodById);
 router.get("/", optionalAuth, foodController.getAllFoods);
 
 module.exports = router;
