@@ -813,3 +813,167 @@ Xóa đơn hàng
   "message": "Delete order successful"
 }
 ```
+
+---
+
+## 10. User APIs
+
+### 10.1 GET /users
+
+Lấy danh sách tất cả người dùng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization
+
+#### Response (200) – Success
+
+```json
+{
+  "totalUser": "number",
+  "users": [
+    {
+      "userId": "number",
+      "userName": "string",
+      "email": "string",
+      "phone": "string",
+      "registerDate": "string",
+      "isActiveAccount": "number",
+      "orderCount": "number"
+    }
+  ]
+}
+```
+
+### 10.2 GET /users/:userId
+
+Lấy thông tin chi tiết người dùng theo ID
+
+> Headers: Authorization
+
+#### Params
+
+| Param  | Type   | Description   |
+| ------ | ------ | ------------- |
+| userId | number | ID người dùng |
+
+#### Response (200) – Success
+
+```json
+{
+  "userName": "string",
+  "email": "string",
+  "phone": "string",
+  "address": "string",
+  "role": "string"
+}
+```
+
+### 10.3 POST /users
+
+Tạo mới người dùng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization  
+> Content-Type: application/json
+
+#### Body
+
+```json
+{
+  "userName": "string",
+  "email": "string",
+  "password": "string",
+  "phone": "string",
+  "address": "string"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "message": "Create user successful",
+  "userId": "number"
+}
+```
+
+### 10.4 PUT /users/updateMyInfo
+
+Cập nhật thông tin cá nhân của người dùng hiện tại  
+(Yêu cầu đăng nhập)
+
+> Headers: Authorization  
+> Content-Type: application/json
+
+#### Body
+
+```json
+{
+  "userName": "string",
+  "email": "string",
+  "phone": "string",
+  "address": "string"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "message": "Update user successful"
+}
+```
+
+### 10.5 PUT /users/:userId
+
+Cập nhật trạng thái tài khoản người dùng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization  
+> Content-Type: application/json
+
+#### Params
+
+| Param  | Type   | Description   |
+| ------ | ------ | ------------- |
+| userId | number | ID người dùng |
+
+#### Body
+
+```json
+{
+  "isActive": "number"
+}
+```
+
+> Ghi chú:
+> -"isActive: 1 (kích hoạt) | 0 (vô hiệu hóa)"
+
+#### Response (200)
+
+```json
+{
+  "message": "Update isActive user successful"
+}
+```
+
+### 10.6 DELETE /users/:userId
+
+Xóa người dùng  
+(Chỉ dành cho admin)
+
+> Headers: Authorization
+
+#### Params
+
+| Param  | Type   | Description   |
+| ------ | ------ | ------------- |
+| userId | number | ID người dùng |
+
+#### Response (200) – Success
+
+```json
+{
+  "message": "Delete user successful"
+}
+```
