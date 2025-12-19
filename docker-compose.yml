@@ -1,0 +1,58 @@
+services:
+  mysql:
+    image: mysql:5.7.40
+    container_name: mysql-giofchar-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - backend-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend-giofchar-server
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      HOST_NAME: ${HOST_NAME}
+
+      DB_HOST: mysql-giofchar-db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: 3306
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+    depends_on:
+      - mysql
+    networks:
+      - backend-net
+
+volumes:
+  mysql_data:
+
+networks:
+  backend-net:
+    driver: bridge
