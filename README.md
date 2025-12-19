@@ -1,6 +1,67 @@
 # Gio Cha Web – Backend API
 
-Backend API cho website bán giò chả – dùng cho FE call trực tiếp.
+## Backend API cho website bán giò chả – dùng cho FE call trực tiếp.
+
+---
+
+## Table of Contents
+
+1. [Base URL](#1-base-url)
+2. [Authentication](#2-authentication)
+3. [Common Headers](#3-common-headers)
+4. [Auth APIs](#4-auth-apis)
+
+   - 4.1 [GET /auth/account](#41-get-authaccount)
+   - 4.2 [POST /auth/login](#42-post-authlogin)
+   - 4.3 [POST /auth/register](#43-post-authregister)
+
+5. [Botchat APIs](#5-botchat-apis)
+
+6. [Cart APIs](#6-cart-apis)
+
+   - 6.1 [GET /cart/my-cartItems](#61-get-cartmy-cartitems)
+   - 6.2 [POST /cart/cartItem](#62-post-cartcartitem)
+   - 6.3 [DELETE /cart/:cartItemId](#63-delete-cartcartitemid)
+   - 6.4 [DELETE /cart](#64-delete-cart)
+
+7. [Category APIs](#7-category-apis)
+
+   - 7.1 [GET /categories](#71-get-categories)
+   - 7.2 [GET /categories/:categoryId](#72-get-categoriescategoryid)
+   - 7.3 [POST /categories](#73-post-categories)
+   - 7.4 [PUT /categories/:categoryId](#74-put-categoriescategoryid)
+   - 7.5 [DELETE /categories/:categoryId](#75-delete-categoriescategoryid)
+
+8. [Food APIs](#8-food-apis)
+
+   - 8.1 [GET /foods](#81-get-foods)
+   - 8.2 [GET /foods/:foodId](#82-get-foodsfoodid)
+   - 8.3 [POST /foods](#83-post-foods)
+   - 8.4 [PUT /foods/:foodId](#84-put-foodsfoodid)
+   - 8.5 [DELETE /foods/:foodId](#85-delete-foodsfoodid)
+
+9. [Order APIs](#9-order-apis)
+
+   - 9.1 [GET /orders](#91-get-orders)
+   - 9.2 [GET /orders/user/:userId](#92-get-ordersuseruserid)
+   - 9.3 [GET /orders/user/my-orders](#93-get-ordersusermy-orders)
+   - 9.4 [GET /orders/:orderId/detail](#94-get-ordersorderiddetail)
+   - 9.5 [POST /orders/user/cod](#95-post-ordersusercod)
+   - 9.6 [POST /orders/guest/cod](#96-post-ordersguestcod)
+   - 9.7 [PUT /orders/:orderId/cancel](#97-put-ordersorderidcancel)
+   - 9.8 [PUT /orders/:orderId/status](#98-put-ordersorderidstatus)
+   - 9.9 [DELETE /orders/:orderId](#99-delete-ordersorderid)
+
+10. [User APIs](#10-user-apis)
+
+    - 10.1 [GET /users](#101-get-users)
+    - 10.2 [GET /users/:userId](#102-get-usersuserid)
+    - 10.3 [POST /users](#103-post-users)
+    - 10.4 [PUT /users/updateMyInfo](#104-put-usersupdatemyinfo)
+    - 10.5 [PUT /users/:userId](#105-put-usersuserid)
+    - 10.6 [DELETE /users/:userId](#106-delete-usersuserid)
+
+11. [Error Responses](#11-error-responses)
 
 ---
 
