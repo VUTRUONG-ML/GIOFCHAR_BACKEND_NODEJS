@@ -143,7 +143,15 @@ Lấy thông tin tài khoản hiện tại (yêu cầu đăng nhập)
     "message": "Login successful",
     "data": {
         "access_token": "string",
-        "user": {...}
+        "user": {
+            "id": number,
+            "userName": "string",
+            "email": "string",
+            "phone": "string",
+            "address": null,
+            "role": "admin | user",
+            "isActive": boolean
+        }
     }
 }
 ```
