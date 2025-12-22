@@ -66,6 +66,8 @@ const handleIntentRouting = async (req, res, next) => {
     content: agentRes.ask,
   });
 
+  console.log(">>Chats:", CHAT_HISTORY);
+
   // Nếu chưa hỏi xong
   if (!agentRes.done) {
     return res.json({ intent, reply: agentRes.ask });

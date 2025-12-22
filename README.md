@@ -151,6 +151,7 @@ Lấy thông tin tài khoản hiện tại (yêu cầu đăng nhập)
             "address": null,
             "role": "admin | user",
             "isActive": boolean
+          }
         }
     }
 }
@@ -537,7 +538,7 @@ Lấy chi tiết thông tin món ăn
   "foodDescription": "string",
   "discount": "number",
   "rating": "number",
-  "ingredients": "string",
+  "ingredients": "string[]",
   "price": "number",
   "isActive": "number",
   "image": "string",

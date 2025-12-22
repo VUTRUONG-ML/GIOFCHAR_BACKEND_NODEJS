@@ -1,3 +1,4 @@
+const { FOOD_IMAGE_OPTIONS } = require("../constants/cloudinaryOptions");
 const { uploadImage, deleteImage } = require("../services/cloudinary.service");
 const fs = require("fs");
 const uploadToCloudinary = async (req, res, next) => {
@@ -6,12 +7,7 @@ const uploadToCloudinary = async (req, res, next) => {
     return next();
   }
   try {
-    const result = await uploadImage(req.file.path, {
-      folder: "GIOFCHAR_BACKEND_NODEJS_SQL",
-      use_filename: true,
-      unique_filename: false,
-      overwrite: true,
-    });
+    const result = await uploadImage(req.file.path, FOOD_IMAGE_OPTIONS);
     req.cloudinaryImage = result; // secure_url,public_id
   } catch (err) {
     console.error("Cloudinary upload failed:", err);

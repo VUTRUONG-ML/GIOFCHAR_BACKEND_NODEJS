@@ -81,7 +81,12 @@ const createFood = async (
       [
         foodName,
         foodDescription,
-        ingredients || "",
+        ingredients || [
+          "Thịt heo tươi",
+          "Da heo",
+          "Lá chuối",
+          "Gia vị truyền thống",
+        ],
         price,
         discount ?? 0,
         rating ?? 0,

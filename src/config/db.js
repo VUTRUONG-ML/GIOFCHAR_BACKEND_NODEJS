@@ -18,4 +18,18 @@ const pool = mysql.createPool({
   dateStrings: true,
 });
 
+async function checkDBConnection() {
+  try {
+    const connection = await pool.getConnection();
+    console.log(">>>>> MySQL connected:", process.env.DB_HOST);
+    connection.release();
+  } catch (err) {
+    console.error(">>>>> MySQL connection failed");
+    console.error(err);
+    process.exit(1); // fail fast
+  }
+}
+
+checkDBConnection();
+
 module.exports = pool;
