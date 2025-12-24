@@ -107,7 +107,7 @@ const createFood = async (
 
 const getFoodById = async (foodId, { isAdmin = false }) => {
   const field = isAdmin
-    ? "stock, imagePublicId,"
+    ? "stock, imagePublicId, discount,"
     : "discount, rating, ingredients,";
   try {
     // For pool initialization, see above

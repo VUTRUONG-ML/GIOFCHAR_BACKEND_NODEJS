@@ -52,7 +52,7 @@ const createCart = async ({ userId, guestToken }) => {
   }
 };
 
-const addToCart = async (foodId, quantity, cartId) => {
+const addToCart = async (foodId, delta, cartId) => {
   // Kiểm tra foodId đã có trong cartId chưa
   try {
     const cartItem = await cartItemService.findCartItem(
@@ -60,20 +60,36 @@ const addToCart = async (foodId, quantity, cartId) => {
       pool
     );
     if (!cartItem) {
-      await cartItemService.insertCartItem(cartId, foodId, quantity, pool);
+      const result = await cartItemService.insertCartItem(
+        cartId,
+        foodId,
+        delta,
+        pool
+      );
       return {
         message: "Added new item to cart",
         cartId: cartId,
-        foodId,
-        quantity,
+        cartItemId: result.insertId,
+        quantity: delta,
       };
     } else {
-      await cartItemService.updateCartItemQuantity(cartItem.id, quantity, pool);
+      const cartItemId = cartItem.id;
+      const newQuantity = cartItem.quantity + delta;
+      if (newQuantity <= 0) {
+        await cartItemService.deleteCartItem(cartItemId, cartId);
+        return {
+          message: "Remove item from cart successful",
+          cartId: cartId,
+          cartItemId,
+          quantity: 0,
+        };
+      }
+      await cartItemService.updateCartItemQuantity(cartItem.id, delta, pool);
       return {
         message: "Updated quantity item successful",
         cartId: cartId,
-        foodId,
-        quantity,
+        cartItemId,
+        quantity: newQuantity,
       };
     }
   } catch (err) {

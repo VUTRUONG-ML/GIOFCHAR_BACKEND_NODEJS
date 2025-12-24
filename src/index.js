@@ -15,7 +15,11 @@ import botChatRoutes from "./routes/botChat.route.js";
 const app = express();
 const port = process.env.PORT || 8081;
 
-app.use(cors());
+app.use(
+  cors({
+    exposedHeaders: ["X-Guest-Token"], // Cho phép frontend đọc header này
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

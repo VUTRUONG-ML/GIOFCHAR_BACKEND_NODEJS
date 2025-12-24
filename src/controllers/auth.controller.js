@@ -40,11 +40,11 @@ const loginApi = async (req, res) => {
     const result = await authService.login(email, password);
 
     if (guestToken) {
-      mergeGuestCartToUser({ userId: result.user.id, guestToken }).catch(
-        (err) => {
-          console.log(">>>>> Merge cart failed:", err.message);
-        }
-      );
+      try {
+        await mergeGuestCartToUser({ userId: result.user.id, guestToken });
+      } catch (error) {
+        console.log(">>>>> Merge cart failed:", err.message);
+      }
     }
 
     res.status(200).json({ message: "Login successful", data: result });

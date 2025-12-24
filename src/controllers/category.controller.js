@@ -15,7 +15,10 @@ const getAllCategories = async (req, res) => {
     );
     return res
       .status(200)
-      .json({ quantity: categoriesClient.length, categoriesClient });
+      .json({
+        quantity: categoriesClient.length,
+        categories: categoriesClient,
+      });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });

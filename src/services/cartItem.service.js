@@ -6,11 +6,12 @@ const getCartItemsByCartId = async (cartId, conn) => {
   try {
     const [cartItems] = await conn.execute(
       `SELECT 
-          ci.id AS cartItemsId, 
+          ci.id AS cartItemId, 
           f.id  AS foodId,
           f.foodName,
           f.image,
           f.price,
+          f.discount,
           ci.quantity,
           ci.cartID AS cartID
         FROM cart_items ci 
@@ -44,12 +45,12 @@ const findCartItem = async ({ cartId, foodId, cartItemId }, conn) => {
   }
 };
 
-const updateCartItemQuantity = async (cartItemId, quantity, conn) => {
+const updateCartItemQuantity = async (cartItemId, delta, conn) => {
   // Nếu món ăn tồn tại trong cart
   try {
     const [result] = await conn.execute(
       "UPDATE cart_items SET quantity = quantity + ? WHERE id = ?",
-      [quantity, cartItemId]
+      [delta, cartItemId]
     );
     return result;
   } catch (err) {

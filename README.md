@@ -226,7 +226,7 @@ Lấy danh sách sản phẩm trong giỏ hàng
   "message": "Success",
   "cartItems": [
     {
-      "cartItemsId": "number",
+      "cartItemId": "number",
       "foodId": "number",
       "foodName": "string",
       "image": "string",
@@ -268,9 +268,17 @@ Thêm sản phẩm vào giỏ hàng
 ```json
 {
   "message": "string",
-  "cartId": "number",
-  "foodId": "number",
-  "quantity": "number"
+  "cartItems": [
+    {
+      "cartItemId": "number",
+      "foodId": "number",
+      "foodName": "string",
+      "image": "string",
+      "price": "number",
+      "discount": "number",
+      "quantity": "number"
+    }
+  ]
 }
 ```
 
