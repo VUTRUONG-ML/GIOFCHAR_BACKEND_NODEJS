@@ -3,6 +3,17 @@ services:
     image: mysql:5.7.40
     container_name: mysql-giofchar-db
     restart: always
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -p$MYSQL_ROOT_PASSWORD || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -31,9 +42,9 @@ services:
       HOST_NAME: ${HOST_NAME}
 
       DB_HOST: mysql-giofchar-db
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE}
       DB_PORT: 3306
 
       JWT_SECRET: ${JWT_SECRET}
@@ -46,7 +57,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       SESSION_SECRET: ${SESSION_SECRET}
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - backend-net
 

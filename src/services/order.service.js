@@ -156,6 +156,23 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
   }
 };
 
+const attachOrderToUser = async ({ guestToken, userId, orderId }) => {
+  if (!guestToken) return;
+  try {
+    await pool.execute(
+      `
+    UPDATE orders
+    SET userID = ?, guestToken = NULL
+    WHERE guestToken = ? AND userID IS NULL AND id = ?
+    `,
+      [userId, guestToken, orderId]
+    );
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR attach order:", error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrdersByUserId,
@@ -164,4 +181,5 @@ module.exports = {
   deleteOrder,
   getOrderById,
   getOrderByIdAndUser,
+  attachOrderToUser,
 };

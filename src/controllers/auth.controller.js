@@ -1,5 +1,6 @@
 const authService = require("../services/auth.service");
 const { mergeGuestCartToUser } = require("../services/cart.service");
+const { attachOrderToUser } = require("../services/order.service");
 const userService = require("../services/user.service");
 
 const registerApi = async (req, res) => {
@@ -7,9 +8,23 @@ const registerApi = async (req, res) => {
   if (!userName || !email || !phone || !password) {
     return res.status(400).json({ message: "Missing field" });
   }
-
+  const guestToken = req.headers["x-guest-token"];
+  const orderId = req.headers["x-order-id"];
   try {
     const result = await authService.register(userName, email, phone, password);
+
+    if (guestToken) {
+      try {
+        await attachOrderToUser({
+          guestToken,
+          userId: result.insertId,
+          orderId,
+        });
+        console.log(">>>>> Attach order to user success");
+      } catch (error) {
+        console.log(">>>>> Attach order failed", error);
+      }
+    }
 
     res
       .status(201)
