@@ -699,9 +699,17 @@ Xem tất cả đơn hàng của một người dùng
       "orderId": "number",
       "orderCode": "string",
       "status": "string",
-      "paymentStatus": "string",
-      "deliveryAddress": "string",
-      "time": "string"
+      "time": "string",
+      "amount": "number",
+      "items": [
+        {
+          "orderItemId": "number",
+          "foodName": "string",
+          "image": "string",
+          "price": "number",
+          "quantity": "number"
+        }
+      ]
     }
   ]
 }
@@ -724,9 +732,16 @@ Xem tất cả đơn hàng của chính người dùng hiện tại
       "orderId": "number",
       "orderCode": "string",
       "status": "string",
-      "paymentStatus": "string",
-      "deliveryAddress": "string",
-      "time": "string"
+      "time": "string",
+      "amount": "number",
+      "items": [
+        {
+          "orderItemId": "number",
+          "foodName": "string",
+          "image": "string",
+          "quantity": "number"
+        }
+      ]
     }
   ]
 }
@@ -755,6 +770,7 @@ Xem chi tiết các sản phẩm trong đơn hàng
   "totalItem": "number",
   "orderCode": "string",
   "createdAt": "string",
+  "updatedAt": "string",
   "orderStatus": "string",
   "address": "string",
   "amountOrder": "number",
@@ -784,12 +800,23 @@ Tạo đơn hàng (thanh toán COD) dành cho người dùng đã đăng nhập
 
 > Headers: Authorization
 
+#### Body
+
+```json
+{
+  "customerName": "string",
+  "email": "string",
+  "phone": "string",
+  "address": "string"
+}
+```
+
 #### Response (200) – Success
 
 ```json
 {
   "message": "Create order successful",
-  "orderId": "number",
+  "orderCode": "string",
   "totalPriceOrder": "number"
 }
 ```
@@ -801,12 +828,23 @@ Tạo đơn hàng (thanh toán COD) dành cho khách
 
 > Headers: x-guest-token
 
+#### Body
+
+```json
+{
+  "customerName": "string",
+  "email": "string",
+  "phone": "string",
+  "address": "string"
+}
+```
+
 #### Response (200) – Success
 
 ```json
 {
   "message": "Create order successful",
-  "orderId": "number",
+  "orderCode": "string",
   "totalPriceOrder": "number"
 }
 ```

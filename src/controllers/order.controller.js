@@ -3,7 +3,7 @@ const orderItemService = require("../services/order_item.service");
 const cartItemService = require("../services/cartItem.service");
 const cartService = require("../services/cart.service");
 const paymentService = require("../services/payment.service");
-const { calculateOrderValues } = require("../utils/order.util");
+const { calculateOrderValues, ordersMap } = require("../utils/order.util");
 const pool = require("../config/db");
 const { deductStockForOrder } = require("../services/food.service");
 
@@ -18,9 +18,36 @@ const getAllOrders = async (req, res) => {
 };
 
 const getOrdersByUserId = async (req, res) => {
-  const userId = req.user.userId;
+  const { role } = req.user;
+  const userId = role === "admin" ? req.params.userId : req.user.userId;
   try {
-    const orders = await orderService.getOrdersByUserId(userId);
+    const rows = await orderService.getOrdersByUserId(userId);
+
+    const ordersMap = rows.reduce((acc, row) => {
+      const orderId = row.orderId;
+
+      if (!acc[orderId]) {
+        acc[orderId] = {
+          orderId: row.orderId,
+          orderCode: row.orderCode,
+          status: row.status,
+          time: row.time,
+          amount: Number(row.amount),
+          items: [],
+        };
+      }
+
+      acc[orderId].items.push({
+        orderItemId: row.orderItemId,
+        foodName: row.foodName,
+        image: row.image,
+        quantity: row.quantity,
+      });
+
+      return acc;
+    }, {});
+
+    const orders = Object.values(ordersMap);
     res.status(200).json({ total: orders.length, orders });
   } catch (error) {
     console.log(">>>>> CONTROLLER ERROR", error.message);
@@ -39,6 +66,7 @@ const getOrderItemsByOrderId = async (req, res) => {
 
     const {
       createdAt,
+      updatedAt,
       orderCode,
       status,
       customerName,
@@ -53,6 +81,7 @@ const getOrderItemsByOrderId = async (req, res) => {
       ({
         orderCode,
         createdAt,
+        updatedAt,
         status,
         customerName,
         email,
@@ -74,6 +103,7 @@ const getOrderItemsByOrderId = async (req, res) => {
       totalItem: items.length,
       orderCode,
       createdAt,
+      updatedAt,
       orderStatus: status,
       address,
       amountOrder,
@@ -115,7 +145,7 @@ const createOrder = async (req, res) => {
     await deductStockForOrder(connection, cartItems);
 
     //Tao order
-    const orderId = await orderService.createOrder(
+    const { orderId, orderCode } = await orderService.createOrder(
       connection,
       { userId, guestToken },
       customerName,
@@ -149,6 +179,7 @@ const createOrder = async (req, res) => {
 
     res.status(200).json({
       message: "Create order successful",
+      orderCode,
       orderId,
       totalPriceOrder: totalPriceOrder,
     });

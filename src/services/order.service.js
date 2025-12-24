@@ -56,11 +56,22 @@ const getOrdersByUserId = async (userId) => {
         o.id AS orderId,
         o.orderCode,
         o.status,
-        o.paymentStatus,
-        o.address AS deliveryAddress,
-        o.createdAt AS time
+        o.createdAt AS time,
+
+        (SELECT SUM(oi2.totalPrice )
+         FROM order_items oi2 
+         WHERE oi2.orderID = o.id
+        ) AS amount,
+
+        oi.id as orderItemId,
+        f.foodName,
+        f.image,
+		    oi.quantity
       FROM orders o 
-      WHERE o.userID = ?`,
+      JOIN order_items oi  ON o.id = oi.orderID
+      JOIN foods f ON f.id = oi.foodID 
+   	  WHERE o.userID = ?
+      ORDER BY o.createdAt`,
       [userId]
     );
     return rows;
@@ -102,7 +113,7 @@ const createOrder = async (
       orderId,
     ]);
 
-    return result.insertId;
+    return { orderId: result.insertId, orderCode };
   } catch (err) {
     throw err;
   }

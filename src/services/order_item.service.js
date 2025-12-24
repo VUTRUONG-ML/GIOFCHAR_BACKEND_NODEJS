@@ -7,6 +7,7 @@ const getOrderItemsByOrderId = async (orderId) => {
         o.id AS orderId,
         o.orderCode,
         o.createdAt,
+        o.updatedAt,
         o.customerName,
         o.email,
         o.phone,
