@@ -19,6 +19,25 @@ const getAllCategories = async () => {
   }
 };
 
+const getNameCategory = async ({ categoryId = 0 }) => {
+  const isWhere = categoryId ? "WHERE id = ?" : "";
+  try {
+    const [categories] = await pool.execute(
+      `
+      SELECT 
+        c.categoryName
+      FROM categories c
+      ${isWhere}
+      `,
+      [categoryId]
+    );
+    return categories;
+  } catch (err) {
+    console.log(">>>>> Service error", err.message);
+    throw err;
+  }
+};
+
 const createCategory = async (name, description) => {
   try {
     const [result] = await pool.execute(
@@ -78,4 +97,5 @@ module.exports = {
   getCategoryById,
   updateCategoryById,
   deleteCategoryById,
+  getNameCategory,
 };

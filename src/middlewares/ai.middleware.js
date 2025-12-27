@@ -11,8 +11,13 @@ const validateInputMessage = (req, res, next) => {
   if (!req.session.chat) {
     req.session.chat = {
       intent: null,
-      slots: null,
       history: [],
+      agent: {
+        done: false,
+        ask: null,
+        slots: null,
+        reason: null,
+      },
     };
   }
 
@@ -43,7 +48,7 @@ const detectUserMessage = async (req, res, next) => {
   next();
 };
 
-const handleIntentRouting = async (req, res, next) => {
+const handleIntent_goi_y_mon = async (req, res, next) => {
   const { chat } = req.session;
   const { intent } = chat;
   const CHAT_HISTORY = req.session.chat.history;
@@ -61,32 +66,25 @@ const handleIntentRouting = async (req, res, next) => {
       .json({ message: "Server error", error: error.message });
   }
 
-  chat.history.push({
-    role: "assistant",
-    content: agentRes.ask,
-  });
-
-  console.log(">>Chats:", CHAT_HISTORY);
-
-  // Nếu chưa hỏi xong
-  if (!agentRes.done) {
-    return res.json({ intent, reply: agentRes.ask });
-  }
-
-  if (!isSlotComplete(agentRes.slots)) {
-    return res.json({
-      intent,
-      reply:
-        "Mình vẫn cần thêm chút thông tin (loại giò, ngân sách, số kg) để tư vấn chính xác hơn nhé",
+  if (agentRes.ask) {
+    chat.history.push({
+      role: "assistant",
+      content: agentRes.ask,
     });
   }
 
-  req.session.chat.slots = agentRes.slots; // preference: null, budget_vnd: null, quantity_kg: null
+  chat.agent = {
+    done: agentRes.done,
+    ask: agentRes.ask,
+    slots: agentRes.slots, // preference: null, budget_vnd: null, quantity_kg: null
+    reason: agentRes.reason,
+  };
+
   next();
 };
 
 module.exports = {
   validateInputMessage,
   detectUserMessage,
-  handleIntentRouting,
+  handleIntent_goi_y_mon,
 };

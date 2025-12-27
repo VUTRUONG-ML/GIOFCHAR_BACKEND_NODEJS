@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   validateInputMessage,
   detectUserMessage,
-  handleIntentRouting,
+  handleIntent_goi_y_mon,
 } = require("../middlewares/ai.middleware");
 
 const { handleIntentData } = require("../controllers/ai.controller");
@@ -12,7 +12,7 @@ router.post(
   "/",
   validateInputMessage,
   detectUserMessage,
-  handleIntentRouting,
+  handleIntent_goi_y_mon,
   handleIntentData
 );
 

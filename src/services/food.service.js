@@ -223,7 +223,6 @@ const filterFood = async (preference, budget, quantity) => {
         f.foodName,
         f.foodDescription,
         f.price ,
-        f.image,
         c.categoryName AS categoryName
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
@@ -235,7 +234,7 @@ const filterFood = async (preference, budget, quantity) => {
     `,
       [preference, preference, preference, budget, quantity]
     );
-    return foods;
+    return foods.length > 0 ? foods : null;
   } catch (error) {
     console.log(">>>>> SERVICE ERROR:", error.message);
     throw error;
