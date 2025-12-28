@@ -26,19 +26,22 @@ const getAllFoodsAdmin = async () => {
 
 const getAllFoods = async ({ option = "default" }) => {
   // const typeOption = "default" | "bestSelling" | "promotion";
-  console.log(">>> check option:", option);
-  let field;
   let optionGet;
   switch (option) {
     case "bestSelling":
-      field = `
-        , 
-        SUM(oi.quantity) as quantityOrdered 
-      `;
       optionGet = `
         JOIN order_items oi ON f.id = oi.foodID
+        WHERE f.stock > 0
         GROUP BY f.id
-        ORDER BY quantityOrdered DESC
+        ORDER BY SUM(oi.quantity) DESC
+        `;
+      break;
+    case "promotion":
+      optionGet = `
+        JOIN order_items oi ON f.id = oi.foodID
+        WHERE f.stock > 0
+        GROUP BY f.id
+        ORDER BY f.discount DESC, SUM(oi.quantity) DESC
         `;
       break;
     default:
@@ -46,9 +49,6 @@ const getAllFoods = async ({ option = "default" }) => {
       optionGet = "";
       break;
   }
-
-  console.log(">>> check field:", field);
-  console.log(">>> check optionget:", optionGet);
 
   try {
     const [foods] = await pool.execute(`
@@ -62,14 +62,14 @@ const getAllFoods = async ({ option = "default" }) => {
         image,
         f.categoryID,
         
-        c.categoryName ${field}
+        c.categoryName
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
       ${optionGet}
     `);
     return foods;
   } catch (err) {
-    console.log(">>>>> Service error", err.message);
+    console.log(">>>>> Service getAllFoods error", err.message);
     throw err;
   }
 };

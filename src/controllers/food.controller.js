@@ -22,14 +22,20 @@ const getAllFoods = async (req, res) => {
 const getAllBestSelling = async (req, res) => {
   try {
     const foods = await foodService.getAllFoods({ option: "bestSelling" });
-    const newFoods = foods.map((food) => ({
-      ...food,
-      quantityOrdered: Number(food.quantityOrdered),
-    }));
-    return res.status(200).json({ quantity: foods.length, foods: newFoods });
+    return res.status(200).json({ quantity: foods.length, foods });
   } catch (error) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.log(">>>>> CONTROLLER ERROR", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const getFoodsPromotion = async (req, res) => {
+  try {
+    const foods = await foodService.getAllFoods({ option: "promotion" });
+    return res.status(200).json({ quantity: foods.length, foods });
+  } catch (error) {
+    console.log(">>>>> CONTROLLER ERROR", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -203,4 +209,5 @@ module.exports = {
   updateFoodById,
   deleteFoodById,
   getAllBestSelling,
+  getFoodsPromotion,
 };
