@@ -3,7 +3,7 @@ services:
     image: mysql:5.7.40
     container_name: mysql-giofchar-db
     restart: always
-
+    platform: linux/amd64
     healthcheck:
       test:
         [
