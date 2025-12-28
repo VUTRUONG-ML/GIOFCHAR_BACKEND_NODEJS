@@ -530,7 +530,7 @@ Lấy chi tiết thông tin món ăn
   "stock": "number",
   "imagePublicId": "string",
   "price": "string",
-  "isActive": "number",
+  "isActive": "number (1 | 0)",
   "image": "string",
   "categoryID": "number",
   "categoryName": "string"
@@ -639,6 +639,33 @@ Xóa món ăn
 ```json
 {
   "message": "Delete food successful"
+}
+```
+
+### 8.6 GET /foods/best-selling
+
+Lấy danh sách món ăn
+(Có thể đăng nhập hoặc không đăng nhập)
+
+#### Response (200)
+
+```json
+{
+  "quantity": "number",
+  "foods": [
+    {
+      "foodId": "number",
+      "foodName": "string",
+      "price": "string",
+      "discount": "number",
+      "rating": "number",
+      "isActive": "number (1 | 0)",
+      "image": "string",
+      "categoryID": "number",
+      "categoryName": "string",
+      "quantityOrdered": "number"
+    }
+  ]
 }
 ```
 

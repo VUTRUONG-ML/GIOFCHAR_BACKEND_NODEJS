@@ -24,7 +24,32 @@ const getAllFoodsAdmin = async () => {
   }
 };
 
-const getAllFoods = async () => {
+const getAllFoods = async ({ option = "default" }) => {
+  // const typeOption = "default" | "bestSelling" | "promotion";
+  console.log(">>> check option:", option);
+  let field;
+  let optionGet;
+  switch (option) {
+    case "bestSelling":
+      field = `
+        , 
+        SUM(oi.quantity) as quantityOrdered 
+      `;
+      optionGet = `
+        JOIN order_items oi ON f.id = oi.foodID
+        GROUP BY f.id
+        ORDER BY quantityOrdered DESC
+        `;
+      break;
+    default:
+      field = "";
+      optionGet = "";
+      break;
+  }
+
+  console.log(">>> check field:", field);
+  console.log(">>> check optionget:", optionGet);
+
   try {
     const [foods] = await pool.execute(`
       SELECT 
@@ -37,9 +62,10 @@ const getAllFoods = async () => {
         image,
         f.categoryID,
         
-        c.categoryName
+        c.categoryName ${field}
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
+      ${optionGet}
     `);
     return foods;
   } catch (err) {

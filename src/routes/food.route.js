@@ -44,6 +44,7 @@ router.post(
   checkCategory,
   foodController.createFood
 );
+router.get("/best-selling", foodController.getAllBestSelling);
 router.get("/:foodId", optionalAuth, foodController.getFoodById);
 router.get("/", optionalAuth, foodController.getAllFoods);
 

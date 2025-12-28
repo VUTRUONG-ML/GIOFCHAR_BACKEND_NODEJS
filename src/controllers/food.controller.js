@@ -9,14 +9,25 @@ const getAllFoods = async (req, res) => {
     if (role === "admin") {
       foods = await foodService.getAllFoodsAdmin();
     } else {
-      foods = await foodService.getAllFoods();
+      foods = await foodService.getAllFoods({});
     }
-
-    if (!foods.length)
-      return res.status(404).json({ message: "Empty Foods list" });
 
     res.status(200).json({ quantity: foods.length, foods });
   } catch (err) {
+    console.log(">>>>> CONTROLLER ERROR", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const getAllBestSelling = async (req, res) => {
+  try {
+    const foods = await foodService.getAllFoods({ option: "bestSelling" });
+    const newFoods = foods.map((food) => ({
+      ...food,
+      quantityOrdered: Number(food.quantityOrdered),
+    }));
+    return res.status(200).json({ quantity: foods.length, foods: newFoods });
+  } catch (error) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -191,4 +202,5 @@ module.exports = {
   getFoodById,
   updateFoodById,
   deleteFoodById,
+  getAllBestSelling,
 };
