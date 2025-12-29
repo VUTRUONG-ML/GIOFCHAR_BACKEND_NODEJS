@@ -17,7 +17,23 @@ const getStatusOverview = async (req, res) => {
     const resultYes = await orderService.countYesterdayOrders();
 
     const { status, percent } = statusOverview(resultToday, resultYes);
-    return res.status(200).json({ status, percent });
+    return res
+      .status(200)
+      .json({ countTodayOrders: resultToday, status, percent });
+  } catch (error) {
+    console.log(">>> CONTROLLER ERROR:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
+const getStatusRevenue = async (req, res) => {
+  try {
+    const revenueToday = await orderService.revenue(pool, "today");
+    const revenueYesterday = await orderService.revenue(pool, "yesterday");
+    const { status, percent } = statusOverview(revenueToday, revenueYesterday);
+    return res.status(200).json({ revenueToday, status, percent });
   } catch (error) {
     console.log(">>> CONTROLLER ERROR:", error.message);
     return res
@@ -284,4 +300,5 @@ module.exports = {
   cancelOrder,
   deleteOrder,
   getStatusOverview,
+  getStatusRevenue,
 };

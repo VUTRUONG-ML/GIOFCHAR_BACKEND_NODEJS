@@ -53,10 +53,17 @@ router.post(
 
 // Xem trạng thái order của hôm nay so với hôm qua
 router.get(
-  "/stats/overview",
+  "/stats/overviewQuantity",
   requireAuth,
   userMiddleware.checkAdmin,
   orderController.getStatusOverview
+);
+
+router.get(
+  "/stats/overviewRevenue",
+  requireAuth,
+  userMiddleware.checkAdmin,
+  orderController.getStatusRevenue
 );
 
 // Xem chi tiết item bên trong orderid có thể là khách, user, admin

@@ -205,6 +205,32 @@ const attachOrderToUser = async ({ guestToken, userId, orderId }) => {
   }
 };
 
+const revenue = async (conn = pool, time = "default") => {
+  const optionTime =
+    time === "today"
+      ? "WHERE o.createdAt >= CURDATE() AND o.createdAt < CURDATE() + INTERVAL 1 DAY"
+      : time === "yesterday"
+      ? "WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()"
+      : "";
+  try {
+    const [result] = await conn.execute(
+      `
+        SELECT 
+          SUM(amount) as revenue
+        FROM (SELECT 
+                SUM(oi.totalPrice ) as amount
+                FROM orders o
+                JOIN order_items oi ON o.id = oi.orderID 
+                ${optionTime}
+                GROUP BY o.id) ordersAmount;
+      `
+    );
+    return result[0].revenue ? Number(result[0].revenue) : 0;
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR revenue:", error.message);
+    throw error;
+  }
+};
 module.exports = {
   getAllOrders,
   countTodayOrders,
@@ -216,4 +242,5 @@ module.exports = {
   getOrderById,
   getOrderByIdAndUser,
   attachOrderToUser,
+  revenue,
 };
