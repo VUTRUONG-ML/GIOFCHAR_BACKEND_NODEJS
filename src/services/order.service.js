@@ -29,6 +29,38 @@ const getAllOrders = async () => {
   }
 };
 
+const countTodayOrders = async (conn = pool) => {
+  try {
+    const [result] = await conn.execute(
+      `
+      SELECT COUNT(o.id) as countOrdered
+      FROM orders o
+      WHERE o.createdAt >= CURDATE() AND o.createdAt < CURDATE() + INTERVAL 1 DAY
+      `
+    );
+    return result[0].countOrdered;
+  } catch (error) {
+    console.log(">>> SERVICE countTodayOrders ERROR:", error.message);
+    throw error;
+  }
+};
+
+const countYesterdayOrders = async (conn = pool) => {
+  try {
+    const [result] = await conn.execute(
+      `
+      SELECT COUNT(o.id) as countOrdered
+      FROM orders o
+      WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()
+      `
+    );
+    return result[0].countOrdered;
+  } catch (error) {
+    console.log(">>> SERVICE countYesterdayOrders ERROR:", error.message);
+    throw error;
+  }
+};
+
 const getOrderById = async (orderId) => {
   try {
     const [rows] = await pool.execute(
@@ -175,6 +207,8 @@ const attachOrderToUser = async ({ guestToken, userId, orderId }) => {
 
 module.exports = {
   getAllOrders,
+  countTodayOrders,
+  countYesterdayOrders,
   getOrdersByUserId,
   createOrder,
   updateOrderStatus,

@@ -4,14 +4,20 @@ const { attachOrderToUser } = require("../services/order.service");
 const userService = require("../services/user.service");
 
 const registerApi = async (req, res) => {
-  const { userName, email, phone, password } = req.body;
+  const { userName, email, phone, password, address } = req.body;
   if (!userName || !email || !phone || !password) {
     return res.status(400).json({ message: "Missing field" });
   }
   const guestToken = req.headers["x-guest-token"];
   const orderId = req.headers["x-order-id"];
   try {
-    const result = await authService.register(userName, email, phone, password);
+    const result = await authService.register(
+      userName,
+      email,
+      phone,
+      password,
+      address
+    );
 
     if (guestToken) {
       try {

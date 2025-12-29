@@ -5,14 +5,26 @@ const jwt = require("jsonwebtoken");
 const userService = require("./user.service");
 require("dotenv").config();
 
-const register = async (userName, email, phone, password) => {
+const register = async (userName, email, phone, password, address = null) => {
+  const isAddress = address !== null;
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  let optionExecute = {
+    sql: "",
+    values: [],
+  };
+  if (!address) {
+    optionExecute = {
+      sql: "INSERT INTO users (userName, email, phone, password) VALUES (?, ?, ?, ?)",
+      values: [userName, email, phone, hashedPassword],
+    };
+  } else {
+    optionExecute = {
+      sql: "INSERT INTO users (userName, email, phone, password, address) VALUES (?, ?, ?, ?, ?)",
+      values: [userName, email, phone, hashedPassword, address],
+    };
+  }
   try {
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const [result] = await pool.execute(
-      `INSERT INTO users (userName, email, phone, password) VALUES (?, ?, ?, ?)`,
-      [userName, email, phone, hashedPassword]
-    );
+    const [result] = await pool.execute({ ...optionExecute });
     return result;
   } catch (err) {
     throw err;

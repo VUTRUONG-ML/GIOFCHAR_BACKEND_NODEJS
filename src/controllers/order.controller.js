@@ -3,9 +3,28 @@ const orderItemService = require("../services/order_item.service");
 const cartItemService = require("../services/cartItem.service");
 const cartService = require("../services/cart.service");
 const paymentService = require("../services/payment.service");
-const { calculateOrderValues, ordersMap } = require("../utils/order.util");
+const {
+  calculateOrderValues,
+  ordersMap,
+  statusOverview,
+} = require("../utils/order.util");
 const pool = require("../config/db");
 const { deductStockForOrder } = require("../services/food.service");
+
+const getStatusOverview = async (req, res) => {
+  try {
+    const resultToday = await orderService.countTodayOrders();
+    const resultYes = await orderService.countYesterdayOrders();
+
+    const { status, percent } = statusOverview(resultToday, resultYes);
+    return res.status(200).json({ status, percent });
+  } catch (error) {
+    console.log(">>> CONTROLLER ERROR:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
 
 const getAllOrders = async (req, res) => {
   try {
@@ -264,4 +283,5 @@ module.exports = {
   updateOrderStatus,
   cancelOrder,
   deleteOrder,
+  getStatusOverview,
 };
