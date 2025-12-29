@@ -3,13 +3,10 @@ const orderItemService = require("../services/order_item.service");
 const cartItemService = require("../services/cartItem.service");
 const cartService = require("../services/cart.service");
 const paymentService = require("../services/payment.service");
-const {
-  calculateOrderValues,
-  ordersMap,
-  statusOverview,
-} = require("../utils/order.util");
+const { calculateOrderValues, ordersMap } = require("../utils/order.util");
 const pool = require("../config/db");
 const { deductStockForOrder } = require("../services/food.service");
+const { statusOverview } = require("../utils/status");
 
 const getStatusOverview = async (req, res) => {
   try {

@@ -1,4 +1,6 @@
+const pool = require("../config/db");
 const userService = require("../services/user.service");
+const { statusOverview } = require("../utils/status");
 
 const getAllUsers = async (req, res) => {
   try {
@@ -128,6 +130,21 @@ const deleteUserById = async (req, res) => {
   }
 };
 
+const getOverviewCountUser = async (req, res) => {
+  try {
+    const [countToday, countYesterday] = await Promise.all([
+      userService.countUser(pool, "today"),
+      userService.countUser(pool, "yesterday"),
+    ]);
+    const { status, percent } = statusOverview(countToday, countYesterday);
+
+    return res.status(200).json({ countUser: countToday, status, percent });
+  } catch (error) {
+    console.log(">>>>> CONTROLLER ERROR", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   updateUserByAdmin,
   getAllUsers,
@@ -135,4 +152,5 @@ module.exports = {
   createUser,
   updateUserById,
   deleteUserById,
+  getOverviewCountUser,
 };

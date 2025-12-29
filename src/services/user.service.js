@@ -110,6 +110,29 @@ const getUserByEmail = async (email) => {
   }
 };
 
+const countUser = async (conn = pool, time = "default") => {
+  const condition =
+    time === "today"
+      ? "WHERE u.createdAt >= CURDATE() AND u.createdAt < CURDATE() + INTERVAL  1 DAY"
+      : time === "yesterday"
+      ? "WHERE u.createdAt >= CURDATE() - INTERVAL 1 DAY AND u.createdAt < CURDATE()"
+      : "";
+  try {
+    const [result] = await conn.execute(
+      `
+        SELECT 
+          COUNT(*) as countUser
+        FROM users u 
+        ${condition}
+      `
+    );
+    return result[0].countUser;
+  } catch (error) {
+    console.log(">>>>> SERVICE countUser ERROR:", error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllUsersWithOrderCount,
   updateActiveUserById,
@@ -118,4 +141,5 @@ module.exports = {
   updateUserById,
   deleteUserById,
   getUserByEmail,
+  countUser,
 };

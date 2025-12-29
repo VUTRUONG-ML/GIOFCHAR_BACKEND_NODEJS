@@ -17,6 +17,12 @@ router.put(
   userController.updateUserByAdmin
 );
 router.put("/updateMyInfo", requireAuth, userController.updateUserById);
+router.get(
+  "/stats/overviewCount",
+  requireAuth,
+  checkAdmin,
+  userController.getOverviewCountUser
+);
 router.post("/", requireAuth, checkAdmin, userController.createUser);
 router.get("/:userId", userController.getUserById);
 router.get("/", requireAuth, checkAdmin, userController.getAllUsers);
