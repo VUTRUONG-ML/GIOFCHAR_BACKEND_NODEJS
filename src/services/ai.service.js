@@ -3,9 +3,17 @@ import { collectedFail, collectedSuccess } from "../constants/resonAgent.js";
 import { formatAiRes } from "../utils/suportAi.js";
 import { getAllCategories, getNameCategory } from "./category.service.js";
 
+import {
+  keys,
+  createGeminiModel,
+  switchKey,
+} from "../utils/switchGeminiKey.js";
+
 export const detectIntent = async (message) => {
-  try {
-    const prompt = `
+  for (let i = 0; i < keys.length; i++) {
+    const geminiModel = createGeminiModel();
+    try {
+      const prompt = `
         Hãy phân loại câu hỏi của người dùng vào một trong các intent sau: 
         - goi_y_mon
         - chao_hoi
@@ -28,23 +36,34 @@ export const detectIntent = async (message) => {
         Tin nhắn User: "${message}"
     `;
 
-    const aiRes = await geminiModel.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+      const aiRes = await geminiModel.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
 
-    return formatAiRes(aiRes.text);
-  } catch (error) {
-    console.log(">>>> SERVICE ERROR detectIntent:", error.message);
-    throw error;
+      return formatAiRes(aiRes.text);
+    } catch (error) {
+      if (error.message.includes("quota") || error.status === 429) {
+        const currkey = switchKey(); // thử key khác
+        console.log(
+          `>>>>> SERVICE ERROR detectIntent key${currkey}: `,
+          error.message
+        );
+      } else {
+        console.log(">>>> SERVICE ERROR detectIntent:", error.message);
+        throw error;
+      }
+    }
   }
 };
 
 export const slotFillingAgent = async (CHAT_HISTORY) => {
-  try {
-    const categories = await getNameCategory({});
-    console.log("category:", categories);
-    const prompt = `
+  for (let i = 0; i < keys.length; i++) {
+    const geminiModel = createGeminiModel();
+    try {
+      const categories = await getNameCategory({});
+      console.log("category:", categories);
+      const prompt = `
     You are a conversation agent for a Vietnamese ecommerce system selling giò chả.
     Your ONLY task is to manage a multi-turn conversation and collect enough information
     from the user to recommend giò chả products.
@@ -102,34 +121,54 @@ export const slotFillingAgent = async (CHAT_HISTORY) => {
     }
   `;
 
-    const aiRes = await geminiModel.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+      const aiRes = await geminiModel.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
 
-    return formatAiRes(aiRes.text);
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR:", error.message);
-    throw error;
+      return formatAiRes(aiRes.text);
+    } catch (error) {
+      if (error.message.includes("quota") || error.status === 429) {
+        const currkey = switchKey(); // thử key khác
+        console.log(
+          `>>>>> SERVICE ERROR slotFillingAgent key${currkey}: `,
+          error.message
+        );
+      } else {
+        console.log(">>>>> SERVICE slotFillingAgent ERROR:", error.message);
+        throw error;
+      }
+    }
   }
 };
 
 export const answer = async ({ intent, data }) => {
   const trueData = data ? data : "Shop không có data như mô tả";
-  try {
-    const prompt = `
+  for (let i = 0; i < keys.length; i++) {
+    const geminiModel = createGeminiModel();
+    try {
+      const prompt = `
         Bạn là trợ lý cho cửa hàng Giò chả Dũng Hoài, bạn đang trả lời cho người dùng 
         Dựa trên intent: ${intent}
         Dựa trên dữ liệu thật: ${JSON.stringify(trueData)} 
         Viết câu trả lời thân thiện, tự nhiên, tóm tắt ngắn gọn cho người dùng cho người dùng.
     `;
-    const aiRes = await geminiModel.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-    return aiRes.text;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR ai answer:", error.message);
-    throw error;
+      const aiRes = await geminiModel.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      return aiRes.text;
+    } catch (error) {
+      if (error.message.includes("quota") || error.status === 429) {
+        const currkey = switchKey(); // thử key khác
+        console.log(
+          `>>>>> SERVICE ERROR ai answer key${currkey}: `,
+          error.message
+        );
+      } else {
+        console.log(">>>>> SERVICE ERROR ai answer:", error.message);
+        throw error;
+      }
+    }
   }
 };

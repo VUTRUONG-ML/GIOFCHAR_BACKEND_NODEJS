@@ -3,13 +3,15 @@ const safeDeleteCloudinary = require("../utils/safeCloudinary");
 
 const getAllFoods = async (req, res) => {
   const { role } = req.user;
+  const { search } = req.query;
   try {
     let foods;
 
     if (role === "admin") {
       foods = await foodService.getAllFoodsAdmin();
     } else {
-      foods = await foodService.getAllFoods({});
+      if (!search) foods = await foodService.getAllFoods({});
+      else foods = await foodService.searchFood((key = search));
     }
 
     res.status(200).json({ quantity: foods.length, foods });

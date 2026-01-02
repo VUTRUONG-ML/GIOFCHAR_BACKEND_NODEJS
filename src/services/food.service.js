@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { normalizeVN } = require("../utils/nomalize");
 
 const getAllFoodsAdmin = async () => {
   try {
@@ -214,26 +215,34 @@ const deleteFoodById = async (foodId) => {
   }
 };
 
-const searchFood = async (key) => {
+const searchFood = async (key = "") => {
+  const normalizedKeyword = normalizeVN(key);
   try {
     const [result] = await pool.execute(
       `
       SELECT 
-        f.id ,
-        f.foodName,
-        f.price ,
-        f.image,
-        f.stock,
-        c.id as categoryId,
-        c.categoryName 
+       f.id as foodId,
+        foodName, 
+        price,
+        discount,
+        rating,
+        isActive,
+        image,
+        f.categoryID,
+        
+        c.categoryName
       FROM foods f
       JOIN categories c ON f.categoryID = c.id 
-      WHERE (f.foodName LIKE CONCAT("%", ?, "%") OR f.foodDescription LIKE CONCAT("%", ?, "%")) 
-            AND f.stock  > 0`,
-      [key, key]
+      WHERE f.isActive = 1
+            AND f.stock > 0`
     );
-
-    return result;
+    if (!normalizedKeyword) return result;
+    return result.filter((row) => {
+      return (
+        normalizeVN(row.foodName).includes(normalizedKeyword) ||
+        normalizeVN(row.foodDescription || "").includes(normalizedKeyword)
+      );
+    });
   } catch (error) {
     console.log(">>>>> SERVICE ERROR", error.message);
     throw error;
