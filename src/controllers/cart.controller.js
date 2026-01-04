@@ -42,6 +42,7 @@ const addFoodToCart = async (req, res) => {
         foodName: food.foodName,
         image: food.image,
         price: food.price,
+        originalPrice: food.originalPrice,
         discount: food.discount,
         quantity: result.quantity,
       },

@@ -11,6 +11,7 @@ const getCartItemsByCartId = async (cartId, conn) => {
           f.foodName,
           f.image,
           f.price,
+          f.originalPrice,
           f.discount,
           ci.quantity,
           ci.cartID AS cartID

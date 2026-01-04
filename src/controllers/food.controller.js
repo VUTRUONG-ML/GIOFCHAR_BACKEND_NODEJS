@@ -46,7 +46,7 @@ const createFood = async (req, res) => {
     foodName,
     foodDescription,
     ingredients,
-    price,
+    originalPrice,
     discount,
     rating,
     stock,
@@ -56,23 +56,33 @@ const createFood = async (req, res) => {
 
   const imageUrl = req.cloudinaryImage?.secure_url || null;
   const imagePublicId = req.cloudinaryImage?.public_id || null;
-  if (!foodName || !foodDescription || !price || !categoryID || !stock) {
+  if (
+    !foodName ||
+    !foodDescription ||
+    originalPrice === undefined ||
+    categoryID === undefined ||
+    stock === undefined
+  ) {
     return res.status(400).json({ message: "Missing field" });
   }
 
+  if (Number.isNaN(Number(originalPrice))) {
+    return res.status(400).json({ message: "originalPrice must be a number" });
+  }
+
   const isActiveValue =
-    isActive === true || isActive === "true"
+    isActive === undefined
       ? 1
-      : isActive === false || isActive === "false"
-      ? 0
-      : 1;
+      : isActive === true || isActive === "true" || isActive === "1"
+      ? 1
+      : 0;
 
   try {
     const result = await foodService.createFood(
       foodName,
       foodDescription,
       ingredients,
-      price,
+      Number(originalPrice),
       discount,
       rating,
       stock,
@@ -119,7 +129,7 @@ const updateFoodById = async (req, res) => {
   const {
     foodName,
     foodDescription,
-    price,
+    originalPrice,
     discount,
     rating,
     stock,
@@ -137,20 +147,31 @@ const updateFoodById = async (req, res) => {
     imagePublicId = req.cloudinaryImage?.public_id || null;
   }
 
-  if (!foodName || !foodDescription || !price || !categoryID)
+  if (
+    !foodName ||
+    !foodDescription ||
+    originalPrice == null ||
+    categoryID == null
+  ) {
     return res.status(400).json({ message: "Missing field" });
+  }
+
+  if (Number.isNaN(Number(originalPrice))) {
+    return res.status(400).json({ message: "originalPrice must be a number" });
+  }
 
   const isActiveValue =
-    isActive === true || isActive === "true" || isActive === "1"
+    isActive === undefined
       ? 1
-      : isActive === false || isActive === "false" || isActive === "0"
-      ? 0
-      : 1;
+      : isActive === true || isActive === "true" || isActive === "1"
+      ? 1
+      : 0;
+
   try {
     const result = await foodService.updateFoodById(
       foodName,
       foodDescription,
-      price,
+      originalPrice,
       discount,
       rating,
       stock,

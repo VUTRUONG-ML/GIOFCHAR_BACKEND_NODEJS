@@ -56,6 +56,7 @@ const getAllFoods = async ({ option = "default" }) => {
       SELECT 
         f.id as foodId,
         foodName, 
+        originalPrice,
         price,
         discount,
         rating,
@@ -79,7 +80,7 @@ const createFood = async (
   foodName,
   foodDescription,
   ingredients,
-  price,
+  originalPrice,
   discount,
   rating,
   stock,
@@ -89,11 +90,21 @@ const createFood = async (
   imagePublicId
 ) => {
   try {
+    const finalDiscount = discount ?? 0;
+    if (finalDiscount < 0 || finalDiscount > 100) {
+      throw new Error("Discount must be between 0 and 100");
+    }
+
+    const price = Number(
+      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2)
+    );
+
     const [result] = await pool.execute(
       `INSERT INTO foods (
             foodName,
             foodDescription,
             ingredients,
+            originalPrice,
             price,
             discount,
             rating,
@@ -103,7 +114,7 @@ const createFood = async (
             image,
             imagePublicId
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )`,
       [
         foodName,
@@ -114,8 +125,9 @@ const createFood = async (
           "Lá chuối",
           "Gia vị truyền thống",
         ],
+        originalPrice,
         price,
-        discount ?? 0,
+        finalDiscount,
         rating ?? 0,
         stock ?? 0,
         isActive ?? true,
@@ -145,6 +157,7 @@ const getFoodById = async (foodId, { isAdmin = false }) => {
         foodDescription,
         ${field}
         price,
+        originalPrice,
         isActive,
         image,
         f.categoryID,
@@ -165,9 +178,9 @@ const getFoodById = async (foodId, { isAdmin = false }) => {
 const updateFoodById = async (
   foodName,
   foodDescription,
-  price,
-  discount, //
-  rating, //
+  originalPrice,
+  discount,
+  rating,
   stock,
   isActive,
   categoryID,
@@ -176,15 +189,36 @@ const updateFoodById = async (
   foodId
 ) => {
   try {
+    const finalDiscount = discount ?? 0;
+    if (finalDiscount < 0 || finalDiscount > 100) {
+      throw new Error("Discount must be between 0 and 100");
+    }
+
+    const price = Number(
+      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2)
+    );
+
     const [result] = await pool.execute(
       `UPDATE foods 
-            SET foodName = ?,foodDescription = ?,price = ?,discount = ?,rating = ?,stock = ?,isActive = ?,categoryID = ?,image = ?, imagePublicId = ?
-            WHERE id = ?`,
+       SET 
+         foodName = ?,
+         foodDescription = ?,
+         originalPrice = ?,
+         price = ?,
+         discount = ?,
+         rating = ?,
+         stock = ?,
+         isActive = ?,
+         categoryID = ?,
+         image = ?,
+         imagePublicId = ?
+       WHERE id = ?`,
       [
         foodName,
         foodDescription,
+        originalPrice,
         price,
-        discount ?? 0,
+        finalDiscount,
         rating ?? 0,
         stock ?? 0,
         isActive ?? true,
