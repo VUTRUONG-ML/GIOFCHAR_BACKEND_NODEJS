@@ -256,18 +256,17 @@ const filterFood = async (preference, budget, quantity) => {
       SELECT
         f.id as foodId,
         f.foodName,
-        f.foodDescription,
-        f.price ,
-        c.categoryName AS categoryName
+        f.price,
+        f.image
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
       WHERE f.isActive = TRUE
-        AND (f.foodName LIKE CONCAT("%", ?, "%") OR f.foodDescription LIKE CONCAT("%", ?, "%") OR c.categoryName LIKE CONCAT("%", ?, "%"))
+        AND (f.foodName LIKE CONCAT("%", ?, "%") OR c.categoryName LIKE CONCAT("%", ?, "%"))
         AND f.price <= ?
         AND f.stock >= ?
       ORDER BY f.price ASC;
     `,
-      [preference, preference, preference, budget, quantity]
+      [preference, preference, budget, quantity]
     );
     return foods.length > 0 ? foods : null;
   } catch (error) {
