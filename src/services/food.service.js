@@ -258,6 +258,7 @@ const searchFood = async (key = "") => {
        f.id as foodId,
         foodName, 
         price,
+        originalPrice,
         discount,
         rating,
         isActive,
