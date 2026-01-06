@@ -53,7 +53,7 @@ router.post(
 
 // Xem trạng thái order của hôm nay so với hôm qua
 router.get(
-  "/stats/overviewQuantity",
+  "/stats/overviewCount",
   requireAuth,
   userMiddleware.checkAdmin,
   orderController.getStatusOverview

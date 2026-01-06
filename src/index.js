@@ -12,6 +12,7 @@ import orderRoutes from "./routes/order.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import authRoutes from "./routes/auth.route.js";
 import botChatRoutes from "./routes/botChat.route.js";
+import statisticRoutes from "./routes/statistic.route.js";
 import { checkOrigin } from "./middlewares/session.middleware.js";
 
 const app = express();
@@ -40,6 +41,7 @@ app.use(
   })
 );
 
+app.use("/api/statistic", statisticRoutes);
 app.use("/api/botchat", botChatRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
