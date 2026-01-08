@@ -40,6 +40,6 @@ export const classificationStockLevel = (rows) => {
   const levelSeparation = 10;
   return rows.map((r) => ({
     ...r,
-    status: r.stock >= levelSeparation ? "low" : "very_low",
+    status: r.stock >= levelSeparation ? "low" : "critical",
   }));
 };
