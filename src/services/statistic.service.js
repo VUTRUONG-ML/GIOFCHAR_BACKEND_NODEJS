@@ -86,6 +86,7 @@ export const lowStockProducts = async ({ conn = pool }) => {
   try {
     const sql = `
       SELECT 
+        id as foodId,
         f.foodName,
         f.stock 
       FROM foods f 
@@ -98,4 +99,3 @@ export const lowStockProducts = async ({ conn = pool }) => {
     throw error;
   }
 };
-lowStockProducts({});
