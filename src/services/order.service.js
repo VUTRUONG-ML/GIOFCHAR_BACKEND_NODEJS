@@ -22,7 +22,7 @@ const getAllOrders = async () => {
       FROM orders o 
       JOIN order_items oi  ON o.id = oi.orderID
       GROUP BY o.id
-      ORDER BY o.createdAt`);
+      ORDER BY o.createdAt DESC`);
     return rows;
   } catch (err) {
     throw err;

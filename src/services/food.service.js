@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { normalizeVN } = require("../utils/nomalize");
+const { normalizeVN } = require("../utils/normalize");
 
 const getAllFoodsAdmin = async () => {
   try {
