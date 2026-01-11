@@ -17,13 +17,18 @@ const getAllOrders = async () => {
         o.address AS deliveryAddress,
         o.createdAt AS time,
 
-        SUM(oi.quantity ) as totalQuantity,
+        SUM(oi.weight ) as totalWeight,
         SUM(oi.totalPrice ) as amount
       FROM orders o 
       JOIN order_items oi  ON o.id = oi.orderID
       GROUP BY o.id
       ORDER BY o.createdAt DESC`);
-    return rows;
+    const res = rows.map((r) => ({
+      ...r,
+      totalWeight: Number(r.totalWeight),
+      amount: Number(r.amount),
+    }));
+    return res;
   } catch (err) {
     throw err;
   }
@@ -98,7 +103,7 @@ const getOrdersByUserId = async (userId) => {
         oi.id as orderItemId,
         f.foodName,
         f.image,
-		    oi.quantity
+		    oi.weight
       FROM orders o 
       JOIN order_items oi  ON o.id = oi.orderID
       JOIN foods f ON f.id = oi.foodID 

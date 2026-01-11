@@ -324,7 +324,7 @@ const getStock = async (conn, foodId, { forUpdate = false }) => {
   }
 };
 
-const updateStock = async (conn, foodId, quantityOrder) => {
+const updateStock = async (conn, foodId, weightOrder) => {
   try {
     const [result] = await conn.execute(
       `
@@ -332,7 +332,7 @@ const updateStock = async (conn, foodId, quantityOrder) => {
       SET stock = stock - ?
       WHERE id = ? AND stock >= ?
       `,
-      [quantityOrder, foodId, quantityOrder]
+      [weightOrder, foodId, weightOrder]
     );
     return result.affectedRows === 1 ? true : false;
   } catch (error) {
@@ -344,7 +344,7 @@ const updateStock = async (conn, foodId, quantityOrder) => {
 const deductStockForOrder = async (conn, cartItems) => {
   try {
     for (const item of cartItems) {
-      const updated = await updateStock(conn, item.foodId, item.quantity);
+      const updated = await updateStock(conn, item.foodId, item.weight);
       if (!updated) throw new Error("OUT_OF_STOCK");
     }
     return true;

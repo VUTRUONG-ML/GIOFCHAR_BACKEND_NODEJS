@@ -15,7 +15,7 @@ const getOrderItemsByOrderId = async (orderId) => {
         o.status,
         
         oi.id AS orderItemId,
-        oi.quantity,
+        oi.weight,
         oi.totalPrice as totalPriceOnOneItem,
         
         f.id AS foodId,
@@ -32,18 +32,24 @@ const getOrderItemsByOrderId = async (orderId) => {
       WHERE o.id = ?`,
       [orderId]
     );
-    return rows;
+    const res = rows.map((r) => ({
+      ...r,
+      weight: Number(r.weight),
+      totalPriceOnOneItem: Number(r.totalPriceOnOneItem),
+      price: Number(r.price),
+    }));
+    return res;
   } catch (err) {
     throw err;
   }
 };
 
 const createOrderItem = async (connection, orderValues) => {
-  // orderValues : array[[orderID, foodID, quantity, totalPrice]]
+  // orderValues : array[[orderID, foodID, weight, totalPrice]]
   try {
     // muốn thêm nhiều dòng dữ liệu thì dùng query
     const [result] = await connection.query(
-      "INSERT INTO order_items (orderID, foodID, quantity, totalPrice) VALUES ?",
+      "INSERT INTO order_items (orderID, foodID, weight, totalPrice) VALUES ?",
       [orderValues]
     );
     return result.insertId;

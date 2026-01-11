@@ -699,7 +699,7 @@ Lấy danh sách tất cả đơn hàng
       "phone": "string",
       "deliveryAddress": "string",
       "time": "string",
-      "totalQuantity": "number",
+      "totalWeight": "number",
       "amount": "number"
     }
   ]
@@ -736,8 +736,7 @@ Xem tất cả đơn hàng của một người dùng
           "orderItemId": "number",
           "foodName": "string",
           "image": "string",
-          "price": "number",
-          "quantity": "number"
+          "weight": "number"
         }
       ]
     }
@@ -769,7 +768,7 @@ Xem tất cả đơn hàng của chính người dùng hiện tại
           "orderItemId": "number",
           "foodName": "string",
           "image": "string",
-          "quantity": "number"
+          "weight": "number"
         }
       ]
     }
@@ -813,7 +812,7 @@ Xem chi tiết các sản phẩm trong đơn hàng
     {
       "orderId": "number",
       "orderItemId": "number",
-      "quantity": "number",
+      "weight": "number",
       "totalPriceOnOneItem": "number",
       "foodId": "number",
       "foodName": "string",

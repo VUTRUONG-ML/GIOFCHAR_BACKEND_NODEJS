@@ -42,7 +42,7 @@ const getStatusRevenue = async (req, res) => {
 const getAllOrders = async (req, res) => {
   try {
     const orders = await orderService.getAllOrders();
-    res.status(200).json({ total: orders.length, orders: orders });
+    res.status(200).json({ total: orders.length, orders });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -73,7 +73,7 @@ const getOrdersByUserId = async (req, res) => {
         orderItemId: row.orderItemId,
         foodName: row.foodName,
         image: row.image,
-        quantity: row.quantity,
+        weight: row.weight,
       });
 
       return acc;
@@ -154,7 +154,7 @@ const getOrderItemsByOrderId = async (req, res) => {
 
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
-  const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
+  const { userId, guestToken } = req.user;
   const cartId = req.cartId; // từ middleware
   const { customerName, email, phone, address } = req.body;
   if (!address || !customerName || !email || !phone)
@@ -225,9 +225,9 @@ const createOrder = async (req, res) => {
         .json({ message: "Some products are out of stock." });
     }
 
-    if (err.message === "QUANTITY_ORDER_NEGATIVE") {
+    if (err.message === "WEIGHT_ORDER_NEGATIVE") {
       return res.status(400).json({
-        message: "The quantity of products ordered must not be negative.",
+        message: "The weight of products ordered must not be negative.",
       });
     }
 
