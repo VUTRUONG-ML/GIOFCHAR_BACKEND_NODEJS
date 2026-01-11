@@ -13,14 +13,19 @@ const getCartItemsByCartId = async (cartId, conn) => {
           f.price,
           f.originalPrice,
           f.discount,
-          ci.quantity,
+          ci.weight,
           ci.cartID AS cartID
         FROM cart_items ci 
         JOIN foods f ON ci.foodID = f.id 
         WHERE ci.cartID = ?`,
       [cartId]
     );
-    return cartItems;
+    const res = cartItems.map((item) => ({
+      ...item,
+      price: Number(item.price),
+      originalPrice: Number(item.originalPrice),
+    }));
+    return res;
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);
     throw err;
@@ -46,11 +51,11 @@ const findCartItem = async ({ cartId, foodId, cartItemId }, conn) => {
   }
 };
 
-const updateCartItemQuantity = async (cartItemId, delta, conn) => {
+const updateCartItemQuantity = async (cartItemId, delta, conn = pool) => {
   // Nếu món ăn tồn tại trong cart
   try {
     const [result] = await conn.execute(
-      "UPDATE cart_items SET quantity = quantity + ? WHERE id = ?",
+      "UPDATE cart_items SET weight = weight + ? WHERE id = ?",
       [delta, cartItemId]
     );
     return result;
@@ -61,12 +66,12 @@ const updateCartItemQuantity = async (cartItemId, delta, conn) => {
 };
 
 // -> Lấy cartID của người dùng hiện tại -> thêm vào food cho cartID đó thông qua bảng cart_items
-const insertCartItem = async (cartId, foodId, quantity, conn) => {
+const insertCartItem = async (cartId, foodId, weight, conn = pool) => {
   try {
     const [result] = await conn.execute(
-      `INSERT INTO cart_items (cartID, foodID, quantity)
+      `INSERT INTO cart_items (cartID, foodID, weight)
         VALUES (?, ?, ?)`,
-      [cartId, foodId, quantity]
+      [cartId, foodId, weight]
     );
     return result;
   } catch (err) {

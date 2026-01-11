@@ -70,18 +70,18 @@ const addToCart = async (foodId, delta, cartId) => {
         message: "Added new item to cart",
         cartId: cartId,
         cartItemId: result.insertId,
-        quantity: delta,
+        weight: delta,
       };
     } else {
       const cartItemId = cartItem.id;
-      const newQuantity = cartItem.quantity + delta;
-      if (newQuantity <= 0) {
+      const newWeight = cartItem.weight + delta;
+      if (newWeight <= 0) {
         await cartItemService.deleteCartItem(cartItemId, cartId);
         return {
           message: "Remove item from cart successful",
           cartId: cartId,
           cartItemId,
-          quantity: 0,
+          weight: 0,
         };
       }
       await cartItemService.updateCartItemQuantity(cartItem.id, delta, pool);
@@ -89,7 +89,7 @@ const addToCart = async (foodId, delta, cartId) => {
         message: "Updated quantity item successful",
         cartId: cartId,
         cartItemId,
-        quantity: newQuantity,
+        weight: newWeight,
       };
     }
   } catch (err) {

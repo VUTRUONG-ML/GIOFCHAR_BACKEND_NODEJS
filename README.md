@@ -231,7 +231,9 @@ Lấy danh sách sản phẩm trong giỏ hàng
       "foodName": "string",
       "image": "string",
       "price": "number",
-      "quantity": "number",
+      "originalPrice": "number",
+      "discount": "number", // percent
+      "weight": "number",
       "cartID": "number"
     }
   ]
@@ -259,7 +261,7 @@ Thêm sản phẩm vào giỏ hàng
 ```json
 {
   "foodId": "number",
-  "quantity": "number"
+  "weightDelta": "number"
 }
 ```
 
@@ -275,8 +277,9 @@ Thêm sản phẩm vào giỏ hàng
       "foodName": "string",
       "image": "string",
       "price": "number",
+      "originalPrice": "number",
       "discount": "number",
-      "quantity": "number"
+      "weight": "number"
     }
   ]
 }

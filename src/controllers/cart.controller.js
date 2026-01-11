@@ -29,10 +29,10 @@ const getAllCartItems = async (req, res) => {
 
 const addFoodToCart = async (req, res) => {
   const cartId = req.cartId;
-  const { foodId, quantity } = req.body;
+  const { foodId, weightDelta } = req.body;
   const food = req.food;
   try {
-    const result = await cartService.addToCart(foodId, quantity, cartId);
+    const result = await cartService.addToCart(foodId, weightDelta, cartId);
 
     res.status(200).json({
       message: result.message,
@@ -41,10 +41,10 @@ const addFoodToCart = async (req, res) => {
         foodId: food.foodId,
         foodName: food.foodName,
         image: food.image,
-        price: food.price,
-        originalPrice: food.originalPrice,
+        price: Number(food.price),
+        originalPrice: Number(food.originalPrice),
         discount: food.discount,
-        quantity: result.quantity,
+        weight: result.weight,
       },
     });
   } catch (err) {
