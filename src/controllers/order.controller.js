@@ -7,6 +7,7 @@ const { calculateOrderValues, ordersMap } = require("../utils/order.util");
 const pool = require("../config/db");
 const { deductStockForOrder } = require("../services/food.service");
 const { statusOverview } = require("../utils/status");
+const { buildVnpayPaymentUrl } = require("../services/payments/vnpay.service");
 
 const getStatusOverview = async (req, res) => {
   try {
@@ -156,8 +157,8 @@ const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
   const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
   const cartId = req.cartId; // từ middleware
-  const { customerName, email, phone, address } = req.body;
-  if (!address || !customerName || !email || !phone)
+  const { customerName, email, phone, address, paymentMethod } = req.body;
+  if (!address || !customerName || !email || !phone || !paymentMethod)
     return res.status(400).json({ message: "Missing field" });
 
   const connection = await pool.getConnection();
@@ -194,27 +195,50 @@ const createOrder = async (req, res) => {
 
     await orderItemService.createOrderItem(connection, orderValues);
 
-    const paymentTypeDefault = "COD";
-    const transactionDefault = "COD";
+    // Nếu paymentMethod = card | ? => build url return để trả về thêm field paymentUrl => Fe kiểm tra nếu có trường này -> redirect sang url đó .
+    const transactionDefault = paymentMethod === "COD" ? "COD" : "";
     const paymentStatusDefault = "pending";
+
     await paymentService.createPayment(
       connection,
       orderId,
-      paymentTypeDefault,
+      paymentMethod,
       totalPriceOrder,
       transactionDefault,
       paymentStatusDefault
     );
+    let result = {};
+    if (paymentMethod === "COD") {
+      result = {
+        message: "Create order successful",
+        orderCode,
+        orderId,
+        totalPriceOrder: totalPriceOrder,
+      };
+    } else {
+      const ipAddr =
+        String(req.headers["x-forwarded-for"])?.split(",")[0] ||
+        req.socket.remoteAddress ||
+        "127.0.0.1";
+      const paymentUrl = buildVnpayPaymentUrl({
+        orderId: orderId,
+        amount: totalPriceOrder,
+        ipAddr,
+      });
+      result = {
+        message: "Create order successful",
+        orderCode,
+        orderId,
+        totalPriceOrder: totalPriceOrder,
+        paymentUrl,
+      };
+    }
+
     await cartService.clearCart(cartId, connection);
 
     await connection.commit();
 
-    res.status(200).json({
-      message: "Create order successful",
-      orderCode,
-      orderId,
-      totalPriceOrder: totalPriceOrder,
-    });
+    res.status(200).json(result);
   } catch (err) {
     await connection.rollback(); // rollback nếu lỗi
     console.error(">>>>> CONTROLLER ERROR Transaction failed:", err);

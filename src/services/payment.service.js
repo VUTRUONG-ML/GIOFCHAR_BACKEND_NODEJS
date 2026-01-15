@@ -44,11 +44,26 @@ const createPayment = async (
   paymentStatus
 ) => {
   try {
-    const [result] = await conn.execute(
-      `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
-        VALUES (?, ?, ?, ?, ?)`,
-      [orderID, paymentType, amount, transactionId, paymentStatus]
-    );
+    const provider = "vnpay";
+    let sql = "";
+    let values = [];
+    if (paymentType === "COD") {
+      sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
+              VALUES (?, ?, ?, ?, ?)`;
+      values = [orderID, paymentType, amount, transactionId, paymentStatus];
+    } else {
+      sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status, provider) 
+              VALUES (?, ?, ?, ?, ?, ?)`;
+      values = [
+        orderID,
+        paymentType,
+        amount,
+        transactionId,
+        paymentStatus,
+        provider,
+      ];
+    }
+    const [result] = await conn.execute(sql, values);
     return result;
   } catch (err) {
     throw err;
