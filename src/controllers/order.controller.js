@@ -217,7 +217,7 @@ const createOrder = async (req, res) => {
       };
     } else {
       const ipAddr =
-        String(req.headers["x-forwarded-for"])?.split(",")[0] ||
+        req.headers["x-forwarded-for"] ||
         req.socket.remoteAddress ||
         "127.0.0.1";
       const paymentUrl = buildVnpayPaymentUrl({

@@ -8,7 +8,7 @@ import { sortObject } from "../../utils/payment.js";
 export function buildVnpayPaymentUrl({
   orderId,
   amount,
-  orderInfo = `Thanh toan don hang ${orderId}`,
+  orderInfo = `Thanh_toan_don_hang_${orderId}`,
   orderType = "other",
   bankCode,
   ipAddr,
@@ -26,22 +26,26 @@ export function buildVnpayPaymentUrl({
     vnp_OrderType: orderType,
     vnp_Amount: amount * 100, // VNPay yêu cầu *100
     vnp_ReturnUrl: vnpayConfig.returnUrl,
-    vnp_IpAddr: ipAddr,
     vnp_CreateDate: createDate,
   };
+
+  vnp_Params.vnp_IpAddr = ipAddr === "::1" ? "127.0.0.1" : ipAddr;
 
   if (bankCode) {
     vnp_Params.vnp_BankCode = bankCode;
   }
 
-  const sortedVnpParams = sortObject(vnp_Params);
+  vnp_Params = sortObject(vnp_Params);
 
-  const signData = qs.stringify(sortedVnpParams, { encode: false });
+  const signData = qs.stringify(vnp_Params, { encode: false });
 
   const hmac = crypto.createHmac("sha512", vnpayConfig.secretKey);
   const secureHash = hmac.update(signData, "utf-8").digest("hex");
 
   vnp_Params.vnp_SecureHash = secureHash;
 
-  return `${vnpayConfig.vnpUrl}?${qs.stringify(vnp_Params, { encode: false })}`;
+  const url = `${vnpayConfig.vnpUrl}?${qs.stringify(vnp_Params, {
+    encode: false,
+  })}`;
+  return url;
 }
