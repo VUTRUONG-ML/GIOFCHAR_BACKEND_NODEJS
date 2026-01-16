@@ -5,6 +5,11 @@ const paymentController = require("../controllers/payment.controller");
 const { requireAuth } = require("../middlewares/auth.middleware");
 const userMiddleware = require("../middlewares/user.middleware");
 const orderMiddleware = require("../middlewares/order.middleware");
+const {
+  verifyVnpaySignature,
+  checkVnpayOrder,
+} = require("../middlewares/payment.middleware");
+const { asyncHandler } = require("../errors/errorHandler");
 
 router.delete(
   "/:paymentId",
@@ -25,6 +30,19 @@ router.post(
   orderMiddleware.checkOrderExists,
   paymentController.createPayment
 );
+
+router.get(
+  "/vnpay/ipn",
+  (req, res, next) => {
+    console.log(">>> IPN HIT <<<");
+    console.log("QUERY:", req.query);
+    next();
+  },
+  verifyVnpaySignature,
+  asyncHandler(checkVnpayOrder),
+  asyncHandler(paymentController.handleIpn)
+);
+
 router.get(
   "/:paymentId",
   requireAuth,

@@ -221,7 +221,7 @@ const createOrder = async (req, res) => {
         req.socket.remoteAddress ||
         "127.0.0.1";
       const paymentUrl = buildVnpayPaymentUrl({
-        orderId: orderId,
+        orderId: orderCode,
         amount: totalPriceOrder,
         ipAddr,
       });
@@ -263,18 +263,23 @@ const createOrder = async (req, res) => {
 
 const updateOrderStatus = async (req, res) => {
   const orderId = req.params.orderId;
-  const status = req.body.status;
+  const newStatus = req.body.status;
+  const paymentStatus = req.order.paymentStatus;
   if (
-    !status ||
-    (status !== "delivering" &&
-      status !== "unconfirmed" &&
-      status !== "cancelled" &&
-      status !== "delivered")
+    !newStatus ||
+    (newStatus !== "delivering" &&
+      newStatus !== "unconfirmed" &&
+      newStatus !== "cancelled" &&
+      newStatus !== "delivered")
   ) {
     return res.status(400).json({ message: "Missing or incorrect status" });
   }
   try {
-    const result = await orderService.updateOrderStatus(orderId, status);
+    const result = await orderService.updateOrder({
+      orderId,
+      status: newStatus,
+      paymentStatus,
+    });
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Order not found" });
     res.status(200).json({ message: "Update order status successful" });
@@ -287,8 +292,13 @@ const updateOrderStatus = async (req, res) => {
 const cancelOrder = async (req, res) => {
   const orderId = req.params.orderId;
   const status = "cancelled";
+  const paymentStatus = req.order.paymentStatus;
   try {
-    const result = await orderService.updateOrderStatus(orderId, status);
+    const result = await orderService.updateOrder({
+      orderId,
+      status,
+      paymentStatus,
+    });
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Order not found" });
     res.status(200).json({ message: "Cancel order successful" });
@@ -312,6 +322,19 @@ const deleteOrder = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+const getPaymentStatus = async (req, res) => {
+  const { orderId } = req.order;
+
+  try {
+    const order = await orderService.getPaymentStatus(orderId);
+    return res.status(200).json({ ...order });
+  } catch (error) {
+    console.log(">>> CONTROLLER ERROR:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
 module.exports = {
   getAllOrders,
   getOrdersByUserId,
@@ -322,4 +345,5 @@ module.exports = {
   deleteOrder,
   getStatusOverview,
   getStatusRevenue,
+  getPaymentStatus,
 };

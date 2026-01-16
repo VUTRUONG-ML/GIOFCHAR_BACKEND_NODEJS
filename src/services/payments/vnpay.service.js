@@ -4,6 +4,8 @@ import dayjs from "dayjs";
 
 import { vnpayConfig } from "../../config/vnpay.js";
 import { sortObject } from "../../utils/payment.js";
+import { updateOrder } from "../order.service.js";
+import { updatePaymentById } from "../payment.service.js";
 
 export function buildVnpayPaymentUrl({
   orderId,
@@ -35,12 +37,7 @@ export function buildVnpayPaymentUrl({
     vnp_Params.vnp_BankCode = bankCode;
   }
 
-  vnp_Params = sortObject(vnp_Params);
-
-  const signData = qs.stringify(vnp_Params, { encode: false });
-
-  const hmac = crypto.createHmac("sha512", vnpayConfig.secretKey);
-  const secureHash = hmac.update(signData, "utf-8").digest("hex");
+  const secureHash = signVnpayParams(vnp_Params);
 
   vnp_Params.vnp_SecureHash = secureHash;
 
@@ -48,4 +45,46 @@ export function buildVnpayPaymentUrl({
     encode: false,
   })}`;
   return url;
+}
+
+export function signVnpayParams(vnp_Params) {
+  vnp_Params = sortObject(vnp_Params);
+  const signData = qs.stringify(vnp_Params, { encode: false });
+
+  const hmac = crypto.createHmac("sha512", vnpayConfig.secretKey);
+  const signed = hmac.update(signData, "utf-8").digest("hex");
+  return signed;
+}
+
+export async function processIpn({ order, payment, vnp_Params, connection }) {
+  if (payment.paymentStatus !== "pending") {
+    return {
+      RspCode: "02",
+      Message: "This payment has been updated to the payment status",
+    };
+  }
+  const rspCode = vnp_Params.vnp_ResponseCode;
+  const transactionId = vnp_Params.vnp_TransactionNo;
+
+  const newPaymentStatus = rspCode === "00" ? "success" : "failed";
+
+  await updateOrder(
+    {
+      orderId: order.orderId,
+      status: order.status,
+      paymentStatus: newPaymentStatus,
+    },
+    connection
+  );
+  await updatePaymentById(
+    {
+      paymentId: payment.paymentId,
+      paymentStatus: newPaymentStatus,
+      paymentType: payment.paymentType,
+      transactionId: transactionId,
+    },
+    connection
+  );
+
+  return { RspCode: "00", Message: "Success" };
 }

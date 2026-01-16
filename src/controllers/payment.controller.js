@@ -1,4 +1,6 @@
+const pool = require("../config/db");
 const paymentService = require("../services/payment.service");
+const { processIpn } = require("../services/payments/vnpay.service");
 
 const getAllPayments = async (req, res) => {
   try {
@@ -69,9 +71,8 @@ const updatePayment = async (req, res) => {
 
   try {
     const result = await paymentService.updatePaymentById(
-      paymentId,
-      paymentStatus,
-      paymentType
+      { paymentId, paymentStatus, paymentType },
+      pool
     );
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Payment not found" });
@@ -97,10 +98,34 @@ const deletePayment = async (req, res) => {
   }
 };
 
+const handleIpn = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  const order = req.order;
+  const payment = req.payment;
+  const vnpayParams = req.vnpayParams;
+  try {
+    await connection.beginTransaction();
+    const result = await processIpn({
+      order,
+      payment,
+      vnp_Params: vnpayParams,
+      connection,
+    });
+    await connection.commit();
+    return res.status(200).json(result);
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   getAllPayments,
   getPaymentById,
   createPayment,
   updatePayment,
   deletePayment,
+  handleIpn,
 };

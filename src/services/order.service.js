@@ -151,11 +151,11 @@ const createOrder = async (
   }
 };
 
-const updateOrderStatus = async (orderId, status) => {
+const updateOrder = async ({ orderId, status, paymentStatus }, conn = pool) => {
   try {
-    const [result] = await pool.execute(
-      "UPDATE orders o SET status = ? WHERE id = ?",
-      [status, orderId]
+    const [result] = await conn.execute(
+      "UPDATE orders o SET status = ?, paymentStatus = ? WHERE id = ?",
+      [status, paymentStatus, orderId]
     );
     return result;
   } catch (err) {
@@ -179,7 +179,7 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
   try {
     const { field, value } = switchCustomer({ userId, guestToken });
     const [result] = await pool.execute(
-      `SELECT * FROM orders WHERE id = ? AND ${field} = ?`,
+      `SELECT id as orderId FROM orders WHERE id = ? AND ${field} = ?`,
       [orderId, value]
     );
     return result.length > 0 ? result[0] : null;
@@ -231,16 +231,49 @@ const revenue = async (conn = pool, time = "default") => {
     throw error;
   }
 };
+
+const getPaymentStatus = async (orderId) => {
+  try {
+    const sql = `SELECT id as orderId, paymentStatus FROM orders WHERE id = ?`;
+    const [rows] = await pool.execute(sql, [orderId]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.log(">>> SERVICE ORDER ERROR:", error.message);
+    throw error;
+  }
+};
+const getByOrderCode = async ({ orderCode }, conn = pool) => {
+  try {
+    const sql = `
+      SELECT
+        o.id as orderId,
+        o.status,
+        o.paymentStatus,
+        SUM(oi.totalPrice) as amount
+      FROM orders o 
+      JOIN order_items oi ON o.id = oi.orderID 
+      WHERE o.orderCode = ?
+      GROUP BY  o.id
+    `;
+    const [rows] = await conn.execute(sql, [orderCode]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.log(">>> SERVICE ORDER ERROR:", error.message);
+    throw error;
+  }
+};
 module.exports = {
   getAllOrders,
   countTodayOrders,
   countYesterdayOrders,
   getOrdersByUserId,
   createOrder,
-  updateOrderStatus,
+  updateOrder,
   deleteOrder,
   getOrderById,
   getOrderByIdAndUser,
   attachOrderToUser,
   revenue,
+  getByOrderCode,
+  getPaymentStatus,
 };

@@ -6,7 +6,6 @@ const orderService = require("../services/order.service");
 const optionalAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   const guestToken = req.headers["x-guest-token"];
-
   if (!token) {
     req.user = { userId: null, guestToken: guestToken ?? null, role: "user" };
     return next();
@@ -40,7 +39,7 @@ const requireAuth = (req, res, next) => {
 
 const authorizeOrderAccess = async (req, res, next) => {
   const { userId, guestToken } = req.user;
-  const { orderId } = req.params;
+  const orderId = req.params.orderId || req.order.orderId;
   if (req.user.role === "admin") return next();
   try {
     const order = await orderService.getOrderByIdAndUser(orderId, {
@@ -50,6 +49,7 @@ const authorizeOrderAccess = async (req, res, next) => {
     if (!order)
       return res.status(403).json({ message: "You do not have access" });
 
+    req.order = order;
     next();
   } catch (error) {
     console.log(">>>>> MIDDLEEWARE AUTH ERROR", error.message);

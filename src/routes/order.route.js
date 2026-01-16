@@ -10,6 +10,10 @@ const {
 const userMiddleware = require("../middlewares/user.middleware");
 const cartMiddleware = require("../middlewares/cart.middleware");
 const orderController = require("../controllers/order.controller");
+const {
+  checkOrderExists,
+  checkOrderByOrderCode,
+} = require("../middlewares/order.middleware");
 
 // Xóa order dành cho admin
 router.delete(
@@ -24,6 +28,7 @@ router.put(
   "/:orderId/cancel",
   optionalAuth,
   authorizeOrderAccess,
+  checkOrderExists,
   orderController.cancelOrder
 );
 
@@ -32,6 +37,7 @@ router.put(
   "/:orderId/status",
   requireAuth,
   userMiddleware.checkAdmin,
+  checkOrderExists,
   orderController.updateOrderStatus
 );
 
@@ -73,7 +79,13 @@ router.get(
   authorizeOrderAccess,
   orderController.getOrderItemsByOrderId
 );
-
+router.get(
+  "/payment-status/by-code/:orderCode",
+  checkOrderByOrderCode,
+  optionalAuth,
+  authorizeOrderAccess,
+  orderController.getPaymentStatus
+);
 // Xem tất cả order của chính bản thân dành cho user
 router.get("/user/my-orders", requireAuth, orderController.getOrdersByUserId);
 
