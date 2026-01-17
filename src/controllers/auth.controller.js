@@ -9,7 +9,6 @@ const registerApi = async (req, res) => {
     return res.status(400).json({ message: "Missing field" });
   }
   const guestToken = req.headers["x-guest-token"];
-  const orderId = req.headers["x-order-id"];
   try {
     const result = await authService.register(
       userName,
@@ -22,9 +21,8 @@ const registerApi = async (req, res) => {
     if (guestToken) {
       try {
         await attachOrderToUser({
-          guestToken,
+          email,
           userId: result.insertId,
-          orderId,
         });
         console.log(">>>>> Attach order to user success");
       } catch (error) {

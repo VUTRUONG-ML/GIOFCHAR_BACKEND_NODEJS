@@ -188,16 +188,15 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
   }
 };
 
-const attachOrderToUser = async ({ guestToken, userId, orderId }) => {
-  if (!guestToken) return;
+const attachOrderToUser = async ({ email, userId }) => {
   try {
     await pool.execute(
       `
     UPDATE orders
     SET userID = ?, guestToken = NULL
-    WHERE guestToken = ? AND userID IS NULL AND id = ?
+    WHERE email = ? 
     `,
-      [userId, guestToken, orderId]
+      [userId, email]
     );
   } catch (error) {
     console.log(">>>>> SERVICE ERROR attach order:", error.message);
