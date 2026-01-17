@@ -210,8 +210,8 @@ const revenue = async (conn = pool, time = "default") => {
     time === "today"
       ? "WHERE o.createdAt >= CURDATE() AND o.createdAt < CURDATE() + INTERVAL 1 DAY"
       : time === "yesterday"
-      ? "WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()"
-      : "";
+        ? "WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()"
+        : "";
   try {
     const [result] = await conn.execute(
       `
@@ -249,6 +249,7 @@ const getByOrderCode = async ({ orderCode }, conn = pool) => {
         o.id as orderId,
         o.status,
         o.paymentStatus,
+        o.has_viewed_payment_result,
         SUM(oi.totalPrice) as amount
       FROM orders o 
       JOIN order_items oi ON o.id = oi.orderID 
@@ -259,6 +260,21 @@ const getByOrderCode = async ({ orderCode }, conn = pool) => {
     return rows.length > 0 ? rows[0] : null;
   } catch (error) {
     console.log(">>> SERVICE ORDER ERROR:", error.message);
+    throw error;
+  }
+};
+const markPaymentResultViewed = async ({ orderId }, conn = pool) => {
+  try {
+    const sql = `
+      UPDATE orders o
+      SET has_viewed_payment_result = TRUE, payment_result_viewed_at = CURRENT_TIMESTAMP()
+      WHERE id = ? 
+        AND o.has_viewed_payment_result = FALSE
+    `;
+    const [rows] = await conn.execute(sql, [orderId]);
+    return rows;
+  } catch (error) {
+    console.log(">>> SERVICE markPaymentResultViewed ERROR:", error.message);
     throw error;
   }
 };
@@ -276,4 +292,5 @@ module.exports = {
   revenue,
   getByOrderCode,
   getPaymentStatus,
+  markPaymentResultViewed,
 };

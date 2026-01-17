@@ -82,8 +82,6 @@ router.get(
 router.get(
   "/payment-status/by-code/:orderCode",
   checkOrderByOrderCode,
-  optionalAuth,
-  authorizeOrderAccess,
   orderController.getPaymentStatus
 );
 // Xem tất cả order của chính bản thân dành cho user

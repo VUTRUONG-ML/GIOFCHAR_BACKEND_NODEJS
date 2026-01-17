@@ -15,11 +15,18 @@ const checkOrderExists = async (req, res, next) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+
 const checkOrderByOrderCode = async (req, res, next) => {
   const orderCode = req.body.orderCode || req.params.orderCode;
   try {
     const order = await orderService.getByOrderCode({ orderCode });
     if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.has_viewed_payment_result)
+      return res.status(403).json({ message: "Payment cannot be reviewed" });
+
+    await orderService.markPaymentResultViewed({ orderId: order.orderId });
+
     req.order = order;
     next();
   } catch (err) {

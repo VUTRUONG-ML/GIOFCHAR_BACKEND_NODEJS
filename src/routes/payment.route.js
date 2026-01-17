@@ -33,11 +33,6 @@ router.post(
 
 router.get(
   "/vnpay/ipn",
-  (req, res, next) => {
-    console.log(">>> IPN HIT <<<");
-    console.log("QUERY:", req.query);
-    next();
-  },
   verifyVnpaySignature,
   asyncHandler(checkVnpayOrder),
   asyncHandler(paymentController.handleIpn)
