@@ -10,32 +10,32 @@ router.delete(
   "/:paymentId",
   requireAuth,
   userMiddleware.checkAdmin,
-  paymentController.deletePayment
+  paymentController.deletePayment,
 );
 router.put(
   "/:paymentId",
   requireAuth,
   userMiddleware.checkAdmin,
-  paymentController.updatePayment
+  paymentController.updatePayment,
 );
 router.post(
   "/",
   requireAuth,
   userMiddleware.checkAdmin,
   orderMiddleware.checkOrderExists,
-  paymentController.createPayment
+  paymentController.createPayment,
 );
 router.get(
   "/:paymentId",
   requireAuth,
   userMiddleware.checkAdmin,
-  paymentController.getPaymentById
+  paymentController.getPaymentById,
 );
 router.get(
   "/",
   requireAuth,
   userMiddleware.checkAdmin,
-  paymentController.getAllPayments
+  paymentController.getAllPayments,
 );
 
 module.exports = router;
