@@ -1,5 +1,6 @@
-const pool = require("../config/db");
-const { normalizeVN } = require("../utils/normalize");
+import pool from "../config/db.js";
+import { buildPreview } from "../utils/food.js";
+import { normalizeVN } from "../utils/normalize.js";
 
 const getAllFoodsAdmin = async () => {
   try {
@@ -9,8 +10,6 @@ const getAllFoodsAdmin = async () => {
         f.id as foodId,
         foodName, 
         foodDescription,
-        price,
-        stock,
         isActive,
         image,
         f.categoryID,
@@ -46,32 +45,44 @@ const getAllFoods = async ({ option = "default" }) => {
         `;
       break;
     default:
-      field = "";
       optionGet = "";
       break;
   }
 
   try {
-    const [foods] = await pool.execute(`
-      SELECT 
-        f.id as foodId,
-        foodName, 
-        originalPrice,
-        price,
-        discount,
-        rating,
-        isActive,
-        image,
+    const [rows] = await pool.execute(`
+      SELECT
+        f.id           AS foodId,
+        f.foodName,
+        f.image,
+        f.rating,
         f.categoryID,
-        
-        c.categoryName
+        c.categoryName,
+
+        fv.id          AS variantId,
+        fv.weight_gram,
+        fv.originalPrice,
+
+        p.id           AS promotionId,
+        p.type         AS promotionType,
+        p.value        AS promotionValue,
+        p.start_at,
+        p.end_at,
+        p.isActive
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
-      ${optionGet}
+      LEFT JOIN food_variants fv ON fv.foodID = f.id
+      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
+      LEFT JOIN promotions p ON p.id = pt.promotionID
+        AND p.isActive = TRUE
+        AND NOW() BETWEEN '2026-01-10 23:59:59' AND '2026-02-10 23:59:59'
+      ORDER BY f.id, fv.weight_gram;
     `);
-    return foods;
+    const newRows = buildPreview(rows);
+    console.log(">>> check", newRows);
+    return newRows;
   } catch (err) {
-    console.log(">>>>> Service getAllFoods error", err.message);
+    console.log(">>>>> Service getAllFoods error", err);
     throw err;
   }
 };
@@ -87,7 +98,7 @@ const createFood = async (
   isActive,
   categoryID,
   image,
-  imagePublicId
+  imagePublicId,
 ) => {
   try {
     const finalDiscount = discount ?? 0;
@@ -96,7 +107,7 @@ const createFood = async (
     }
 
     const price = Number(
-      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2)
+      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2),
     );
 
     const [result] = await pool.execute(
@@ -134,7 +145,7 @@ const createFood = async (
         categoryID,
         image || "",
         imagePublicId || "",
-      ]
+      ],
     );
 
     return { insertId: result.insertId };
@@ -166,7 +177,7 @@ const getFoodById = async (foodId, { isAdmin = false }) => {
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
       WHERE f.id = ?`,
-      [foodId]
+      [foodId],
     );
     return foods.length > 0 ? foods[0] : null;
   } catch (err) {
@@ -186,7 +197,7 @@ const updateFoodById = async (
   categoryID,
   image,
   imagePublicId,
-  foodId
+  foodId,
 ) => {
   try {
     const finalDiscount = discount ?? 0;
@@ -195,7 +206,7 @@ const updateFoodById = async (
     }
 
     const price = Number(
-      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2)
+      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2),
     );
 
     const [result] = await pool.execute(
@@ -226,7 +237,7 @@ const updateFoodById = async (
         image || "",
         imagePublicId || "",
         foodId,
-      ]
+      ],
     );
 
     return result;
@@ -269,7 +280,7 @@ const searchFood = async (key = "") => {
       FROM foods f
       JOIN categories c ON f.categoryID = c.id 
       WHERE f.isActive = 1
-            AND f.stock > 0`
+            AND f.stock > 0`,
     );
     if (!normalizedKeyword) return result;
     return result.filter((row) => {
@@ -301,7 +312,7 @@ const filterFood = async (preference, budget, quantity) => {
         AND f.stock >= ?
       ORDER BY f.price ASC;
     `,
-      [preference, preference, budget, quantity]
+      [preference, preference, budget, quantity],
     );
     return foods.length > 0 ? foods : null;
   } catch (error) {
@@ -315,7 +326,7 @@ const getStock = async (conn, foodId, { forUpdate = false }) => {
     const isLock = forUpdate ? "FOR UPDATE" : "";
     const [result] = await conn.execute(
       `SELECT stock FROM foods WHERE id = ? ${isLock}`,
-      [foodId]
+      [foodId],
     );
     return result.length > 0 ? result[0] : null;
   } catch (error) {
@@ -332,7 +343,7 @@ const updateStock = async (conn, foodId, quantityOrder) => {
       SET stock = stock - ?
       WHERE id = ? AND stock >= ?
       `,
-      [quantityOrder, foodId, quantityOrder]
+      [quantityOrder, foodId, quantityOrder],
     );
     return result.affectedRows === 1 ? true : false;
   } catch (error) {
@@ -354,7 +365,7 @@ const deductStockForOrder = async (conn, cartItems) => {
   }
 };
 
-module.exports = {
+export {
   getAllFoods,
   getAllFoodsAdmin,
   createFood,

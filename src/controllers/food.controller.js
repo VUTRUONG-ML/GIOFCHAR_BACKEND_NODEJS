@@ -4,6 +4,7 @@ const safeDeleteCloudinary = require("../utils/safeCloudinary");
 const getAllFoods = async (req, res) => {
   const { role } = req.user;
   const { search } = req.query;
+  console.log("role:", role);
   try {
     let foods;
 
@@ -74,8 +75,8 @@ const createFood = async (req, res) => {
     isActive === undefined
       ? 1
       : isActive === true || isActive === "true" || isActive === "1"
-      ? 1
-      : 0;
+        ? 1
+        : 0;
 
   try {
     const result = await foodService.createFood(
@@ -89,7 +90,7 @@ const createFood = async (req, res) => {
       isActiveValue,
       categoryID,
       imageUrl,
-      imagePublicId
+      imagePublicId,
     );
 
     res
@@ -164,8 +165,8 @@ const updateFoodById = async (req, res) => {
     isActive === undefined
       ? 1
       : isActive === true || isActive === "true" || isActive === "1"
-      ? 1
-      : 0;
+        ? 1
+        : 0;
 
   try {
     const result = await foodService.updateFoodById(
@@ -179,7 +180,7 @@ const updateFoodById = async (req, res) => {
       categoryID,
       image,
       imagePublicId,
-      foodId
+      foodId,
     );
 
     if (result.affectedRows === 0)
