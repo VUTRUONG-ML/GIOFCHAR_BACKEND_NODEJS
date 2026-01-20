@@ -1,10 +1,11 @@
-const foodService = require("../services/food.service");
-const safeDeleteCloudinary = require("../utils/safeCloudinary");
+import pool from "../config/db.js";
+import foodService from "../services/food.service.js";
+import { getVariantByFoodId } from "../services/variant.service.js";
+import safeDeleteCloudinary from "../utils/safeCloudinary.js";
 
 const getAllFoods = async (req, res) => {
   const { role } = req.user;
   const { search } = req.query;
-  console.log("role:", role);
   try {
     let foods;
 
@@ -125,6 +126,21 @@ const getFoodById = async (req, res) => {
   }
 };
 
+const getDetailFood = async (req, res) => {
+  const foodId = req.params.foodId;
+  try {
+    const food = await foodService.getDetailFood(foodId);
+    console.log(">>> Detail", food);
+    if (!food) return res.status(404).json({ message: "Food not found" });
+    return res.status(200).json(food);
+  } catch (error) {
+    console.log(">>> CONTROLLER get detail food ERROR:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
 const updateFoodById = async (req, res) => {
   const foodId = req.params.foodId;
   const {
@@ -226,7 +242,7 @@ const deleteFoodById = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getAllFoods,
   createFood,
   getFoodById,
@@ -234,4 +250,5 @@ module.exports = {
   deleteFoodById,
   getAllBestSelling,
   getFoodsPromotion,
+  getDetailFood,
 };

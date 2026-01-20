@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { buildPreview } from "../utils/food.js";
 import { normalizeVN } from "../utils/normalize.js";
+import { getVariantByFoodId } from "./variant.service.js";
 
 const getAllFoodsAdmin = async () => {
   try {
@@ -24,7 +25,7 @@ const getAllFoodsAdmin = async () => {
   }
 };
 
-const getAllFoods = async ({ option = "default" }) => {
+const getAllFoods = async ({ option = "default" }, conn = pool) => {
   // const typeOption = "default" | "bestSelling" | "promotion";
   let optionGet;
   switch (option) {
@@ -50,7 +51,7 @@ const getAllFoods = async ({ option = "default" }) => {
   }
 
   try {
-    const [rows] = await pool.execute(`
+    const [rows] = await conn.execute(`
       SELECT
         f.id           AS foodId,
         f.foodName,
@@ -75,11 +76,10 @@ const getAllFoods = async ({ option = "default" }) => {
       LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
       LEFT JOIN promotions p ON p.id = pt.promotionID
         AND p.isActive = TRUE
-        AND NOW() BETWEEN '2026-01-10 23:59:59' AND '2026-02-10 23:59:59'
+        AND NOW() BETWEEN p.start_at AND p.end_at
       ORDER BY f.id, fv.weight_gram;
     `);
     const newRows = buildPreview(rows);
-    console.log(">>> check", newRows);
     return newRows;
   } catch (err) {
     console.log(">>>>> Service getAllFoods error", err);
@@ -155,24 +155,21 @@ const createFood = async (
   }
 };
 
-const getFoodById = async (foodId, { isAdmin = false }) => {
-  const field = isAdmin
-    ? "stock, imagePublicId, discount,"
-    : "discount, rating, ingredients,";
+const getFoodById = async (foodId, { isAdmin = false }, conn = pool) => {
+  // const field = isAdmin
+  //   ? "stock, imagePublicId, discount,"
+  //   : "discount, rating, ingredients,";
   try {
     // For pool initialization, see above
-    const [foods] = await pool.execute(
+    const [foods] = await conn.execute(
       `SELECT 
         f.id as foodId,
-        foodName, 
-        foodDescription,
-        ${field}
-        price,
-        originalPrice,
-        isActive,
-        image,
+        f.foodName,
+        f.foodDescription,
+        f.image,
+        f.rating,
+        f.ingredients,
         f.categoryID,
-        
         c.categoryName
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
@@ -365,7 +362,25 @@ const deductStockForOrder = async (conn, cartItems) => {
   }
 };
 
-export {
+const getDetailFood = async (foodId) => {
+  const connection = await pool.getConnection();
+  try {
+    const food = await getFoodById(foodId, {}, connection);
+    if (!food) {
+      return null;
+    }
+    const variants = await getVariantByFoodId(foodId, connection);
+    console.log("variants:", variants);
+    const newFood = { ...food, variants };
+    return newFood;
+  } catch (error) {
+    console.log(">>> SERVICE get detail food ERROR:", error.message);
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+export default {
   getAllFoods,
   getAllFoodsAdmin,
   createFood,
@@ -377,4 +392,5 @@ export {
   getStock,
   updateStock,
   deductStockForOrder,
+  getDetailFood,
 };

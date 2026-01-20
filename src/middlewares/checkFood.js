@@ -1,3 +1,4 @@
+const pool = require("../config/db");
 const foodService = require("../services/food.service");
 
 const checkFoodExists = async (req, res, next) => {
@@ -8,7 +9,7 @@ const checkFoodExists = async (req, res, next) => {
   }
 
   try {
-    const food = await foodService.getFoodById(foodId, { isAdmin: true });
+    const food = await foodService.getFoodById(foodId, { isAdmin: true }, pool);
 
     if (!food) return res.status(404).json({ message: "Food not found" });
     req.food = food;

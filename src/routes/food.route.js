@@ -18,7 +18,7 @@ router.delete(
   requireAuth,
   checkAdmin,
   checkFood,
-  foodController.deleteFoodById // delete food
+  foodController.deleteFoodById, // delete food
 );
 router.put(
   "/:foodId",
@@ -31,7 +31,7 @@ router.put(
 
   checkFood,
   checkCategory,
-  foodController.updateFoodById
+  foodController.updateFoodById,
 );
 router.post(
   "/",
@@ -42,11 +42,11 @@ router.post(
   cleanupCloudinary, // xóa ảnh nếu có lỗi xảy ra khi res.json() ở 2 controller sau
 
   checkCategory,
-  foodController.createFood
+  foodController.createFood,
 );
 router.get("/promotion", foodController.getFoodsPromotion);
 router.get("/best-selling", foodController.getAllBestSelling);
-router.get("/:foodId", optionalAuth, foodController.getFoodById);
+router.get("/:foodId", optionalAuth, foodController.getDetailFood);
 router.get("/", optionalAuth, foodController.getAllFoods);
 
 module.exports = router;
