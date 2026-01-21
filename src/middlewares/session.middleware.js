@@ -20,3 +20,5 @@ export const checkOrigin = (req, res, next) => {
 
   next();
 };
+
+// check xem có phải là client của mình không

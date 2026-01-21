@@ -130,7 +130,6 @@ const getDetailFood = async (req, res) => {
   const foodId = req.params.foodId;
   try {
     const food = await foodService.getDetailFood(foodId);
-    console.log(">>> Detail", food);
     if (!food) return res.status(404).json({ message: "Food not found" });
     return res.status(200).json(food);
   } catch (error) {

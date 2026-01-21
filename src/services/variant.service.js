@@ -1,7 +1,5 @@
 import pool from "../config/db.js";
-import { attachVariantToFood } from "../utils/food.js";
 import { groupVariant } from "../utils/variant.js";
-import foodService from "./food.service.js";
 
 export async function getVariantByFoodId(foodId, conn = pool) {
   try {
@@ -23,10 +21,25 @@ export async function getVariantByFoodId(foodId, conn = pool) {
     `;
     const [rows] = await conn.execute(sql, [foodId]);
     const res = groupVariant(rows);
-    console.log(">> res:", res);
     return res;
   } catch (error) {
     console.log(">>> SERVICE ERROR:", error.message);
+    throw error;
+  }
+}
+
+export async function createVariant(
+  { foodId, weight_gram, originalPrice, stock = 0 },
+  conn = pool,
+) {
+  const sql = `INSERT INTO food_variants (foodID, weight_gram, originalPrice, stock)
+     VALUES (?, ?, ?, ?)`;
+  const values = [foodId, weight_gram, originalPrice, stock];
+  try {
+    const [result] = await conn.execute(sql, values);
+    return result.insertId;
+  } catch (error) {
+    console.log(">>> SERVICE create variant ERROR:", error.message);
     throw error;
   }
 }

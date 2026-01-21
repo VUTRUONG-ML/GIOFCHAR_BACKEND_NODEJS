@@ -14,6 +14,8 @@ import authRoutes from "./routes/auth.route.js";
 import botChatRoutes from "./routes/botChat.route.js";
 import statisticRoutes from "./routes/statistic.route.js";
 import { checkOrigin } from "./middlewares/session.middleware.js";
+import { errorHandler } from "./errors/errorHandler.js";
+import promotionRoutes from "./routes/promotion.route.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -23,7 +25,7 @@ app.use(
     origin: process.env.CLIENT_ORIGINS.split(","),
     credentials: true, // cho gửi cookie / session
     exposedHeaders: ["X-Guest-Token"], // Cho phép frontend đọc header này
-  })
+  }),
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -38,9 +40,10 @@ app.use(
     cookie: { maxAge: 10 * 60 * 1000 }, // 5p
     httpOnly: true,
     sameSite: "lax",
-  })
+  }),
 );
 
+app.use("/api/promotions", promotionRoutes);
 app.use("/api/statistic", statisticRoutes);
 app.use("/api/botchat", botChatRoutes);
 app.use("/api/auth", authRoutes);
@@ -53,6 +56,8 @@ app.use("/api/users", userRoutes);
 app.use("/", (req, res) => {
   res.send("Hello world, this is GIOFCHAR WEBSITE");
 });
+
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

@@ -370,7 +370,6 @@ const getDetailFood = async (foodId) => {
       return null;
     }
     const variants = await getVariantByFoodId(foodId, connection);
-    console.log("variants:", variants);
     const newFood = { ...food, variants };
     return newFood;
   } catch (error) {

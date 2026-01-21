@@ -1,7 +1,7 @@
-const pool = require("../config/db");
-const { generateOrderCode } = require("../utils/order.util");
-const { switchCustomer } = require("../utils/switchCustomer");
-const { validateOwner } = require("./validators");
+import pool from "../config/db.js";
+import { generateOrderCode } from "../utils/order.util.js";
+import { switchCustomer } from "../utils/switchCustomer.js";
+import { validateOwner } from "./validators.js";
 
 const getAllOrders = async () => {
   try {
@@ -36,7 +36,7 @@ const countTodayOrders = async (conn = pool) => {
       SELECT COUNT(o.id) as countOrdered
       FROM orders o
       WHERE o.createdAt >= CURDATE() AND o.createdAt < CURDATE() + INTERVAL 1 DAY
-      `
+      `,
     );
     return result[0].countOrdered;
   } catch (error) {
@@ -52,7 +52,7 @@ const countYesterdayOrders = async (conn = pool) => {
       SELECT COUNT(o.id) as countOrdered
       FROM orders o
       WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()
-      `
+      `,
     );
     return result[0].countOrdered;
   } catch (error) {
@@ -73,7 +73,7 @@ const getOrderById = async (orderId) => {
         o.createdAt AS time
       FROM orders o 
       WHERE id = ?`,
-      [orderId]
+      [orderId],
     );
     return rows;
   } catch (err) {
@@ -104,7 +104,7 @@ const getOrdersByUserId = async (userId) => {
       JOIN foods f ON f.id = oi.foodID 
    	  WHERE o.userID = ?
       ORDER BY o.createdAt`,
-      [userId]
+      [userId],
     );
     return rows;
   } catch (err) {
@@ -118,7 +118,7 @@ const createOrder = async (
   customerName,
   email,
   phone,
-  address
+  address,
 ) => {
   try {
     validateOwner({ userId, guestToken });
@@ -134,7 +134,7 @@ const createOrder = async (
 
     const [result] = await connection.execute(
       `INSERT INTO orders (${field}, customerName, email, phone, address) VALUES (?, ?, ?, ?, ?)`,
-      [value, customerName, email, phone, address]
+      [value, customerName, email, phone, address],
     );
 
     const orderId = result.insertId;
@@ -155,7 +155,7 @@ const updateOrderStatus = async (orderId, status) => {
   try {
     const [result] = await pool.execute(
       "UPDATE orders o SET status = ? WHERE id = ?",
-      [status, orderId]
+      [status, orderId],
     );
     return result;
   } catch (err) {
@@ -180,7 +180,7 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
     const { field, value } = switchCustomer({ userId, guestToken });
     const [result] = await pool.execute(
       `SELECT * FROM orders WHERE id = ? AND ${field} = ?`,
-      [orderId, value]
+      [orderId, value],
     );
     return result.length > 0 ? result[0] : null;
   } catch (err) {
@@ -197,7 +197,7 @@ const attachOrderToUser = async ({ guestToken, userId, orderId }) => {
     SET userID = ?, guestToken = NULL
     WHERE guestToken = ? AND userID IS NULL AND id = ?
     `,
-      [userId, guestToken, orderId]
+      [userId, guestToken, orderId],
     );
   } catch (error) {
     console.log(">>>>> SERVICE ERROR attach order:", error.message);
@@ -210,8 +210,8 @@ const revenue = async (conn = pool, time = "default") => {
     time === "today"
       ? "WHERE o.createdAt >= CURDATE() AND o.createdAt < CURDATE() + INTERVAL 1 DAY"
       : time === "yesterday"
-      ? "WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()"
-      : "";
+        ? "WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()"
+        : "";
   try {
     const [result] = await conn.execute(
       `
@@ -223,7 +223,7 @@ const revenue = async (conn = pool, time = "default") => {
                 JOIN order_items oi ON o.id = oi.orderID 
                 ${optionTime}
                 GROUP BY o.id) ordersAmount;
-      `
+      `,
     );
     return result[0].revenue ? Number(result[0].revenue) : 0;
   } catch (error) {
@@ -231,7 +231,7 @@ const revenue = async (conn = pool, time = "default") => {
     throw error;
   }
 };
-module.exports = {
+export default {
   getAllOrders,
   countTodayOrders,
   countYesterdayOrders,
