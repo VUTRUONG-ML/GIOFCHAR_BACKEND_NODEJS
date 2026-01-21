@@ -44,7 +44,7 @@ export function validatePromotion({
     throw new BadRequestError("start_at must be before end_at");
   }
 
-  if (!isActive || typeof isActive !== "boolean") {
+  if (typeof isActive !== "boolean") {
     throw new BadRequestError("Invalid is active promotion");
   }
 }

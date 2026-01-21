@@ -5,9 +5,16 @@ import { asyncHandler } from "../errors/errorHandler.js";
 import {
   createPromotionController,
   getPromotionsController,
+  updatePromotionController,
 } from "../controllers/promotion.controller.js";
 const router = express.Router();
 
+router.put(
+  "/:promotionId",
+  requireAuth,
+  checkAdmin,
+  asyncHandler(updatePromotionController),
+);
 router.post("/", requireAuth, checkAdmin, createPromotionController);
 router.get("/", requireAuth, checkAdmin, asyncHandler(getPromotionsController));
 
