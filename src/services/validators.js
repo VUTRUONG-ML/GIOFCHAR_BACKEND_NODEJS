@@ -48,3 +48,12 @@ export function validatePromotion({
     throw new BadRequestError("Invalid is active promotion");
   }
 }
+
+export function validateVariant({ weight_gram, originalPrice, stock }) {
+  if (typeof weight_gram !== "number" || weight_gram <= 0)
+    throw new BadRequestError("Invalid weight variant");
+  if (typeof originalPrice !== "number" || originalPrice <= 0)
+    throw new BadRequestError("Invalid original price variant");
+  if (typeof stock !== "number" || stock < 0)
+    throw new BadRequestError("Invalid stock variant");
+}

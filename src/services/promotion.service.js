@@ -21,6 +21,27 @@ export async function getPromotions(conn = pool) {
     throw error;
   }
 }
+export async function getPromotionById(promotionId, conn = pool) {
+  try {
+    const sql = `
+    SELECT
+        id as promotionId,
+        name,
+        type,
+        value,
+        start_at,
+        end_at,
+        isActive
+    FROM promotions p
+    WHERE id = ? AND isActive = true
+    `;
+    const [rows] = await conn.execute(sql, [promotionId]);
+    return rows.length > 0 ? rows[0] : null; // {promotionId, name, type, value, start_at, end_at, isActive}
+  } catch (error) {
+    console.log(">>> SERVICE get promotion ERROR:", error.message);
+    throw error;
+  }
+}
 
 export async function createPromotion(
   { name, type, value, start_at, end_at, isActive = true },
@@ -57,6 +78,37 @@ export async function updatePromotion(
     return result.affectedRows === 1;
   } catch (error) {
     console.log(">>> SERVICE update promotion ERROR:", error.message);
+    throw error;
+  }
+}
+
+export async function deletePromotion(promotionId, conn = pool) {
+  try {
+    const sql = `
+      DELETE FROM promotions WHERE id = ?
+    `;
+    const values = [promotionId];
+    const [result] = await conn.execute(sql, values);
+    return result.affectedRows === 1;
+  } catch (error) {
+    console.log(">>> SERVICE delete promotion ERROR:", error.message);
+    throw error;
+  }
+}
+
+export async function createPromotionTarget(
+  { promotionId, variantId },
+  conn = pool,
+) {
+  try {
+    const sql = `
+      INSERT INTO promotion_targets (food_variantID, promotionID )
+      VALUES (?, ?)`;
+    const values = [variantId, promotionId];
+    const [result] = await conn.execute(sql, values);
+    return result.insertId;
+  } catch (error) {
+    console.log(">>> SERVICE create promotion target ERROR:", error.message);
     throw error;
   }
 }

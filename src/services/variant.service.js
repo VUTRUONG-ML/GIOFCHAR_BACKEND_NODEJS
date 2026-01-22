@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { groupVariant } from "../utils/variant.js";
+import { validateVariant } from "./validators.js";
 
 export async function getVariantByFoodId(foodId, conn = pool) {
   try {
@@ -32,6 +33,7 @@ export async function createVariant(
   { foodId, weight_gram, originalPrice, stock = 0 },
   conn = pool,
 ) {
+  validateVariant({ weight_gram, originalPrice, stock });
   const sql = `INSERT INTO food_variants (foodID, weight_gram, originalPrice, stock)
      VALUES (?, ?, ?, ?)`;
   const values = [foodId, weight_gram, originalPrice, stock];
@@ -41,5 +43,59 @@ export async function createVariant(
   } catch (error) {
     console.log(">>> SERVICE create variant ERROR:", error.message);
     throw error;
+  }
+}
+
+export async function getVariantById(variantId, conn = pool) {
+  try {
+    const sql = `
+      SELECT
+        fv.id as variantId,
+        fv.weight_gram,
+        fv.originalPrice,
+        fv.stock as inStock
+      FROM food_variants fv 
+      WHERE fv.id = ? AND fv.isActive = TRUE
+      ORDER BY fv.weight_gram 
+    `;
+    const [rows] = await conn.execute(sql, [variantId]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.log(">>> SERVICE getVariantById ERROR:", error.message);
+    throw error;
+  }
+}
+
+export async function createVariantWithPromotion({
+  foodId,
+  weight_gram,
+  originalPrice,
+  stock,
+  promotionId = null,
+}) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1. Tạo variant
+    const variantId = await createVariant(
+      { foodId, weight_gram, originalPrice, stock },
+      conn,
+    );
+
+    // 2. Nếu có promotion thì gán promotion cho variant
+    if (promotionId) {
+      await createPromotionTarget({ promotionId, variantId }, conn);
+    }
+
+    await conn.commit();
+    return variantId;
+  } catch (error) {
+    await conn.rollback();
+    console.log(">>> SERVICE createVariantWithPromotion ERROR:", error.message);
+    throw error;
+  } finally {
+    conn.release();
   }
 }

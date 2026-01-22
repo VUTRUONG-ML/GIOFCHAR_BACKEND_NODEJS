@@ -4,10 +4,17 @@ import { checkAdmin } from "../middlewares/user.middleware.js";
 import { asyncHandler } from "../errors/errorHandler.js";
 import {
   createPromotionController,
+  deletePromotionController,
   getPromotionsController,
   updatePromotionController,
 } from "../controllers/promotion.controller.js";
 const router = express.Router();
+router.delete(
+  "/:promotionId",
+  requireAuth,
+  checkAdmin,
+  asyncHandler(deletePromotionController),
+);
 
 router.put(
   "/:promotionId",

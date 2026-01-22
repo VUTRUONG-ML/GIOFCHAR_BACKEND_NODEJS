@@ -1,5 +1,6 @@
 import {
   createPromotion,
+  deletePromotion,
   getPromotions,
   updatePromotion,
 } from "../services/promotion.service.js";
@@ -65,5 +66,16 @@ export const updatePromotionController = async (req, res) => {
 
   return res.status(201).json({
     message: "Update promotion successful",
+  });
+};
+
+export const deletePromotionController = async (req, res) => {
+  const { promotionId } = req.params;
+
+  const deleted = await deletePromotion(promotionId);
+  if (!deleted) throw new NotFoundError("Promotion not found");
+
+  return res.status(200).json({
+    message: "Delete promotion successful",
   });
 };
