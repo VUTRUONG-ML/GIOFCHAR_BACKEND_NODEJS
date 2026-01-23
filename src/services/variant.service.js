@@ -3,7 +3,9 @@ import { groupVariant } from "../utils/variant.js";
 import { validateVariant } from "./validators.js";
 import {
   createPromotionTarget,
+  deletePromotionTarget,
   getPromotionById,
+  getPromotionTarget,
 } from "./promotion.service.js";
 import { BadRequestError, ConflictError } from "../errors/AppError.js";
 
@@ -53,6 +55,28 @@ export async function createVariant(
   }
 }
 
+export async function updateVariant(
+  { variantId, weight_gram, originalPrice, stock = 0, isActive = true },
+  conn = pool,
+) {
+  validateVariant({ weight_gram, originalPrice, stock, isActive });
+  const sql = `
+    UPDATE food_variants
+    SET weight_gram = ?, originalPrice = ?, stock = ?, isActive = ?
+    WHERE id = ?
+  `;
+  const values = [weight_gram, originalPrice, stock, isActive, variantId];
+  try {
+    const [result] = await conn.execute(sql, values);
+    return result.affectedRows === 1;
+  } catch (error) {
+    console.log(">>> SERVICE update variant ERROR:", error.message);
+    if (error.code === "ER_DUP_ENTRY")
+      throw new ConflictError("Weight gram already exists on food");
+    throw error;
+  }
+}
+
 export async function getVariantById(variantId, conn = pool) {
   try {
     const sql = `
@@ -62,7 +86,7 @@ export async function getVariantById(variantId, conn = pool) {
         fv.originalPrice,
         fv.stock as inStock
       FROM food_variants fv 
-      WHERE fv.id = ? AND fv.isActive = TRUE
+      WHERE fv.id = ?
       ORDER BY fv.weight_gram 
     `;
     const [rows] = await conn.execute(sql, [variantId]);
@@ -103,6 +127,76 @@ export async function createVariantWithPromotion({
   } catch (error) {
     await conn.rollback();
     console.log(">>> SERVICE createVariantWithPromotion ERROR:", error.message);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+export async function updateVariantWithPromotion({
+  variantId,
+  weight_gram,
+  originalPrice,
+  stock,
+  isActive,
+  promotionId = null,
+}) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    // 1 cập nhật thông tin variant trước
+    const updatedVariant = await updateVariant(
+      {
+        variantId,
+        weight_gram,
+        originalPrice,
+        stock,
+        isActive,
+      },
+      conn,
+    );
+
+    if (!updatedVariant) throw new BadRequestError("Food variant not found");
+
+    if (promotionId) {
+      const promotion = await getPromotionById(promotionId, conn);
+      if (!promotion) throw new BadRequestError("Promotion not found");
+    }
+
+    const { promotionId: currentPromotionId } = await getPromotionTarget(
+      { variantId },
+      conn,
+    );
+    if (currentPromotionId && !promotionId) {
+      await deletePromotionTarget(
+        {
+          promotionId: currentPromotionId,
+          variantId,
+        },
+        conn,
+      );
+    }
+    if (!currentPromotionId && promotionId) {
+      await createPromotionTarget({ promotionId, variantId }, conn);
+    }
+    if (
+      currentPromotionId &&
+      promotionId &&
+      currentPromotionId !== promotionId
+    ) {
+      await deletePromotionTarget(
+        {
+          promotionId: currentPromotionId,
+          variantId,
+        },
+        conn,
+      );
+      await createPromotionTarget({ promotionId, variantId }, conn);
+    }
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
+    console.log("SERVICE updateVariantWithPromotion ERROR:", error.message);
     throw error;
   } finally {
     conn.release();

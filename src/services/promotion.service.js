@@ -112,3 +112,36 @@ export async function createPromotionTarget(
     throw error;
   }
 }
+export async function deletePromotionTarget(
+  { promotionId, variantId },
+  conn = pool,
+) {
+  try {
+    const sql = `
+      DELETE FROM promotion_targets
+      WHERE promotionID = ? AND food_variantID = ?`;
+    const values = [promotionId, variantId];
+    const [result] = await conn.execute(sql, values);
+    return result.affectedRows === 1;
+  } catch (error) {
+    console.log(">>> SERVICE delete promotion target ERROR:", error.message);
+    throw error;
+  }
+}
+
+export async function getPromotionTarget({ variantId }, conn = pool) {
+  const sql = `
+    SELECT 
+      food_variantID as variantId,
+      promotionID as promotionId
+    WHERE food_variantID = ?
+  `;
+  const values = [variantId];
+  try {
+    const [rows] = await conn.execute(sql, values);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.log(">>> SERVICE getPromotionTarget ERROR:", error.message);
+    throw error;
+  }
+}
