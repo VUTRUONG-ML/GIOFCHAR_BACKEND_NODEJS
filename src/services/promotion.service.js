@@ -33,7 +33,7 @@ export async function getPromotionById(promotionId, conn = pool) {
         end_at,
         isActive
     FROM promotions p
-    WHERE id = ? AND isActive = true
+    WHERE id = ?
     `;
     const [rows] = await conn.execute(sql, [promotionId]);
     return rows.length > 0 ? rows[0] : null; // {promotionId, name, type, value, start_at, end_at, isActive}

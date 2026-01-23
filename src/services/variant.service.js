@@ -1,6 +1,11 @@
 import pool from "../config/db.js";
 import { groupVariant } from "../utils/variant.js";
 import { validateVariant } from "./validators.js";
+import {
+  createPromotionTarget,
+  getPromotionById,
+} from "./promotion.service.js";
+import { BadRequestError, ConflictError } from "../errors/AppError.js";
 
 export async function getVariantByFoodId(foodId, conn = pool) {
   try {
@@ -19,7 +24,7 @@ export async function getVariantByFoodId(foodId, conn = pool) {
             AND p.isActive = TRUE
         WHERE fv.foodID = ? AND fv.isActive = TRUE
         ORDER BY fv.weight_gram 
-    `;
+    `; // Nếu bỏ AND NOW() BETWEEN p.start_at AND p.end_at và AND p.isActive = TRUE xuống dưới where thì nó sẽ không khớp đk where nên nó sẽ bỏ các dòng mà promotion null
     const [rows] = await conn.execute(sql, [foodId]);
     const res = groupVariant(rows);
     return res;
@@ -42,6 +47,8 @@ export async function createVariant(
     return result.insertId;
   } catch (error) {
     console.log(">>> SERVICE create variant ERROR:", error.message);
+    if (error.code === "ER_DUP_ENTRY")
+      throw new ConflictError("Weight gram already exists on food");
     throw error;
   }
 }
@@ -86,6 +93,8 @@ export async function createVariantWithPromotion({
 
     // 2. Nếu có promotion thì gán promotion cho variant
     if (promotionId) {
+      const promotion = await getPromotionById(promotionId, conn);
+      if (!promotion) throw new BadRequestError("Promotion not found");
       await createPromotionTarget({ promotionId, variantId }, conn);
     }
 

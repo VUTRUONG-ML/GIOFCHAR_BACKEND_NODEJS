@@ -22,7 +22,12 @@ router.put(
   checkAdmin,
   asyncHandler(updatePromotionController),
 );
-router.post("/", requireAuth, checkAdmin, createPromotionController);
+router.post(
+  "/",
+  requireAuth,
+  checkAdmin,
+  asyncHandler(createPromotionController),
+);
 router.get("/", requireAuth, checkAdmin, asyncHandler(getPromotionsController));
 
 export default router;

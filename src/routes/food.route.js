@@ -1,23 +1,24 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const upload = require("../config/multer");
-const {
+import upload from "../config/multer.js";
+import {
   uploadToCloudinary,
   cleanupCloudinary,
-} = require("../middlewares/cloudinary.middleware");
-const { requireAuth, optionalAuth } = require("../middlewares/auth.middleware");
-const { checkAdmin } = require("../middlewares/user.middleware");
+} from "../middlewares/cloudinary.middleware.js";
+import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
+import { checkAdmin } from "../middlewares/user.middleware.js";
 
-const foodController = require("../controllers/food.controller");
-const checkCategory = require("../middlewares/checkCategory");
-const checkFood = require("../middlewares/checkFood");
+import foodController from "../controllers/food.controller.js";
+import checkCategory from "../middlewares/checkCategory.js";
+import { checkFoodExists } from "../middlewares/checkFood.js";
+import { asyncHandler } from "../errors/errorHandler.js";
+import { createVariantController } from "../controllers/variant.controller.js";
 
 router.delete(
   "/:foodId",
   requireAuth,
   checkAdmin,
-  checkFood,
   foodController.deleteFoodById, // delete food
 );
 router.put(
@@ -29,7 +30,6 @@ router.put(
   uploadToCloudinary,
   cleanupCloudinary,
 
-  checkFood,
   checkCategory,
   foodController.updateFoodById,
 );
@@ -44,9 +44,16 @@ router.post(
   checkCategory,
   foodController.createFood,
 );
+router.post(
+  "/:foodId/variants",
+  requireAuth,
+  checkAdmin,
+  checkFoodExists,
+  asyncHandler(createVariantController),
+);
 router.get("/promotion", foodController.getFoodsPromotion);
 router.get("/best-selling", foodController.getAllBestSelling);
 router.get("/:foodId", optionalAuth, foodController.getDetailFood);
 router.get("/", optionalAuth, foodController.getAllFoods);
 
-module.exports = router;
+export default router;

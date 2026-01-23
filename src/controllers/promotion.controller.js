@@ -7,7 +7,7 @@ import {
 import { asyncHandler } from "../errors/errorHandler.js";
 import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 
-export const createPromotionController = asyncHandler(async (req, res) => {
+export const createPromotionController = async (req, res) => {
   const { name, type, value, start_at, end_at, isActive } = req.body;
   if (!name || !type || value == null || !start_at || !end_at) {
     throw new BadRequestError("Missing required fields");
@@ -32,7 +32,7 @@ export const createPromotionController = asyncHandler(async (req, res) => {
     message: "Create promotion successful",
     promotionId: newPromotionId,
   });
-});
+};
 
 export const getPromotionsController = async (req, res) => {
   const promotions = await getPromotions();

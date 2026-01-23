@@ -49,7 +49,6 @@ const getAllFoods = async ({ option = "default" }, conn = pool) => {
       optionGet = "";
       break;
   }
-
   try {
     const [rows] = await conn.execute(`
       SELECT

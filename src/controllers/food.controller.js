@@ -241,7 +241,7 @@ const deleteFoodById = async (req, res) => {
   }
 };
 
-export {
+export default {
   getAllFoods,
   createFood,
   getFoodById,

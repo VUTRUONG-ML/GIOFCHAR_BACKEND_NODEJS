@@ -1,7 +1,7 @@
-const pool = require("../config/db");
-const foodService = require("../services/food.service");
+import pool from "../config/db.js";
+import foodService from "../services/food.service.js";
 
-const checkFoodExists = async (req, res, next) => {
+export const checkFoodExists = async (req, res, next) => {
   const foodId = req.body.foodId || req.params.foodId;
 
   if (!foodId) {
@@ -21,5 +21,3 @@ const checkFoodExists = async (req, res, next) => {
       .json({ message: "Server error", error: err.message });
   }
 };
-
-module.exports = checkFoodExists;

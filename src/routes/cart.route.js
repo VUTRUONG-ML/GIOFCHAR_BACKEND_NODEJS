@@ -8,7 +8,7 @@ const {
 } = require("../middlewares/cart.middleware");
 const { requireAuth, optionalAuth } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
-const checkFood = require("../middlewares/checkFood");
+const { checkFoodExists } = require("../middlewares/checkFood");
 
 router.delete("/", optionalAuth, resolveCart, cartController.clearCart);
 router.delete(
@@ -16,20 +16,20 @@ router.delete(
   optionalAuth,
   resolveCart,
   itemBelongOwn,
-  cartController.deleteCartItem
+  cartController.deleteCartItem,
 );
 router.post(
   "/cartItem",
   optionalAuth,
   resolveCart,
-  checkFood,
-  cartController.addFoodToCart
+  checkFoodExists,
+  cartController.addFoodToCart,
 );
 router.get(
   "/my-cartItems",
   optionalAuth,
   resolveCart,
-  cartController.getAllCartItems
+  cartController.getAllCartItems,
 );
 router.get("/", requireAuth, checkAdmin, cartController.getAllCarts);
 
