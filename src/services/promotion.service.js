@@ -134,6 +134,7 @@ export async function getPromotionTarget({ variantId }, conn = pool) {
     SELECT 
       food_variantID as variantId,
       promotionID as promotionId
+    FROM promotion_targets
     WHERE food_variantID = ?
   `;
   const values = [variantId];

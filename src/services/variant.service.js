@@ -163,10 +163,12 @@ export async function updateVariantWithPromotion({
       if (!promotion) throw new BadRequestError("Promotion not found");
     }
 
-    const { promotionId: currentPromotionId } = await getPromotionTarget(
-      { variantId },
-      conn,
-    );
+    const promotionTarget = await getPromotionTarget({ variantId }, conn);
+
+    const currentPromotionId = promotionTarget
+      ? promotionTarget.promotionId
+      : null;
+
     if (currentPromotionId && !promotionId) {
       await deletePromotionTarget(
         {

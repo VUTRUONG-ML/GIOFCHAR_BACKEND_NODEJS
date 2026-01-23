@@ -16,6 +16,7 @@ import statisticRoutes from "./routes/statistic.route.js";
 import { checkOrigin } from "./middlewares/session.middleware.js";
 import { errorHandler } from "./errors/errorHandler.js";
 import promotionRoutes from "./routes/promotion.route.js";
+import variantRoutes from "./routes/variant.route.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -43,6 +44,7 @@ app.use(
   }),
 );
 
+app.use("/api/variants", variantRoutes);
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/statistic", statisticRoutes);
 app.use("/api/botchat", botChatRoutes);
