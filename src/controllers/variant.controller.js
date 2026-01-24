@@ -1,6 +1,7 @@
-import { BadRequestError } from "../errors/AppError.js";
+import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 import {
   createVariantWithPromotion,
+  deleteVariant,
   updateVariantWithPromotion,
 } from "../services/variant.service.js";
 
@@ -46,4 +47,12 @@ export async function updateVariantController(req, res) {
     promotionId,
   });
   return res.status(200).json({ message: "Update food variant successful" });
+}
+
+export async function deleteVariantController(req, res) {
+  const { variantId } = req.params;
+  const deleted = await deleteVariant(variantId);
+  if (!deleted) throw new NotFoundError("Variant not found");
+
+  return res.status(200).json({ message: "Delete food variant successful" });
 }

@@ -204,3 +204,17 @@ export async function updateVariantWithPromotion({
     conn.release();
   }
 }
+
+export async function deleteVariant(variantId, conn = pool) {
+  const sql = `DELETE FROM food_variants WHERE id = ?`;
+  const values = [variantId];
+  try {
+    const [result] = await conn.execute(sql, values);
+    return result.affectedRows === 1;
+  } catch (error) {
+    console.log(">>> SERVICE delete variant ERROR:", error.message);
+    if (error.code === "ER_ROW_IS_REFERENCED_2")
+      throw new ConflictError("RESOURCE_IN_USE");
+    throw error;
+  }
+}

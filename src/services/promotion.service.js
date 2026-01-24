@@ -112,6 +112,7 @@ export async function createPromotionTarget(
     throw error;
   }
 }
+
 export async function deletePromotionTarget(
   { promotionId, variantId },
   conn = pool,

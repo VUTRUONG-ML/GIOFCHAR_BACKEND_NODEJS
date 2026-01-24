@@ -29,7 +29,7 @@ const getNameCategory = async ({ categoryId = 0 }) => {
       FROM categories c
       ${isWhere}
       `,
-      [categoryId]
+      [categoryId],
     );
     return categories;
   } catch (err) {
@@ -43,7 +43,7 @@ const createCategory = async (name, description) => {
     const [result] = await pool.execute(
       `INSERT INTO categories (categoryName, categoryDescription)
         VALUES (?, ?)`,
-      [name, description]
+      [name, description],
     );
     return result;
   } catch (err) {
@@ -56,7 +56,7 @@ const getCategoryById = async (categoryId) => {
   try {
     const [categories] = await pool.execute(
       "SELECT * FROM categories WHERE id = ?",
-      [categoryId]
+      [categoryId],
     );
     return categories.length > 0 ? categories[0] : null;
   } catch (err) {
@@ -71,7 +71,7 @@ const updateCategoryById = async (name, description, categoryId) => {
       `UPDATE categories 
         SET categoryName = ?, categoryDescription = ?
         WHERE id = ?`,
-      [name, description, categoryId]
+      [name, description, categoryId],
     );
     return result;
   } catch (err) {

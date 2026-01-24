@@ -11,14 +11,12 @@ const getAllCategories = async (req, res) => {
     }
     const categoriesClient = categories.map(
       ({ categoryDescription, quantityFood, ...categoryClient }) =>
-        categoryClient
+        categoryClient,
     );
-    return res
-      .status(200)
-      .json({
-        quantity: categoriesClient.length,
-        categories: categoriesClient,
-      });
+    return res.status(200).json({
+      quantity: categoriesClient.length,
+      categories: categoriesClient,
+    });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -33,7 +31,7 @@ const createCategory = async (req, res) => {
   try {
     const result = await categoryService.createCategory(
       categoryName,
-      categoryDescription
+      categoryDescription,
     );
 
     res.status(201).json({
@@ -77,7 +75,7 @@ const updateCategoryById = async (req, res) => {
     const result = await categoryService.updateCategoryById(
       categoryName,
       categoryDescription,
-      categoryId
+      categoryId,
     );
 
     if (result.affectedRows === 0)
@@ -107,6 +105,11 @@ const deleteCategoryById = async (req, res) => {
     res.status(200).json({ message: "Delete category successful" });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR", err.message);
+    if (err.code === "ER_ROW_IS_REFERENCED_2") {
+      return res.status(400).json({
+        message: "Cannot delete category",
+      });
+    }
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
