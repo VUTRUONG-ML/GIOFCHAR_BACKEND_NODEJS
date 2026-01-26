@@ -1,14 +1,25 @@
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+import { v4 as uuidv4 } from "uuid";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
 
-const orderService = require("../services/order.service");
+import orderService from "../services/order.service.js";
 
-const optionalAuth = (req, res, next) => {
+export const optionalAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
-  const guestToken = req.headers["x-guest-token"];
-
+  let guestToken = req.headers["x-guest-token"];
+  // nếu không gửi token
   if (!token) {
-    req.user = { userId: null, guestToken: guestToken ?? null, role: "user" };
+    if (!guestToken) {
+      guestToken = uuidv4();
+      res.setHeader("x-guest-token", guestToken);
+    }
+
+    req.user = {
+      userId: null,
+      guestToken,
+      role: "user",
+    };
     return next();
   }
 
@@ -18,13 +29,18 @@ const optionalAuth = (req, res, next) => {
   } catch (err) {
     // token sai coi như guest
     console.log(">>>>> Optional auth failed:", err.message);
-    req.user = { userId: null, guestToken: guestToken ?? null, role: "user" };
+    res.setHeader("x-guest-token", guestToken);
+    req.user = {
+      userId: null,
+      guestToken: guestToken,
+      role: "user",
+    };
   }
 
   next();
 };
 
-const requireAuth = (req, res, next) => {
+export const requireAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "Access token missing" });
 
@@ -38,7 +54,7 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-const authorizeOrderAccess = async (req, res, next) => {
+export const authorizeOrderAccess = async (req, res, next) => {
   const { userId, guestToken } = req.user;
   const { orderId } = req.params;
   if (req.user.role === "admin") return next();
@@ -57,10 +73,4 @@ const authorizeOrderAccess = async (req, res, next) => {
       .status(500)
       .json({ message: "Server error", error: error.message });
   }
-};
-
-module.exports = {
-  requireAuth,
-  authorizeOrderAccess,
-  optionalAuth,
 };

@@ -1,6 +1,6 @@
-const pool = require("../config/db");
-const { validateOwner } = require("./validators");
-const cartItemService = require("./cartItem.service");
+import pool from "../config/db.js";
+import { validateOwner } from "./validators.js";
+import cartItemService from "./cartItem.service.js";
 
 const getAllCarts = async () => {
   try {
@@ -19,7 +19,7 @@ const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
   try {
     const [carts] = await conn.execute(
       `SELECT * FROM carts WHERE ${field} = ? ${isLock}`,
-      [value]
+      [value],
     );
 
     return carts.length > 0 ? carts[0] : null;
@@ -38,7 +38,7 @@ const createCart = async ({ userId, guestToken }) => {
   try {
     const [result] = await pool.execute(
       `INSERT INTO carts (${field}) VALUES (?)`,
-      [value]
+      [value],
     );
 
     const [rows] = await pool.execute("SELECT * FROM carts WHERE id = ?", [
@@ -57,14 +57,14 @@ const addToCart = async (foodId, delta, cartId) => {
   try {
     const cartItem = await cartItemService.findCartItem(
       { cartId, foodId },
-      pool
+      pool,
     );
     if (!cartItem) {
       const result = await cartItemService.insertCartItem(
         cartId,
         foodId,
         delta,
-        pool
+        pool,
       );
       return {
         message: "Added new item to cart",
@@ -104,11 +104,11 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
     await connection.beginTransaction();
     const cartUser = await getCart(
       { userId },
-      { conn: connection, forUpdate: true }
+      { conn: connection, forUpdate: true },
     );
     const cartGuest = await getCart(
       { guestToken },
-      { conn: connection, forUpdate: true }
+      { conn: connection, forUpdate: true },
     );
     if (!cartGuest) {
       await connection.commit();
@@ -118,12 +118,12 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
       // Trường hợp sau khi người dùng thêm giỏ hàng rồi đang nhập nhưng tài khoản chưa có giỏ hàng
       const [result] = await connection.execute(
         `UPDATE carts SET userID = ?, guestToken = NULL WHERE guestToken = ?`,
-        [userId, guestToken]
+        [userId, guestToken],
       );
     } else {
       const guestItems = await cartItemService.getCartItemsByCartId(
         cartGuest.id,
-        connection
+        connection,
       );
       for (const guestItem of guestItems) {
         //Kiểm tra trong cartUser đã có foodId này chưa
@@ -132,14 +132,14 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
             cartId: cartUser.id,
             foodId: guestItem.foodId,
           },
-          connection
+          connection,
         );
         if (existed) {
           // nếu có rồi
           await cartItemService.updateCartItemQuantity(
             existed.id,
             guestItem.quantity,
-            connection
+            connection,
           );
         } else {
           //Nếu chưa có
@@ -147,7 +147,7 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
             cartUser.id,
             guestItem.foodId,
             guestItem.quantity,
-            connection
+            connection,
           );
         }
       }
@@ -189,7 +189,39 @@ const ensureCart = async ({ userId, guestToken }) => {
   }
 };
 
-module.exports = {
+async function withCart(context, handler) {
+  const { guestToken: incomingGuestToken, userId } = context ?? {};
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    let cart;
+    let guestToken = incomingGuestToken;
+    if (userId) {
+      cart = await ensureCart({ userId });
+    } else {
+      cart = await ensureCart({ guestToken });
+    }
+
+    const result = await handler({
+      cartId: cart.id,
+      conn,
+    });
+
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    console.log("SERVICE with cart ERROR:", err);
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+export default {
+  withCart,
   getAllCarts,
   getCart,
   createCart,

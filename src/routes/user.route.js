@@ -1,29 +1,29 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const userController = require("../controllers/user.controller");
-const { requireAuth } = require("../middlewares/auth.middleware");
-const { checkAdmin } = require("../middlewares/user.middleware");
+import userController from "../controllers/user.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
+import { checkAdmin } from "../middlewares/user.middleware.js";
 
 router.delete(
   "/:userId",
   requireAuth,
   checkAdmin,
-  userController.deleteUserById
+  userController.deleteUserById,
 );
 router.put(
   "/:userId",
   requireAuth,
   checkAdmin,
-  userController.updateUserByAdmin
+  userController.updateUserByAdmin,
 );
 router.put("/updateMyInfo", requireAuth, userController.updateUserById);
 router.get(
   "/stats/overviewCount",
   requireAuth,
   checkAdmin,
-  userController.getOverviewCountUser
+  userController.getOverviewCountUser,
 );
 router.post("/", requireAuth, checkAdmin, userController.createUser);
 router.get("/:userId", userController.getUserById);
 router.get("/", requireAuth, checkAdmin, userController.getAllUsers);
-module.exports = router;
+export default router;

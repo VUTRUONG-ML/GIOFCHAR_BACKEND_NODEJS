@@ -1,11 +1,12 @@
-const cartService = require("../services/cart.service");
-const cartItemService = require("../services/cartItem.service");
-const pool = require("../config/db");
-const getAllCarts = async (req, res) => {
+import cartService from "../services/cart.service.js";
+import cartItemService from "../services/cartItem.service.js";
+import pool from "../config/db.js";
+export const getAllCartsController = async (req, res) => {
   try {
     const carts = await cartService.getAllCarts();
     res.status(200).json({ carts: carts });
   } catch (err) {
+    console.log(err);
     const status = err.statusCode || 500;
     const message = status === 500 ? "Internal server error" : err.message;
     console.log(">>>>> CONTROLLER ERROR", message);
@@ -13,21 +14,25 @@ const getAllCarts = async (req, res) => {
   }
 };
 
-const getAllCartItems = async (req, res) => {
-  const cartId = req.cartId;
+export const getAllCartItemsController = async (req, res) => {
   try {
-    const cartItems = await cartItemService.getCartItemsByCartId(cartId, pool);
+    const cartItems = await cartService.withCart(
+      req.user,
+      async ({ cartId, conn }) => {
+        return cartItemService.getCartItemsByCartId(cartId, conn);
+      },
+    );
     if (!cartItems.length)
       return res.status(200).json({ message: "Empty carts", cartItems });
 
     res.status(200).json({ message: "Success", cartItems });
   } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
+    console.log(">>>>> CONTROLLER ERROR", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-const addFoodToCart = async (req, res) => {
+export const addFoodToCartController = async (req, res) => {
   const cartId = req.cartId;
   const { foodId, quantity } = req.body;
   const food = req.food;
@@ -53,7 +58,7 @@ const addFoodToCart = async (req, res) => {
   }
 };
 
-const deleteCartItem = async (req, res) => {
+export const deleteCartItemController = async (req, res) => {
   const cartId = req.cartId;
   const cartItemId = req.params.cartItemId;
 
@@ -70,7 +75,7 @@ const deleteCartItem = async (req, res) => {
   }
 };
 
-const clearCart = async (req, res) => {
+export const clearCartController = async (req, res) => {
   const cartId = req.cartId;
   try {
     const result = await cartService.clearCart(cartId, pool);
@@ -82,12 +87,4 @@ const clearCart = async (req, res) => {
     console.log(">>>>> CONTROLLER ERROR clearCart-", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
-};
-
-module.exports = {
-  getAllCarts,
-  getAllCartItems,
-  addFoodToCart,
-  deleteCartItem,
-  clearCart,
 };

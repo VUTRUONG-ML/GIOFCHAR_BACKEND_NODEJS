@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-const cartController = require("../controllers/cart.controller");
 const {
   resolveCart,
   itemBelongOwn,
@@ -9,28 +8,30 @@ const {
 const { requireAuth, optionalAuth } = require("../middlewares/auth.middleware");
 const { checkAdmin } = require("../middlewares/user.middleware");
 const { checkFoodExists } = require("../middlewares/checkFood");
+const {
+  clearCartController,
+  deleteCartItemController,
+  addFoodToCartController,
+  getAllCartItemsController,
+  getAllCartsController,
+} = require("../controllers/cart.controller");
 
-router.delete("/", optionalAuth, resolveCart, cartController.clearCart);
+router.delete("/", optionalAuth, resolveCart, clearCartController);
 router.delete(
   "/:cartItemId",
   optionalAuth,
   resolveCart,
   itemBelongOwn,
-  cartController.deleteCartItem,
+  deleteCartItemController,
 );
 router.post(
   "/cartItem",
   optionalAuth,
   resolveCart,
   checkFoodExists,
-  cartController.addFoodToCart,
+  addFoodToCartController,
 );
-router.get(
-  "/my-cartItems",
-  optionalAuth,
-  resolveCart,
-  cartController.getAllCartItems,
-);
-router.get("/", requireAuth, checkAdmin, cartController.getAllCarts);
+router.get("/my-cartItems", optionalAuth, getAllCartItemsController);
+router.get("/", requireAuth, checkAdmin, getAllCartsController);
 
 module.exports = router;

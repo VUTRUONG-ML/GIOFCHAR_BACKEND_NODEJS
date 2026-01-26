@@ -122,13 +122,13 @@ const getOrderItemsByOrderId = async (req, res) => {
         paymentStatus,
         address,
         ...rest
-      }) => rest
+      }) => rest,
     );
 
     //tinh tong tien cua order
     const amountOrder = itemList.reduce(
       (sum, item) => sum + Number(item.totalPriceOnOneItem),
-      0
+      0,
     );
 
     res.status(200).json({
@@ -168,7 +168,7 @@ const createOrder = async (req, res) => {
     //Lay ve cartItem cua nguoi dung hien tai
     const cartItems = await cartItemService.getCartItemsByCartId(
       cartId,
-      connection
+      connection,
     );
     if (cartItems.length === 0)
       return res.status(400).json({ message: "Empty cart items" });
@@ -183,13 +183,13 @@ const createOrder = async (req, res) => {
       customerName,
       email,
       phone,
-      address
+      address,
     );
 
     // Tinh cac gia tri de dua vao tao orderItem
     const { orderValues, totalPriceOrder } = calculateOrderValues(
       cartItems,
-      orderId
+      orderId,
     );
 
     await orderItemService.createOrderItem(connection, orderValues);
@@ -203,7 +203,7 @@ const createOrder = async (req, res) => {
       paymentTypeDefault,
       totalPriceOrder,
       transactionDefault,
-      paymentStatusDefault
+      paymentStatusDefault,
     );
     await cartService.clearCart(cartId, connection);
 

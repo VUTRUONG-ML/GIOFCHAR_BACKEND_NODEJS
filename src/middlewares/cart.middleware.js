@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
-import cartService, { mergeGuestCartToUser } from "../services/cart.service.js";
-import { findCartItem } from "../services/cartItem.service.js";
 import pool from "../config/db.js";
+import cartItemService from "../services/cartItem.service.js";
 
 export const resolveCart = async (req, res, next) => {
   try {
@@ -32,7 +31,10 @@ export const itemBelongOwn = async (req, res, next) => {
   const cartId = req.cartId;
   const { cartItemId } = req.params;
   try {
-    const cartItem = await findCartItem({ cartId, cartItemId }, pool);
+    const cartItem = await cartItemService.findCartItem(
+      { cartId, cartItemId },
+      pool,
+    );
     if (!cartItem) {
       return res.status(403).json({ message: "You do not have access" });
     }

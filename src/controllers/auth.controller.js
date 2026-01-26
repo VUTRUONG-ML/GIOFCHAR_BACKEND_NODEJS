@@ -1,9 +1,9 @@
-const authService = require("../services/auth.service");
-const { mergeGuestCartToUser } = require("../services/cart.service");
-const { attachOrderToUser } = require("../services/order.service");
-const userService = require("../services/user.service");
+import authService from "../services/auth.service.js";
+import cartService from "../services/cart.service.js";
+import orderService from "../services/order.service.js";
+import userService from "../services/user.service.js";
 
-const registerApi = async (req, res) => {
+export const registerApi = async (req, res) => {
   const { userName, email, phone, password, address } = req.body;
   if (!userName || !email || !phone || !password) {
     return res.status(400).json({ message: "Missing field" });
@@ -16,12 +16,12 @@ const registerApi = async (req, res) => {
       email,
       phone,
       password,
-      address
+      address,
     );
 
     if (guestToken) {
       try {
-        await attachOrderToUser({
+        await orderService.attachOrderToUser({
           guestToken,
           userId: result.insertId,
           orderId,
@@ -52,7 +52,7 @@ const registerApi = async (req, res) => {
   }
 };
 
-const loginApi = async (req, res) => {
+export const loginApi = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ message: "Missing field" });
@@ -62,9 +62,12 @@ const loginApi = async (req, res) => {
 
     if (guestToken) {
       try {
-        await mergeGuestCartToUser({ userId: result.user.id, guestToken });
+        await cartService.mergeGuestCartToUser({
+          userId: result.user.id,
+          guestToken,
+        });
       } catch (error) {
-        console.log(">>>>> Merge cart failed:", err.message);
+        console.log(">>>>> Merge cart failed:", error.message);
       }
     }
 
@@ -77,7 +80,7 @@ const loginApi = async (req, res) => {
   }
 };
 
-const getAccount = async (req, res) => {
+export const getAccount = async (req, res) => {
   const userId = req.user.userId;
   try {
     const user = await userService.getUserById(userId);
@@ -87,10 +90,4 @@ const getAccount = async (req, res) => {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
-};
-
-module.exports = {
-  registerApi,
-  loginApi,
-  getAccount,
 };
