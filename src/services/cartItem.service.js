@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { ConflictError } from "../errors/AppError.js";
 
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
 const getCartItemsByCartId = async (cartId, conn) => {
@@ -27,16 +28,23 @@ const getCartItemsByCartId = async (cartId, conn) => {
   }
 };
 
-const findCartItem = async ({ cartId, foodId, cartItemId }, conn) => {
-  // tìm cartItem có cartID và foodID
-  const field = cartItemId ? "ci.id" : "ci.foodID";
-  const value = cartItemId ?? foodId;
+const findCartItem = async (
+  { cartId, variantId, cartItemId },
+  conn,
+  forUpdate = false,
+) => {
+  // khi truyền conn thì chắc chắn là đang sử dụng transaction
+  // tìm cartItem có cartID và variantId
+  const field = cartItemId ? "ci.id" : "ci.food_variantID";
+  const option = forUpdate && conn ? "FOR UPDATE" : "";
+  const value = cartItemId ?? variantId;
   try {
     const [result] = await conn.execute(
       `
         SELECT *
         FROM cart_items ci 
-        WHERE ci.cartID = ? AND ${field} = ?`,
+        WHERE ci.cartID = ? AND ${field} = ?
+        ${option}`,
       [cartId, value],
     );
     return result.length ? result[0] : null;
@@ -61,12 +69,12 @@ const updateCartItemQuantity = async (cartItemId, delta, conn) => {
 };
 
 // -> Lấy cartID của người dùng hiện tại -> thêm vào food cho cartID đó thông qua bảng cart_items
-const insertCartItem = async (cartId, foodId, quantity, conn) => {
+const insertCartItem = async (cartId, variantId, quantity, conn) => {
   try {
     const [result] = await conn.execute(
-      `INSERT INTO cart_items (cartID, foodID, quantity)
+      `INSERT INTO cart_items (cartID, food_variantID, quantity)
         VALUES (?, ?, ?)`,
-      [cartId, foodId, quantity],
+      [cartId, variantId, quantity],
     );
     return result;
   } catch (err) {
@@ -75,9 +83,9 @@ const insertCartItem = async (cartId, foodId, quantity, conn) => {
   }
 };
 
-const deleteCartItem = async (cartItemId, cartId) => {
+const deleteCartItem = async (cartItemId, cartId, conn = pool) => {
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       "DELETE FROM cart_items WHERE id = ? AND cartID = ?",
       [cartItemId, cartId],
     );

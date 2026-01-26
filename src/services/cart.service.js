@@ -1,6 +1,8 @@
 import pool from "../config/db.js";
 import { validateOwner } from "./validators.js";
 import cartItemService from "./cartItem.service.js";
+import { getVariantById } from "./variant.service.js";
+import { NotFoundError } from "../errors/AppError.js";
 
 const getAllCarts = async () => {
   try {
@@ -52,49 +54,52 @@ const createCart = async ({ userId, guestToken }) => {
   }
 };
 
-const addToCart = async (foodId, delta, cartId) => {
-  // Kiểm tra foodId đã có trong cartId chưa
-  try {
-    const cartItem = await cartItemService.findCartItem(
-      { cartId, foodId },
-      pool,
+const addToCart = async (variantId, delta, cartId, connection) => {
+  const variant = await getVariantById(variantId, connection);
+  if (!variant) throw new NotFoundError("Food variant not found");
+
+  // Kiểm tra variantId đã có trong cartId chưa
+  const cartItem = await cartItemService.findCartItem(
+    { cartId, variantId },
+    connection,
+    true,
+  );
+  if (!cartItem) {
+    const result = await cartItemService.insertCartItem(
+      cartId,
+      variantId,
+      delta,
+      connection,
     );
-    if (!cartItem) {
-      const result = await cartItemService.insertCartItem(
-        cartId,
-        foodId,
-        delta,
-        pool,
-      );
+    return {
+      message: "Added new item to cart",
+      cartId: cartId,
+      cartItemId: result.insertId,
+      quantity: delta,
+    };
+  } else {
+    const cartItemId = cartItem.id;
+    const newQuantity = cartItem.quantity + delta;
+    if (newQuantity <= 0) {
+      await cartItemService.deleteCartItem(cartItemId, cartId, connection);
       return {
-        message: "Added new item to cart",
-        cartId: cartId,
-        cartItemId: result.insertId,
-        quantity: delta,
-      };
-    } else {
-      const cartItemId = cartItem.id;
-      const newQuantity = cartItem.quantity + delta;
-      if (newQuantity <= 0) {
-        await cartItemService.deleteCartItem(cartItemId, cartId);
-        return {
-          message: "Remove item from cart successful",
-          cartId: cartId,
-          cartItemId,
-          quantity: 0,
-        };
-      }
-      await cartItemService.updateCartItemQuantity(cartItem.id, delta, pool);
-      return {
-        message: "Updated quantity item successful",
+        message: "Remove item from cart successful",
         cartId: cartId,
         cartItemId,
-        quantity: newQuantity,
+        quantity: 0,
       };
     }
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR addToCart:", err.message);
-    throw err;
+    await cartItemService.updateCartItemQuantity(
+      cartItem.id,
+      delta,
+      connection,
+    );
+    return {
+      message: "Updated quantity item successful",
+      cartId: cartId,
+      cartItemId,
+      quantity: newQuantity,
+    };
   }
 };
 

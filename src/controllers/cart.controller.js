@@ -1,6 +1,7 @@
 import cartService from "../services/cart.service.js";
 import cartItemService from "../services/cartItem.service.js";
 import pool from "../config/db.js";
+import { ConflictError } from "../errors/AppError.js";
 export const getAllCartsController = async (req, res) => {
   try {
     const carts = await cartService.getAllCarts();
@@ -33,11 +34,15 @@ export const getAllCartItemsController = async (req, res) => {
 };
 
 export const addFoodToCartController = async (req, res) => {
-  const cartId = req.cartId;
-  const { foodId, quantity } = req.body;
+  const { variantId, quantity } = req.body;
   const food = req.food;
   try {
-    const result = await cartService.addToCart(foodId, quantity, cartId);
+    const result = await cartService.withCart(
+      req.user,
+      async ({ cartId, conn }) => {
+        return await cartService.addToCart(variantId, quantity, cartId, conn);
+      },
+    );
 
     res.status(200).json({
       message: result.message,
@@ -54,7 +59,9 @@ export const addFoodToCartController = async (req, res) => {
     });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR addFoodToCart", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
+    if (err.code === "ER_DUP_ENTRY")
+      throw new ConflictError("Food variant already exists in cart");
+    throw err;
   }
 };
 

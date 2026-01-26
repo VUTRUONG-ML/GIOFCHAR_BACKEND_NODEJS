@@ -1,20 +1,19 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const {
-  resolveCart,
-  itemBelongOwn,
-} = require("../middlewares/cart.middleware");
-const { requireAuth, optionalAuth } = require("../middlewares/auth.middleware");
-const { checkAdmin } = require("../middlewares/user.middleware");
-const { checkFoodExists } = require("../middlewares/checkFood");
-const {
+import { resolveCart, itemBelongOwn } from "../middlewares/cart.middleware.js";
+import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
+import { checkAdmin } from "../middlewares/user.middleware.js";
+import { checkFoodExists } from "../middlewares/checkFood.js";
+import { asyncHandler } from "../errors/errorHandler.js";
+
+import {
   clearCartController,
   deleteCartItemController,
   addFoodToCartController,
   getAllCartItemsController,
   getAllCartsController,
-} = require("../controllers/cart.controller");
+} from "../controllers/cart.controller.js";
 
 router.delete("/", optionalAuth, resolveCart, clearCartController);
 router.delete(
@@ -27,11 +26,10 @@ router.delete(
 router.post(
   "/cartItem",
   optionalAuth,
-  resolveCart,
   checkFoodExists,
-  addFoodToCartController,
+  asyncHandler(addFoodToCartController),
 );
 router.get("/my-cartItems", optionalAuth, getAllCartItemsController);
 router.get("/", requireAuth, checkAdmin, getAllCartsController);
 
-module.exports = router;
+export default router;

@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { ConflictError } from "../errors/AppError.js";
 import { validatePromotion } from "./validators.js";
 
 export async function getPromotions(conn = pool) {
