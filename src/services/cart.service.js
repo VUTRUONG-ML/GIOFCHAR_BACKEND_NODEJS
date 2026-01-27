@@ -175,13 +175,13 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
   }
 };
 
-const clearCart = async (cartId, conn) => {
+const clearCart = async (cartId, conn = pool) => {
   try {
     const [result] = await conn.execute("DELETE FROM carts WHERE id = ?", [
       cartId,
     ]);
-
-    return result;
+    if (result.affectedRows === 0) throw new NotFoundError("Cart not found");
+    return true;
   } catch (err) {
     throw err;
   }

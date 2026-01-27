@@ -68,15 +68,9 @@ export const deleteCartItemController = async (req, res) => {
 };
 
 export const clearCartController = async (req, res) => {
-  const cartId = req.cartId;
-  try {
-    const result = await cartService.clearCart(cartId, pool);
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Cart not found" });
+  const result = cartService.withCart(req.user, async ({ cartId, conn }) => {
+    return await cartService.clearCart(cartId, conn);
+  });
 
-    res.status(200).json({ message: "Clear cart successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR clearCart-", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res.status(200).json({ message: "Clear cart successful" });
 };

@@ -15,7 +15,7 @@ import {
   getAllCartsController,
 } from "../controllers/cart.controller.js";
 
-router.delete("/", optionalAuth, resolveCart, clearCartController);
+router.delete("/", optionalAuth, asyncHandler(clearCartController));
 router.delete(
   "/:cartItemId",
   optionalAuth,
