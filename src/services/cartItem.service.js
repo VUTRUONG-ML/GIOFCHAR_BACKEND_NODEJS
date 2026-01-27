@@ -1,5 +1,9 @@
 import pool from "../config/db.js";
-import { ConflictError } from "../errors/AppError.js";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from "../errors/AppError.js";
 import { groupVariant } from "../utils/variant.js";
 
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
@@ -102,7 +106,8 @@ const deleteCartItem = async (cartItemId, cartId, conn = pool) => {
       "DELETE FROM cart_items WHERE id = ? AND cartID = ?",
       [cartItemId, cartId],
     );
-    return result;
+    if (!result.affectedRows) throw new NotFoundError("Cart item not found");
+    return true;
   } catch (err) {
     throw err;
   }

@@ -1,7 +1,7 @@
 import express from "express";
 const router = express.Router();
 
-import { resolveCart, itemBelongOwn } from "../middlewares/cart.middleware.js";
+import { resolveCart } from "../middlewares/cart.middleware.js";
 import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
 import { checkAdmin } from "../middlewares/user.middleware.js";
 import { checkFoodExists } from "../middlewares/checkFood.js";
@@ -19,9 +19,7 @@ router.delete("/", optionalAuth, resolveCart, clearCartController);
 router.delete(
   "/:cartItemId",
   optionalAuth,
-  resolveCart,
-  itemBelongOwn,
-  deleteCartItemController,
+  asyncHandler(deleteCartItemController),
 );
 router.post("/cartItem", optionalAuth, asyncHandler(addFoodToCartController));
 router.get("/my-cartItems", optionalAuth, getAllCartItemsController);

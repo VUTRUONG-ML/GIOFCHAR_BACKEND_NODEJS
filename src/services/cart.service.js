@@ -31,19 +31,19 @@ const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
   }
 };
 
-const createCart = async ({ userId, guestToken }) => {
+const createCart = async ({ userId, guestToken }, conn = pool) => {
   validateOwner({ userId, guestToken });
 
   const field = userId ? "userID" : "guestToken";
   const value = userId ?? guestToken;
 
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `INSERT INTO carts (${field}) VALUES (?)`,
       [value],
     );
 
-    const [rows] = await pool.execute("SELECT * FROM carts WHERE id = ?", [
+    const [rows] = await conn.execute("SELECT * FROM carts WHERE id = ?", [
       result.insertId,
     ]);
 
@@ -187,11 +187,11 @@ const clearCart = async (cartId, conn) => {
   }
 };
 
-const ensureCart = async ({ userId, guestToken }) => {
+const ensureCart = async ({ userId, guestToken }, conn = pool) => {
   validateOwner({ userId, guestToken });
   try {
-    let cart = await getCart({ userId, guestToken }, { conn: pool });
-    if (!cart) cart = await createCart({ userId, guestToken });
+    let cart = await getCart({ userId, guestToken }, { conn });
+    if (!cart) cart = await createCart({ userId, guestToken }, conn);
     return cart;
   } catch (error) {
     console.log(">>>> SERVICE ERROR", error.message);
@@ -209,9 +209,9 @@ async function withCart(context, handler) {
     let cart;
     let guestToken = incomingGuestToken;
     if (userId) {
-      cart = await ensureCart({ userId });
+      cart = await ensureCart({ userId }, conn);
     } else {
-      cart = await ensureCart({ guestToken });
+      cart = await ensureCart({ guestToken }, conn);
     }
 
     const result = await handler({

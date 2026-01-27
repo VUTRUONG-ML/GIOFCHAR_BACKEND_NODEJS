@@ -1,7 +1,7 @@
 import cartService from "../services/cart.service.js";
 import cartItemService from "../services/cartItem.service.js";
 import pool from "../config/db.js";
-import { ConflictError } from "../errors/AppError.js";
+import { ConflictError, NotFoundError } from "../errors/AppError.js";
 export const getAllCartsController = async (req, res) => {
   try {
     const carts = await cartService.getAllCarts();
@@ -36,42 +36,35 @@ export const getAllCartItemsController = async (req, res) => {
 
 export const addFoodToCartController = async (req, res) => {
   const { variantId, quantity } = req.body;
-  try {
-    const result = await cartService.withCart(
-      req.user,
-      async ({ cartId, conn }) => {
-        return await cartService.addToCart(variantId, quantity, cartId, conn);
-      },
-    );
 
-    const { message, ...otherInf } = result;
-    res.status(200).json({
-      message: message,
-      cartItem: {
-        ...otherInf,
-      },
-    });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR addFoodToCart", err.message);
-    throw err;
-  }
+  const result = await cartService.withCart(
+    req.user,
+    async ({ cartId, conn }) => {
+      return await cartService.addToCart(variantId, quantity, cartId, conn);
+    },
+  );
+
+  const { message, ...otherInf } = result;
+  res.status(200).json({
+    message: message,
+    cartItem: {
+      ...otherInf,
+    },
+  });
 };
 
 export const deleteCartItemController = async (req, res) => {
-  const cartId = req.cartId;
+  const user = req.user;
   const cartItemId = req.params.cartItemId;
 
-  try {
-    const result = await cartItemService.deleteCartItem(cartItemId, cartId);
+  const result = await cartService.withCart(
+    { ...user, cartItemId },
+    async ({ cartId, conn }) => {
+      return await cartItemService.deleteCartItem(cartItemId, cartId, conn);
+    },
+  );
 
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Cart item not found" });
-
-    res.status(200).json({ message: "Delete cart item successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR deleteCartItem", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  return res.status(200).json({ message: "Delete cart item successful" });
 };
 
 export const clearCartController = async (req, res) => {

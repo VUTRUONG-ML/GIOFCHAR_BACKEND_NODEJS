@@ -26,23 +26,3 @@ export const resolveCart = async (req, res, next) => {
       .json({ message: "Failed to get or create cart", error: error.message });
   }
 };
-
-export const itemBelongOwn = async (req, res, next) => {
-  const cartId = req.cartId;
-  const { cartItemId } = req.params;
-  try {
-    const cartItem = await cartItemService.findCartItem(
-      { cartId, cartItemId },
-      pool,
-    );
-    if (!cartItem) {
-      return res.status(403).json({ message: "You do not have access" });
-    }
-    next();
-  } catch (error) {
-    console.log(">>>>> MIDDLEWARE ERROR itemBelongOwn", error.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
-};
