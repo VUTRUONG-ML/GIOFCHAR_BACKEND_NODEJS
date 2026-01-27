@@ -23,12 +23,7 @@ router.delete(
   itemBelongOwn,
   deleteCartItemController,
 );
-router.post(
-  "/cartItem",
-  optionalAuth,
-  checkFoodExists,
-  asyncHandler(addFoodToCartController),
-);
+router.post("/cartItem", optionalAuth, asyncHandler(addFoodToCartController));
 router.get("/my-cartItems", optionalAuth, getAllCartItemsController);
 router.get("/", requireAuth, checkAdmin, getAllCartsController);
 

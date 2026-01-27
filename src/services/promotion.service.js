@@ -28,8 +28,8 @@ export async function getPromotionById(promotionId, conn = pool) {
     SELECT
         id as promotionId,
         name,
-        type,
-        value,
+        type as typePromotion,
+        value as valuePromotion,
         start_at,
         end_at,
         isActive

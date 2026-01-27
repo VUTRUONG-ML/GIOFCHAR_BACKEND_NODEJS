@@ -77,9 +77,25 @@ export async function updateVariant(
   }
 }
 
-export async function getVariantById(variantId, conn = pool) {
-  try {
-    const sql = `
+export async function getVariantById(variantId, moreInf = false, conn = pool) {
+  // moreInf là cờ để lấy thêm thông tin cho variant thông qua food
+  let sql = "";
+  if (moreInf) {
+    sql = `
+      SELECT
+          fv.id as variantId,
+          fv.weight_gram,
+          fv.originalPrice,
+          fv.stock as inStock,
+          fv.foodID as foodId,
+          f.foodName,
+          f.image
+      FROM food_variants fv 
+      JOIN foods f ON fv.foodID  = f.id
+      WHERE fv.id = ?
+    `;
+  } else {
+    sql = `
       SELECT
         fv.id as variantId,
         fv.weight_gram,
@@ -87,8 +103,9 @@ export async function getVariantById(variantId, conn = pool) {
         fv.stock as inStock
       FROM food_variants fv 
       WHERE fv.id = ?
-      ORDER BY fv.weight_gram 
     `;
+  }
+  try {
     const [rows] = await conn.execute(sql, [variantId]);
     return rows.length > 0 ? rows[0] : null;
   } catch (error) {

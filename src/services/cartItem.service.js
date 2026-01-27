@@ -1,26 +1,39 @@
 import pool from "../config/db.js";
 import { ConflictError } from "../errors/AppError.js";
+import { groupVariant } from "../utils/variant.js";
 
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
 const getCartItemsByCartId = async (cartId, conn) => {
   // trả về toàn bộ food bên trong một giỏ hàng
   try {
-    const [cartItems] = await conn.execute(
+    const [rows] = await conn.execute(
       `SELECT 
-          ci.id AS cartItemId, 
-          f.id  AS foodId,
-          f.foodName,
-          f.image,
-          f.price,
-          f.originalPrice,
-          f.discount,
-          ci.quantity,
-          ci.cartID AS cartID
-        FROM cart_items ci 
-        JOIN foods f ON ci.foodID = f.id 
-        WHERE ci.cartID = ?`,
+        ci.id AS cartItemId, 
+        f.id  AS foodId,
+        f.foodName,
+        f.image,
+        
+        fv.id as variantId,
+        fv.weight_gram,
+        fv.stock as inStock,
+        fv.originalPrice,
+        
+        p.id as promotionId,
+        p.type as typePromotion,
+        p.value as valuePromotion, 
+        
+        ci.quantity
+      FROM cart_items ci 
+      JOIN food_variants fv ON ci.food_variantID = fv.id 
+      JOIN foods f ON fv.foodID = f.id
+      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
+      LEFT JOIN promotions p ON pt.promotionID = p.id 
+          AND NOW() BETWEEN p.start_at AND p.end_at 
+          AND p.isActive = TRUE
+      WHERE ci.cartID = ?`,
       [cartId],
     );
+    const cartItems = groupVariant(rows);
     return cartItems;
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);

@@ -2,7 +2,7 @@ import pool from "../config/db.js";
 import { validateOwner } from "./validators.js";
 import cartItemService from "./cartItem.service.js";
 import { getVariantById } from "./variant.service.js";
-import { NotFoundError } from "../errors/AppError.js";
+import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 
 const getAllCarts = async () => {
   try {
@@ -55,7 +55,7 @@ const createCart = async ({ userId, guestToken }) => {
 };
 
 const addToCart = async (variantId, delta, cartId, connection) => {
-  const variant = await getVariantById(variantId, connection);
+  const variant = await getVariantById(variantId, true, connection);
   if (!variant) throw new NotFoundError("Food variant not found");
 
   // Kiểm tra variantId đã có trong cartId chưa
@@ -65,6 +65,8 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     true,
   );
   if (!cartItem) {
+    if (delta <= 0) throw new BadRequestError("Item not found in cart");
+
     const result = await cartItemService.insertCartItem(
       cartId,
       variantId,
@@ -75,6 +77,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
       message: "Added new item to cart",
       cartId: cartId,
       cartItemId: result.insertId,
+      ...variant,
       quantity: delta,
     };
   } else {
@@ -86,6 +89,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
         message: "Remove item from cart successful",
         cartId: cartId,
         cartItemId,
+        ...variant,
         quantity: 0,
       };
     }
@@ -98,6 +102,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
       message: "Updated quantity item successful",
       cartId: cartId,
       cartItemId,
+      ...variant,
       quantity: newQuantity,
     };
   }
@@ -197,7 +202,7 @@ const ensureCart = async ({ userId, guestToken }) => {
 async function withCart(context, handler) {
   const { guestToken: incomingGuestToken, userId } = context ?? {};
   const conn = await pool.getConnection();
-
+  console.log(">>> service:", context);
   try {
     await conn.beginTransaction();
 

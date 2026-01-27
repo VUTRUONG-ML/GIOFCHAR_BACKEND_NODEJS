@@ -16,6 +16,7 @@ export const getAllCartsController = async (req, res) => {
 };
 
 export const getAllCartItemsController = async (req, res) => {
+  console.log(">>> user:", req.user);
   try {
     const cartItems = await cartService.withCart(
       req.user,
@@ -35,7 +36,6 @@ export const getAllCartItemsController = async (req, res) => {
 
 export const addFoodToCartController = async (req, res) => {
   const { variantId, quantity } = req.body;
-  const food = req.food;
   try {
     const result = await cartService.withCart(
       req.user,
@@ -44,23 +44,15 @@ export const addFoodToCartController = async (req, res) => {
       },
     );
 
+    const { message, ...otherInf } = result;
     res.status(200).json({
-      message: result.message,
+      message: message,
       cartItem: {
-        cartItemId: result.cartItemId,
-        foodId: food.foodId,
-        foodName: food.foodName,
-        image: food.image,
-        price: food.price,
-        originalPrice: food.originalPrice,
-        discount: food.discount,
-        quantity: result.quantity,
+        ...otherInf,
       },
     });
   } catch (err) {
     console.log(">>>>> CONTROLLER ERROR addFoodToCart", err.message);
-    if (err.code === "ER_DUP_ENTRY")
-      throw new ConflictError("Food variant already exists in cart");
     throw err;
   }
 };

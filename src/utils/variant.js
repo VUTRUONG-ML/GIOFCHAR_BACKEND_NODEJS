@@ -1,5 +1,5 @@
 export function groupVariant(rows) {
-  // rows: [{variantId, weight_gram, originalPrice, inStock, typePromotion, valuePromotion}]
+  // rows: [{variantId, weight_gram, originalPrice, inStock, typePromotion, valuePromotion, ...otherInf}]
   const map = {};
   for (const r of rows) {
     const key = r.variantId;
@@ -9,6 +9,8 @@ export function groupVariant(rows) {
       inStock,
       typePromotion,
       valuePromotion,
+      promotionId,
+      ...orderInf
     } = r;
     if (!map[key]) {
       map[key] = {
@@ -19,6 +21,7 @@ export function groupVariant(rows) {
         inStock,
         discountPercent: 0,
         discountFixed: 0,
+        ...orderInf,
       };
     }
 
