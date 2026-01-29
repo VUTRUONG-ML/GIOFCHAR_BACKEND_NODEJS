@@ -7,6 +7,8 @@ import { calculateOrderValues } from "../utils/order.util.js";
 import pool from "../config/db.js";
 import foodService from "../services/food.service.js";
 import { statusOverview } from "../utils/status.js";
+import { deductStockForOrder } from "../services/variant.service.js";
+import { BadRequestError } from "../errors/AppError.js";
 
 const getStatusOverview = async (req, res) => {
   try {
@@ -66,86 +68,68 @@ const getOrderItemsByOrderId = async (req, res) => {
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
   const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
-  const cartId = req.cartId; // từ middleware
   const { customerName, email, phone, address } = req.body;
   if (!address || !customerName || !email || !phone)
     return res.status(400).json({ message: "Missing field" });
 
-  const connection = await pool.getConnection();
+  const result = await cartService.withCart(
+    req.user,
+    async ({ cartId, conn }) => {
+      //Lay ve cartItem cua nguoi dung hien tai
+      const cartItems = await cartItemService.getCartItemsByCartId(
+        cartId,
+        conn,
+        true,
+      );
+      if (cartItems.length === 0)
+        throw new BadRequestError("Your shopping cart is empty.");
 
-  try {
-    await connection.beginTransaction(); // Khởi tạo transaction
+      // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
+      await deductStockForOrder(conn, cartItems);
 
-    //Lay ve cartItem cua nguoi dung hien tai
-    const cartItems = await cartItemService.getCartItemsByCartId(
-      cartId,
-      connection,
-    );
-    if (cartItems.length === 0)
-      return res.status(400).json({ message: "Empty cart items" });
+      //Tao order
+      const { orderId, orderCode } = await orderService.createOrder(
+        conn,
+        { userId, guestToken },
+        customerName,
+        email,
+        phone,
+        address,
+      );
 
-    // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
-    await foodService.deductStockForOrder(connection, cartItems);
+      // Tinh cac gia tri de dua vao tao orderItem
+      const { orderValues, totalPriceOrder } = calculateOrderValues(
+        cartItems,
+        orderId,
+      );
 
-    //Tao order
-    const { orderId, orderCode } = await orderService.createOrder(
-      connection,
-      { userId, guestToken },
-      customerName,
-      email,
-      phone,
-      address,
-    );
+      await orderItemService.createOrderItem(conn, orderValues);
 
-    // Tinh cac gia tri de dua vao tao orderItem
-    const { orderValues, totalPriceOrder } = calculateOrderValues(
-      cartItems,
-      orderId,
-    );
+      const paymentTypeDefault = "COD";
+      const transactionDefault = "COD";
+      const paymentStatusDefault = "pending";
+      await paymentService.createPayment(
+        conn,
+        orderId,
+        paymentTypeDefault,
+        totalPriceOrder,
+        transactionDefault,
+        paymentStatusDefault,
+      );
+      await cartService.clearCart(cartId, conn);
 
-    await orderItemService.createOrderItem(connection, orderValues);
+      return { orderId, orderCode, totalPriceOrder };
+    },
+  );
 
-    const paymentTypeDefault = "COD";
-    const transactionDefault = "COD";
-    const paymentStatusDefault = "pending";
-    await paymentService.createPayment(
-      connection,
-      orderId,
-      paymentTypeDefault,
-      totalPriceOrder,
-      transactionDefault,
-      paymentStatusDefault,
-    );
-    await cartService.clearCart(cartId, connection);
+  const { orderId, orderCode, totalPriceOrder } = result;
 
-    await connection.commit();
-
-    res.status(200).json({
-      message: "Create order successful",
-      orderCode,
-      orderId,
-      totalPriceOrder: totalPriceOrder,
-    });
-  } catch (err) {
-    await connection.rollback(); // rollback nếu lỗi
-    console.error(">>>>> CONTROLLER ERROR Transaction failed:", err);
-
-    if (err.message === "OUT_OF_STOCK") {
-      return res
-        .status(409)
-        .json({ message: "Some products are out of stock." });
-    }
-
-    if (err.message === "QUANTITY_ORDER_NEGATIVE") {
-      return res.status(400).json({
-        message: "The quantity of products ordered must not be negative.",
-      });
-    }
-
-    res.status(500).json({ message: "Server error", error: err.message });
-  } finally {
-    connection.release();
-  }
+  res.status(200).json({
+    message: "Create order successful",
+    orderCode,
+    orderId,
+    totalPriceOrder,
+  });
 };
 
 const updateOrderStatus = async (req, res) => {

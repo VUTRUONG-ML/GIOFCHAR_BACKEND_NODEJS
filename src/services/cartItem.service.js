@@ -7,7 +7,7 @@ import {
 import { groupVariant } from "../utils/variant.js";
 
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
-const getCartItemsByCartId = async (cartId, conn) => {
+const getCartItemsByCartId = async (cartId, conn, forOrder = false) => {
   // trả về toàn bộ food bên trong một giỏ hàng
   try {
     const [rows] = await conn.execute(
@@ -37,7 +37,7 @@ const getCartItemsByCartId = async (cartId, conn) => {
       WHERE ci.cartID = ?`,
       [cartId],
     );
-    const cartItems = groupVariant(rows);
+    const cartItems = groupVariant(rows, forOrder);
     return cartItems;
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);

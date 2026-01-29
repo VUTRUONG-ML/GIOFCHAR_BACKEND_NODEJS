@@ -46,11 +46,11 @@ const getOrderItemsByOrderId = async (orderId) => {
 };
 
 const createOrderItem = async (connection, orderValues) => {
-  // orderValues : array[[orderID, foodID, quantity, totalPrice]]
+  // orderValues : array[[orderID, food_variantID, item_name, weight_gram, originalPrice, discount_type, discount_value, discount_amount, unitPrice, quantity, totalPrice]]
   try {
     // muốn thêm nhiều dòng dữ liệu thì dùng query
     const [result] = await connection.query(
-      "INSERT INTO order_items (orderID, foodID, quantity, totalPrice) VALUES ?",
+      "INSERT INTO order_items (orderID, food_variantID, item_name, weight_gram, originalPrice, discount_type, discount_value, discount_amount, unitPrice, quantity, totalPrice) VALUES ?",
       [orderValues],
     );
     return result.insertId;

@@ -235,3 +235,35 @@ export async function deleteVariant(variantId, conn = pool) {
     throw error;
   }
 }
+
+const updateStock = async (conn, variantId, quantityOrder) => {
+  try {
+    if (quantityOrder <= 0)
+      throw new BadRequestError("The order quantity must be greater than zero");
+    const [result] = await conn.execute(
+      `
+      UPDATE food_variants
+      SET stock = stock - ?
+      WHERE id = ? AND stock >= ?
+      `,
+      [quantityOrder, variantId, quantityOrder],
+    );
+    return result.affectedRows === 1;
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR update stock:", error.message);
+    throw error;
+  }
+};
+
+export const deductStockForOrder = async (conn, cartItems) => {
+  try {
+    for (const item of cartItems) {
+      const updated = await updateStock(conn, item.variantId, item.quantity);
+      if (!updated) throw new ConflictError("Some products are out of stock.");
+    }
+    return true;
+  } catch (error) {
+    console.log(">>>>> SERVICE ERROR deduct stock:", error.message);
+    throw error;
+  }
+};

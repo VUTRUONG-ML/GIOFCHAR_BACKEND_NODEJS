@@ -331,36 +331,6 @@ const getStock = async (conn, foodId, { forUpdate = false }) => {
   }
 };
 
-const updateStock = async (conn, foodId, quantityOrder) => {
-  try {
-    const [result] = await conn.execute(
-      `
-      UPDATE foods
-      SET stock = stock - ?
-      WHERE id = ? AND stock >= ?
-      `,
-      [quantityOrder, foodId, quantityOrder],
-    );
-    return result.affectedRows === 1 ? true : false;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR update stock:", error.message);
-    throw error;
-  }
-};
-
-const deductStockForOrder = async (conn, cartItems) => {
-  try {
-    for (const item of cartItems) {
-      const updated = await updateStock(conn, item.foodId, item.quantity);
-      if (!updated) throw new Error("OUT_OF_STOCK");
-    }
-    return true;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR deduct stock:", error.message);
-    throw error;
-  }
-};
-
 const getDetailFood = async (foodId) => {
   const connection = await pool.getConnection();
   try {
@@ -388,7 +358,5 @@ export default {
   searchFood,
   filterFood,
   getStock,
-  updateStock,
-  deductStockForOrder,
   getDetailFood,
 };

@@ -1,11 +1,30 @@
 const calculateOrderValues = (cartItems, orderId) => {
   let totalPriceOrder = 0;
+
   const orderValues = cartItems.map((item) => {
-    const totalPriceItem = item.quantity * item.price;
+    const unitPrice = item.price; // finalPrice
+    const totalPriceItem = unitPrice * item.quantity;
     totalPriceOrder += totalPriceItem;
-    if (item.quantity < 0) throw new Error("QUANTITY_ORDER_NEGATIVE");
-    return [orderId, item.foodId, item.quantity, totalPriceItem];
+
+    return [
+      orderId,
+
+      item.variantId,
+
+      item.foodName, // item_name
+      item.weight_gram,
+
+      item.originalPrice,
+      item.typePromotion ?? null,
+      item.valuePromotion ?? null,
+      item.discountFixed, // discount_amount
+
+      unitPrice,
+      item.quantity,
+      totalPriceItem,
+    ];
   });
+
   return { orderValues, totalPriceOrder };
 };
 

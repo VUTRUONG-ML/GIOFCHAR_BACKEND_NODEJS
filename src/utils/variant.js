@@ -1,4 +1,4 @@
-export function groupVariant(rows) {
+export function groupVariant(rows, forOrder = false) {
   // rows: [{variantId, weight_gram, originalPrice, inStock, typePromotion, valuePromotion, ...otherInf}]
   const map = {};
   for (const r of rows) {
@@ -19,34 +19,48 @@ export function groupVariant(rows) {
         originalPrice,
         price: originalPrice,
         inStock,
-        discountPercent: 0,
         discountFixed: 0,
+
+        ...(forOrder && {
+          typePromotion: null,
+          valuePromotion: null,
+        }),
+
         ...orderInf,
       };
     }
 
-    let discountPercent = 0;
     let discountFixed = 0;
+
     if (typePromotion && valuePromotion) {
       if (
         typePromotion === "FIXED" &&
-        valuePromotion < map[key].originalPrice
+        valuePromotion > 0 &&
+        valuePromotion < originalPrice
       ) {
         discountFixed = valuePromotion;
-        discountPercent = Math.round(
-          (valuePromotion / map[key].originalPrice) * 100,
-        );
       }
-      if (typePromotion === "PERCENT" && valuePromotion < 100) {
-        discountPercent = valuePromotion;
-        discountFixed = (valuePromotion / 100) * map[key].originalPrice;
+
+      if (
+        typePromotion === "PERCENT" &&
+        valuePromotion > 0 &&
+        valuePromotion < 100
+      ) {
+        discountFixed = (valuePromotion / 100) * originalPrice;
       }
     }
+
+    // nếu có nhiều promotion thì lấy cái giảm nhiều nhất
     if (discountFixed > map[key].discountFixed) {
       map[key].discountFixed = discountFixed;
-      map[key].discountPercent = discountPercent;
       map[key].price = originalPrice - discountFixed;
+
+      if (forOrder) {
+        map[key].typePromotion = typePromotion;
+        map[key].valuePromotion = valuePromotion;
+      }
     }
   }
+
   return Object.values(map);
 }

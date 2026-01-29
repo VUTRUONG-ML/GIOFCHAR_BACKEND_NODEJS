@@ -37,14 +37,17 @@ router.put(
 );
 
 // Tạo order dành cho user
-router.post("/user/cod", requireAuth, resolveCart, orderController.createOrder);
+router.post(
+  "/user/cod",
+  requireAuth,
+  asyncHandler(orderController.createOrder),
+);
 
 // Tạo order dành cho khách
 router.post(
   "/guest/cod",
   optionalAuth,
-  resolveCart,
-  orderController.createOrder,
+  asyncHandler(orderController.createOrder),
 );
 
 // Xem trạng thái order của hôm nay so với hôm qua
