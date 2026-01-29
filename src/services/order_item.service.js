@@ -1,4 +1,6 @@
 const pool = require("../config/db");
+const { NotFoundError } = require("../errors/AppError");
+const { groupOrderDetail } = require("../utils/order.util");
 
 const getOrderItemsByOrderId = async (orderId) => {
   try {
@@ -16,23 +18,28 @@ const getOrderItemsByOrderId = async (orderId) => {
         
         oi.id AS orderItemId,
         oi.quantity,
+        oi.unitPrice,
         oi.totalPrice as totalPriceOnOneItem,
-        
-        f.id AS foodId,
+
         f.foodName,
         f.image,
-        f.price, 
+        fv.weight_gram,
         
         p.paymentType,
         p.status as paymentStatus
       FROM orders o
       JOIN order_items oi ON o.id = oi.orderID
-      JOIN foods f ON oi.foodID = f.id 
+      JOIN food_variants fv ON oi.food_variantID = fv.id
+      JOIN foods f ON fv.foodID = f.id
       JOIN payments p ON o.id = p.orderID
       WHERE o.id = ?`,
       [orderId],
     );
-    return rows;
+    const order = groupOrderDetail(rows);
+
+    if (!order) throw new NotFoundError("Order not found");
+
+    return order;
   } catch (err) {
     throw err;
   }

@@ -41,7 +41,7 @@ function groupOrders(rows) {
         orderCode,
         status,
         time,
-        amount,
+        amount: Number(amount),
         featuredItem: {
           orderItemId,
           foodName,
@@ -72,8 +72,71 @@ function groupOrders(rows) {
   return Array.from(mapOrder.values());
 }
 
+function groupOrderDetail(rows) {
+  // rows = [{orderId, orderCode, createdAt, updatedAt, customerName, email, phone, address, status, orderItemId, foodName, image, weight_gram, quantity, price, totalPriceOnOneItem, paymentType, paymentStatus}]
+  if (rows.length === 0) return null;
+  const {
+    orderId,
+    createdAt,
+    updatedAt,
+    orderCode,
+    status,
+    customerName,
+    email,
+    phone,
+    paymentType,
+    paymentStatus,
+    address,
+  } = rows[0];
+
+  const itemList = rows.map(
+    ({
+      orderId,
+      createdAt,
+      updatedAt,
+      orderCode,
+      status,
+      customerName,
+      email,
+      phone,
+      paymentType,
+      paymentStatus,
+      address,
+      ...rest
+    }) => ({
+      ...rest,
+      unitPrice: Number(rest.unitPrice),
+      totalPriceOnOneItem: Number(rest.totalPriceOnOneItem),
+    }),
+  );
+
+  //tinh tong tien cua order
+  const amountOrder = itemList.reduce(
+    (sum, item) => sum + Number(item.totalPriceOnOneItem),
+    0,
+  );
+  const order = {
+    orderId,
+    totalItem: itemList.length,
+    orderCode,
+    createdAt,
+    updatedAt,
+    orderStatus: status,
+    address,
+    amountOrder,
+    customerName,
+    phone,
+    email,
+    paymentType,
+    paymentStatus,
+    items: itemList,
+  };
+  return order;
+}
+
 module.exports = {
   calculateOrderValues,
   generateOrderCode,
   groupOrders,
+  groupOrderDetail,
 };

@@ -59,67 +59,8 @@ const getOrdersByUserId = async (req, res) => {
 
 const getOrderItemsByOrderId = async (req, res) => {
   const orderId = req.params.orderId;
-  try {
-    const items = await orderItemService.getOrderItemsByOrderId(orderId);
-    if (items.length === 0)
-      return res.status(404).json({ message: "Order not found" });
-
-    // gộp các trường dùng chung
-
-    const {
-      createdAt,
-      updatedAt,
-      orderCode,
-      status,
-      customerName,
-      email,
-      phone,
-      paymentType,
-      paymentStatus,
-      address,
-    } = items[0];
-
-    const itemList = items.map(
-      ({
-        orderCode,
-        createdAt,
-        updatedAt,
-        status,
-        customerName,
-        email,
-        phone,
-        paymentType,
-        paymentStatus,
-        address,
-        ...rest
-      }) => rest,
-    );
-
-    //tinh tong tien cua order
-    const amountOrder = itemList.reduce(
-      (sum, item) => sum + Number(item.totalPriceOnOneItem),
-      0,
-    );
-
-    res.status(200).json({
-      totalItem: items.length,
-      orderCode,
-      createdAt,
-      updatedAt,
-      orderStatus: status,
-      address,
-      amountOrder,
-      customerName,
-      phone,
-      email,
-      paymentType,
-      paymentStatus,
-      items: itemList,
-    });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR getOrderItemsByOrderId", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  const order = await orderItemService.getOrderItemsByOrderId(orderId);
+  return res.status(200).json(order);
 };
 
 const createOrder = async (req, res) => {

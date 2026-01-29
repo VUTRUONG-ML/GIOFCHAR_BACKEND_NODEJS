@@ -67,7 +67,7 @@ router.get(
   "/:orderId/detail",
   optionalAuth,
   authorizeOrderAccess,
-  orderController.getOrderItemsByOrderId,
+  asyncHandler(orderController.getOrderItemsByOrderId),
 );
 
 // Xem tất cả order của chính bản thân dành cho user
