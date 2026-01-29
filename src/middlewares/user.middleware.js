@@ -4,11 +4,6 @@ const checkAdmin = (req, res, next) => {
   return res.status(403).json({ message: "You do not have access" });
 };
 
-const checkSelfOrAdmin = (req, res, next) => {
-  return next();
-};
-
 module.exports = {
   checkAdmin,
-  checkSelfOrAdmin,
 };

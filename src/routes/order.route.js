@@ -1,22 +1,23 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const {
+import {
   requireAuth,
   authorizeOrderAccess,
   optionalAuth,
-} = require("../middlewares/auth.middleware");
+} from "../middlewares/auth.middleware.js";
 
-const userMiddleware = require("../middlewares/user.middleware");
-const cartMiddleware = require("../middlewares/cart.middleware");
-const orderController = require("../controllers/order.controller");
+import userMiddleware from "../middlewares/user.middleware.js";
+import orderController from "../controllers/order.controller.js";
+import { resolveCart } from "../middlewares/cart.middleware.js";
+import { asyncHandler } from "../errors/errorHandler.js";
 
 // Xóa order dành cho admin
 router.delete(
   "/:orderId",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.deleteOrder
+  orderController.deleteOrder,
 );
 
 // Hủy order dành cho user và khách
@@ -24,7 +25,7 @@ router.put(
   "/:orderId/cancel",
   optionalAuth,
   authorizeOrderAccess,
-  orderController.cancelOrder
+  orderController.cancelOrder,
 );
 
 // Cập nhật trạng thái order dành cho admin
@@ -32,23 +33,18 @@ router.put(
   "/:orderId/status",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.updateOrderStatus
+  orderController.updateOrderStatus,
 );
 
 // Tạo order dành cho user
-router.post(
-  "/user/cod",
-  requireAuth,
-  cartMiddleware.resolveCart,
-  orderController.createOrder
-);
+router.post("/user/cod", requireAuth, resolveCart, orderController.createOrder);
 
 // Tạo order dành cho khách
 router.post(
   "/guest/cod",
   optionalAuth,
-  cartMiddleware.resolveCart,
-  orderController.createOrder
+  resolveCart,
+  orderController.createOrder,
 );
 
 // Xem trạng thái order của hôm nay so với hôm qua
@@ -56,14 +52,14 @@ router.get(
   "/stats/overviewCount",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.getStatusOverview
+  orderController.getStatusOverview,
 );
 
 router.get(
   "/stats/overviewRevenue",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.getStatusRevenue
+  orderController.getStatusRevenue,
 );
 
 // Xem chi tiết item bên trong orderid có thể là khách, user, admin
@@ -71,24 +67,28 @@ router.get(
   "/:orderId/detail",
   optionalAuth,
   authorizeOrderAccess,
-  orderController.getOrderItemsByOrderId
+  orderController.getOrderItemsByOrderId,
 );
 
 // Xem tất cả order của chính bản thân dành cho user
-router.get("/user/my-orders", requireAuth, orderController.getOrdersByUserId);
+router.get(
+  "/user/my-orders",
+  requireAuth,
+  asyncHandler(orderController.getOrdersByUserId),
+);
 
 // Xem tất cả order của user đó dành cho admin
 router.get(
   "/user/:userId",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.getOrdersByUserId
+  asyncHandler(orderController.getOrdersByUserId),
 );
 router.get(
   "/",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.getAllOrders
+  orderController.getAllOrders,
 );
 
-module.exports = router;
+export default router;

@@ -15,7 +15,65 @@ function generateOrderCode(orderId) {
   return `DH${year}-${padded}`;
 }
 
+function groupOrders(rows) {
+  // rows = [{orderId, orderCode, status, time, amount, orderItemId, foodName, image, weight_gram, totalPrice, quantity}]
+  if (rows.length === 0) return [];
+  const mapOrder = new Map();
+  for (const order of rows) {
+    const {
+      orderId,
+      orderCode,
+      status,
+      time,
+      amount,
+      orderItemId,
+      foodName,
+      image,
+      weight_gram,
+      totalPrice,
+      quantity,
+    } = order;
+
+    // Nếu order chưa tồn tại
+    if (!mapOrder.has(orderId)) {
+      mapOrder.set(orderId, {
+        orderId,
+        orderCode,
+        status,
+        time,
+        amount,
+        featuredItem: {
+          orderItemId,
+          foodName,
+          image,
+          weight_gram,
+          totalPrice: Number(totalPrice),
+          quantity,
+        },
+      });
+      continue;
+    }
+
+    // So sánh để chọn featuredItem
+    const currentOrder = mapOrder.get(orderId);
+
+    if (currentOrder.featuredItem.totalPrice < Number(totalPrice)) {
+      currentOrder.featuredItem = {
+        orderItemId,
+        foodName,
+        image,
+        weight_gram,
+        totalPrice: Number(totalPrice),
+        quantity,
+      };
+    }
+  }
+
+  return Array.from(mapOrder.values());
+}
+
 module.exports = {
   calculateOrderValues,
   generateOrderCode,
+  groupOrders,
 };

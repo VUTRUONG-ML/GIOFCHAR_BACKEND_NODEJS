@@ -1,6 +1,6 @@
-const pool = require("../config/db");
-const userService = require("../services/user.service");
-const { statusOverview } = require("../utils/status");
+import pool from "../config/db.js";
+import userService from "../services/user.service.js";
+import { statusOverview } from "../utils/status.js";
 
 const getAllUsers = async (req, res) => {
   try {
@@ -40,7 +40,7 @@ const createUser = async (req, res) => {
       email,
       phone,
       address,
-      password
+      password,
     );
 
     res
@@ -75,7 +75,7 @@ const updateUserById = async (req, res) => {
       userName,
       email,
       phone,
-      address
+      address,
     );
 
     if (result.affectedRows === 0)
@@ -145,7 +145,7 @@ const getOverviewCountUser = async (req, res) => {
   }
 };
 
-module.exports = {
+export default {
   updateUserByAdmin,
   getAllUsers,
   getUserById,

@@ -1,12 +1,12 @@
-const orderService = require("../services/order.service");
-const orderItemService = require("../services/order_item.service");
-const cartItemService = require("../services/cartItem.service");
-const cartService = require("../services/cart.service");
-const paymentService = require("../services/payment.service");
-const { calculateOrderValues, ordersMap } = require("../utils/order.util");
-const pool = require("../config/db");
-const { deductStockForOrder } = require("../services/food.service");
-const { statusOverview } = require("../utils/status");
+import orderService from "../services/order.service.js";
+import orderItemService from "../services/order_item.service.js";
+import cartItemService from "../services/cartItem.service.js";
+import cartService from "../services/cart.service.js";
+import paymentService from "../services/payment.service.js";
+import { calculateOrderValues } from "../utils/order.util.js";
+import pool from "../config/db.js";
+import foodService from "../services/food.service.js";
+import { statusOverview } from "../utils/status.js";
 
 const getStatusOverview = async (req, res) => {
   try {
@@ -52,39 +52,9 @@ const getAllOrders = async (req, res) => {
 const getOrdersByUserId = async (req, res) => {
   const { role } = req.user;
   const userId = role === "admin" ? req.params.userId : req.user.userId;
-  try {
-    const rows = await orderService.getOrdersByUserId(userId);
 
-    const ordersMap = rows.reduce((acc, row) => {
-      const orderId = row.orderId;
-
-      if (!acc[orderId]) {
-        acc[orderId] = {
-          orderId: row.orderId,
-          orderCode: row.orderCode,
-          status: row.status,
-          time: row.time,
-          amount: Number(row.amount),
-          items: [],
-        };
-      }
-
-      acc[orderId].items.push({
-        orderItemId: row.orderItemId,
-        foodName: row.foodName,
-        image: row.image,
-        quantity: row.quantity,
-      });
-
-      return acc;
-    }, {});
-
-    const orders = Object.values(ordersMap);
-    res.status(200).json({ total: orders.length, orders });
-  } catch (error) {
-    console.log(">>>>> CONTROLLER ERROR", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
+  const orders = await orderService.getOrdersByUserId(userId);
+  return res.status(200).json({ total: orders.length, orders });
 };
 
 const getOrderItemsByOrderId = async (req, res) => {
@@ -174,7 +144,7 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Empty cart items" });
 
     // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
-    await deductStockForOrder(connection, cartItems);
+    await foodService.deductStockForOrder(connection, cartItems);
 
     //Tao order
     const { orderId, orderCode } = await orderService.createOrder(
@@ -288,7 +258,7 @@ const deleteOrder = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-module.exports = {
+export default {
   getAllOrders,
   getOrdersByUserId,
   getOrderItemsByOrderId,

@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { generateOrderCode } from "../utils/order.util.js";
+import { generateOrderCode, groupOrders } from "../utils/order.util.js";
 import { switchCustomer } from "../utils/switchCustomer.js";
 import { validateOwner } from "./validators.js";
 
@@ -91,22 +91,26 @@ const getOrdersByUserId = async (userId) => {
         o.createdAt AS time,
 
         (SELECT SUM(oi2.totalPrice )
-         FROM order_items oi2 
-         WHERE oi2.orderID = o.id
+        FROM order_items oi2 
+        WHERE oi2.orderID = o.id
         ) AS amount,
 
         oi.id as orderItemId,
         f.foodName,
         f.image,
-		    oi.quantity
+        fv.weight_gram,
+        oi.totalPrice,
+        oi.quantity
       FROM orders o 
       JOIN order_items oi  ON o.id = oi.orderID
-      JOIN foods f ON f.id = oi.foodID 
-   	  WHERE o.userID = ?
+      JOIN food_variants fv ON oi.food_variantID = fv.id
+      JOIN foods f ON fv.foodID = f.id
+      WHERE o.userID = ?
       ORDER BY o.createdAt`,
       [userId],
     );
-    return rows;
+    const newRows = groupOrders(rows);
+    return newRows;
   } catch (err) {
     throw err;
   }
