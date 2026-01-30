@@ -1,7 +1,6 @@
 import express from "express";
 const router = express.Router();
 
-import { resolveCart } from "../middlewares/cart.middleware.js";
 import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
 import { checkAdmin } from "../middlewares/user.middleware.js";
 import { checkFoodExists } from "../middlewares/checkFood.js";

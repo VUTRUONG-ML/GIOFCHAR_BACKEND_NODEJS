@@ -9,7 +9,7 @@ import {
 
 import userMiddleware from "../middlewares/user.middleware.js";
 import orderController from "../controllers/order.controller.js";
-import { resolveCart } from "../middlewares/cart.middleware.js";
+
 import { asyncHandler } from "../errors/errorHandler.js";
 
 // Xóa order dành cho admin
@@ -29,11 +29,11 @@ router.put(
 );
 
 // Cập nhật trạng thái order dành cho admin
-router.put(
+router.patch(
   "/:orderId/status",
   requireAuth,
   userMiddleware.checkAdmin,
-  orderController.updateOrderStatus,
+  asyncHandler(orderController.updateOrderStatus),
 );
 
 // Tạo order dành cho user

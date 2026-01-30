@@ -1,6 +1,12 @@
 import pool from "../config/db.js";
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from "../errors/AppError.js";
 import { generateOrderCode, groupOrders } from "../utils/order.util.js";
 import { switchCustomer } from "../utils/switchCustomer.js";
+import { getPaymentByOrderId, updatePaymentById } from "./payment.service.js";
 import { validateOwner } from "./validators.js";
 
 const getAllOrders = async () => {
@@ -75,7 +81,7 @@ const getOrderById = async (orderId) => {
       WHERE id = ?`,
       [orderId],
     );
-    return rows;
+    return rows[0];
   } catch (err) {
     throw err;
   }
@@ -155,15 +161,98 @@ const createOrder = async (
   }
 };
 
-const updateOrderStatus = async (orderId, status) => {
+const updateOrderStatus = async (orderId, status, conn = pool) => {
   try {
-    const [result] = await pool.execute(
+    if (
+      status !== "delivering" &&
+      status !== "unconfirmed" &&
+      status !== "cancelled" &&
+      status !== "delivered"
+    )
+      throw new BadRequestError("Invalid status order.");
+    const [result] = await conn.execute(
       "UPDATE orders o SET status = ? WHERE id = ?",
       [status, orderId],
     );
-    return result;
+    return result.affectedRows === 1;
   } catch (err) {
     throw err;
+  }
+};
+
+const updateOrderDeliveredCOD = async (
+  orderId,
+  paymentStatus,
+  orderStatus,
+  conn = pool,
+) => {
+  if (
+    paymentStatus !== "success" &&
+    paymentStatus !== "failed" &&
+    paymentStatus !== "pending"
+  )
+    throw BadRequestError("Invalid status payment");
+  if (
+    orderStatus !== "delivering" &&
+    orderStatus !== "unconfirmed" &&
+    orderStatus !== "cancelled" &&
+    orderStatus !== "delivered"
+  )
+    throw new BadRequestError("Invalid status order.");
+  try {
+    const sql = `
+      UPDATE orders
+      SET paymentStatus = ?, status = ?
+      WHERE id = ?
+    `;
+    const [result] = await conn.execute(sql, [
+      paymentStatus,
+      orderStatus,
+      orderId,
+    ]);
+    return result.affectedRows === 1;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const confirmCodOrderPayment = async (orderId, status = "delivered") => {
+  const connection = await pool.getConnection();
+  try {
+    if (status !== "delivered")
+      throw new BadRequestError("Invalid status order.");
+
+    await connection.beginTransaction();
+    const payment = await getPaymentByOrderId(orderId, connection);
+    if (!payment) throw new NotFoundError("Payment not found for this order.");
+
+    const { paymentId, paymentType } = payment;
+    if (paymentType !== "COD")
+      throw new BadRequestError("Only COD orders can be confirmed manually");
+
+    const newPaymentStatus = "success";
+    const updatedOrder = await updateOrderDeliveredCOD(
+      orderId,
+      newPaymentStatus,
+      status,
+      connection,
+    );
+    if (!updatedOrder) throw new NotFoundError("Order not found");
+
+    await updatePaymentById(
+      paymentId,
+      newPaymentStatus,
+      paymentType,
+      connection,
+    );
+    await connection.commit();
+    return true;
+  } catch (error) {
+    await connection.rollback();
+    console.log(">>> SERVICE UPDATE DELIVERED ORDER ERROR", error);
+    throw error;
+  } finally {
+    connection.release();
   }
 };
 
@@ -247,4 +336,5 @@ export default {
   getOrderByIdAndUser,
   attachOrderToUser,
   revenue,
+  confirmCodOrderPayment,
 };

@@ -21,15 +21,20 @@ const getPaymentById = async (paymentId) => {
   }
 };
 
-const updatePaymentById = async (paymentId, paymentStatus, paymentType) => {
+const updatePaymentById = async (
+  paymentId,
+  paymentStatus,
+  paymentType,
+  conn = pool,
+) => {
   try {
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `UPDATE payments p 
         SET paymentType = ?, status = ? 
         WHERE id = ?`,
-      [paymentType, paymentStatus, paymentId]
+      [paymentType, paymentStatus, paymentId],
     );
-    return result;
+    return result.affectedRows === 1;
   } catch (err) {
     throw err;
   }
@@ -41,13 +46,13 @@ const createPayment = async (
   paymentType,
   amount,
   transactionId,
-  paymentStatus
+  paymentStatus,
 ) => {
   try {
     const [result] = await conn.execute(
       `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
         VALUES (?, ?, ?, ?, ?)`,
-      [orderID, paymentType, amount, transactionId, paymentStatus]
+      [orderID, paymentType, amount, transactionId, paymentStatus],
     );
     return result;
   } catch (err) {
@@ -66,10 +71,24 @@ const deletePayment = async (paymentId) => {
   }
 };
 
+const getPaymentByOrderId = async (orderId, conn = pool) => {
+  try {
+    const sql = `
+     SELECT id as paymentId, paymentType, status as paymentStatus
+     FROM payments
+     WHERE orderID = ?
+    `;
+    const [rows] = await conn.execute(sql, [orderId]);
+    return rows[0];
+  } catch (error) {
+    throw error;
+  }
+};
 module.exports = {
   getAllPayments,
   getPaymentById,
   updatePaymentById,
   createPayment,
   deletePayment,
+  getPaymentByOrderId,
 };
