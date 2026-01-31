@@ -84,15 +84,17 @@ export const recentOrders = async ({ conn = pool }) => {
   }
 };
 
-export const lowStockProducts = async ({ conn = pool }) => {
+export const lowStockProducts = async (conn = pool) => {
   try {
     const sql = `
-      SELECT 
-        id as foodId,
+      SELECT
+        fv.id as variantId,
         f.foodName,
-        f.stock 
-      FROM foods f 
-      WHERE f.stock <= 15
+        fv.weight_gram,
+        fv.stock 
+      FROM food_variants fv 
+      JOIN foods f ON fv.foodID = f.id
+      WHERE fv.stock  <= 15
     `;
     const [rows] = await conn.execute(sql);
     return classificationStockLevel(rows);

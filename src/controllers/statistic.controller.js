@@ -46,7 +46,7 @@ export const getRecentOrders = async (req, res) => {
 
 export const getLowStockProducts = async (req, res) => {
   try {
-    const products = await lowStockProducts({});
+    const products = await lowStockProducts();
     return res.status(200).json({ products });
   } catch (error) {
     console.log(">>> CONTROLLER ERROR:", error.message);
