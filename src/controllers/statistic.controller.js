@@ -6,7 +6,9 @@ import {
 import pool from "../config/db.js";
 import { topProduct } from "../services/statistic.service.js";
 export const getRevenue = async (req, res) => {
-  const day = req.query.range;
+  const day = Number(req.query.range);
+  if (day !== 7 && day !== 30 && day !== 90)
+    return res.status(400).json({ message: "Invalid range day" });
   try {
     const result = await revenue({ conn: pool, range: Number(day) });
     return res.status(200).json({ revenue: result });

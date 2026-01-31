@@ -5,7 +5,6 @@ import cartService from "../services/cart.service.js";
 import paymentService from "../services/payment.service.js";
 import { calculateOrderValues } from "../utils/order.util.js";
 import pool from "../config/db.js";
-import foodService from "../services/food.service.js";
 import { statusOverview } from "../utils/status.js";
 import { deductStockForOrder } from "../services/variant.service.js";
 import { BadRequestError } from "../errors/AppError.js";
@@ -29,8 +28,8 @@ const getStatusOverview = async (req, res) => {
 
 const getStatusRevenue = async (req, res) => {
   try {
-    const revenueToday = await orderService.revenue(pool, "today");
-    const revenueYesterday = await orderService.revenue(pool, "yesterday");
+    const revenueToday = await paymentService.revenue("today");
+    const revenueYesterday = await paymentService.revenue("yesterday");
     const { status, percent } = statusOverview(revenueToday, revenueYesterday);
     return res.status(200).json({ revenueToday, status, percent });
   } catch (error) {

@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { BadRequestError } = require("../errors/AppError");
 
 const getAllPayments = async () => {
   try {
@@ -84,6 +85,33 @@ const getPaymentByOrderId = async (orderId, conn = pool) => {
     throw error;
   }
 };
+
+const revenue = async (time = "default", conn = pool) => {
+  const optionTime =
+    time === "today"
+      ? "AND p.createdAt >= CURDATE() AND p.createdAt < CURDATE() + INTERVAL 1 DAY"
+      : time === "yesterday"
+        ? "AND p.createdAt >= CURDATE() - INTERVAL 1 DAY AND p.createdAt < CURDATE()"
+        : "";
+
+  if (time !== "today" && time !== "yesterday" && time !== "default")
+    throw new Error("INVALID_TIME_REVENUE");
+  try {
+    const sql = `
+      SELECT 
+        p.amount as revenue,	
+        p.createdAt 
+      FROM payments p
+      WHERE p.status = "success"
+      ${optionTime}
+    `;
+    const [rows] = await conn.execute(sql);
+    return rows[0] ? Number(rows[0].revenue) : 0;
+  } catch (error) {
+    console.log(">>> SERVICE get revenue payments ERROR", error);
+    throw error;
+  }
+};
 module.exports = {
   getAllPayments,
   getPaymentById,
@@ -91,4 +119,5 @@ module.exports = {
   createPayment,
   deletePayment,
   getPaymentByOrderId,
+  revenue,
 };

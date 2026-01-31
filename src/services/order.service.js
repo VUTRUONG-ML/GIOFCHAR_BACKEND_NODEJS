@@ -67,9 +67,9 @@ const countYesterdayOrders = async (conn = pool) => {
   }
 };
 
-const getOrderById = async (orderId) => {
+const getOrderById = async (orderId, conn = pool) => {
   try {
-    const [rows] = await pool.execute(
+    const [rows] = await conn.execute(
       `SELECT
         o.id AS orderId,
         o.orderCode,
@@ -85,6 +85,16 @@ const getOrderById = async (orderId) => {
   } catch (err) {
     throw err;
   }
+};
+
+const assertOrderUpdatable = async (orderId, conn = pool) => {
+  const order = await getOrderById(orderId, conn);
+
+  if (!order) throw new NotFoundError("Order not found");
+
+  const { status: currentStatus } = order;
+  if (currentStatus === "cancelled" || currentStatus === "delivered")
+    throw new BadRequestError("Order cannot be updated");
 };
 
 const getOrdersByUserId = async (userId) => {
@@ -170,10 +180,12 @@ const updateOrderStatus = async (orderId, status, conn = pool) => {
       status !== "delivered"
     )
       throw new BadRequestError("Invalid status order.");
+    await assertOrderUpdatable(orderId, conn);
     const [result] = await conn.execute(
       "UPDATE orders o SET status = ? WHERE id = ?",
       [status, orderId],
     );
+    if (result.affectedRows !== 1) throw new NotFoundError("Order not found");
     return result.affectedRows === 1;
   } catch (err) {
     throw err;
@@ -229,6 +241,8 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
     const { paymentId, paymentType } = payment;
     if (paymentType !== "COD")
       throw new BadRequestError("Only COD orders can be confirmed manually");
+
+    await assertOrderUpdatable(orderId, connection);
 
     const newPaymentStatus = "success";
     const updatedOrder = await updateOrderDeliveredCOD(

@@ -6,34 +6,36 @@ import {
 } from "../utils/statistic.js";
 
 export const revenue = async ({ conn = pool, range = 7 }) => {
+  if (isNaN(range)) throw new Error("Invalid range day.");
   let condition;
   switch (range) {
     case 30:
-      condition = "o.createdAt >= CURDATE() - INTERVAL 27 DAY";
+      condition = "p.createdAt >= CURDATE() - INTERVAL 27 DAY";
       break;
     case 90:
-      condition = "o.createdAt >= CURDATE() - INTERVAL 89 DAY";
+      condition = "p.createdAt >= CURDATE() - INTERVAL 89 DAY";
       break;
     default:
-      condition = "o.createdAt >= CURDATE() - INTERVAL 6 DAY";
+      condition = "p.createdAt >= CURDATE() - INTERVAL 6 DAY";
       break;
   }
   try {
-    const sql = `SELECT
-                    DATE(o.createdAt) AS date,
-                    SUM(oi.totalPrice ) AS revenue
-                FROM orders o
-                JOIN order_items oi ON o.id = oi.orderID
+    const sql = `
+                SELECT
+                  DATE(p.createdAt) AS date,
+                  SUM(amount) AS revenue
+                FROM payments p
                 WHERE ${condition}
-                    AND o.createdAt < CURDATE() + INTERVAL 1 DAY 
+                    AND p.createdAt < CURDATE() + INTERVAL 1 DAY
+                    AND p.status = "success"
                 GROUP BY date`;
     const [rows] = await conn.execute(sql);
     // mốc thời gian là 30 nhưng chỉ hiển thị 28 ngày thôi
     return range === 7
       ? buildLast7DaysRevenue(rows)
       : range === 30
-      ? buildLastNDaysRevenue(rows, 28, 4)
-      : buildLastNDaysRevenue(rows, 90, 3);
+        ? buildLastNDaysRevenue(rows, 28, 4)
+        : buildLastNDaysRevenue(rows, 90, 3);
   } catch (error) {
     console.log(">>> SERVICE revenue ERROR:", error.message);
     throw error;
