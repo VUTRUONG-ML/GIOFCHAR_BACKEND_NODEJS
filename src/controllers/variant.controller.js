@@ -2,8 +2,15 @@ import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 import {
   createVariantWithPromotion,
   deleteVariant,
+  getVariantByFoodId,
   updateVariantWithPromotion,
 } from "../services/variant.service.js";
+
+export async function getVariantByFoodController(req, res) {
+  const { foodId } = req.params;
+  const variants = await getVariantByFoodId(foodId, true);
+  return res.status(200).json(variants);
+}
 
 export async function createVariantController(req, res) {
   const { weight_gram, originalPrice, stock, promotionId } = req.body;

@@ -9,7 +9,11 @@ import {
 } from "./promotion.service.js";
 import { BadRequestError, ConflictError } from "../errors/AppError.js";
 
-export async function getVariantByFoodId(foodId, conn = pool) {
+export async function getVariantByFoodId(
+  foodId,
+  forAdmin = false,
+  conn = pool,
+) {
   try {
     const sql = `
         SELECT
@@ -24,11 +28,12 @@ export async function getVariantByFoodId(foodId, conn = pool) {
         LEFT JOIN promotions p ON p.id = pt.promotionID 
             AND NOW() BETWEEN p.start_at AND p.end_at 
             AND p.isActive = TRUE
-        WHERE fv.foodID = ? AND fv.isActive = TRUE
+        WHERE fv.foodID = ?
         ORDER BY fv.weight_gram 
     `; // Nếu bỏ AND NOW() BETWEEN p.start_at AND p.end_at và AND p.isActive = TRUE xuống dưới where thì nó sẽ không khớp đk where nên nó sẽ bỏ các dòng mà promotion null
     const [rows] = await conn.execute(sql, [foodId]);
     const res = groupVariant(rows);
+    if (forAdmin) return rows;
     return res;
   } catch (error) {
     console.log(">>> SERVICE ERROR:", error.message);

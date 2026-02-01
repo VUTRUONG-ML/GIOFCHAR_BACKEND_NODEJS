@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 import foodService from "../services/food.service.js";
-import { getVariantByFoodId } from "../services/variant.service.js";
 import safeDeleteCloudinary from "../utils/safeCloudinary.js";
 
 const getAllFoods = async (req, res) => {

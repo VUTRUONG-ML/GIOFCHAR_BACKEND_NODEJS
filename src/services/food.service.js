@@ -13,6 +13,8 @@ const getAllFoodsAdmin = async () => {
         foodDescription,
         isActive,
         image,
+        rating,
+        ingredients,
         f.categoryID,
         
         c.categoryName

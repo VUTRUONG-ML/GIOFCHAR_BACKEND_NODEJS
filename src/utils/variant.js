@@ -1,5 +1,6 @@
 export function groupVariant(rows, forOrder = false) {
   // rows: [{variantId, weight_gram, originalPrice, inStock, typePromotion, valuePromotion, ...otherInf}]
+  // forOrder để khi group variant thì có cả 2 trường typePromotion và valuePromotion để khi tạo order mình sẽ tính lại giá bán
   const map = {};
   for (const r of rows) {
     const key = r.variantId;
@@ -50,15 +51,12 @@ export function groupVariant(rows, forOrder = false) {
       }
     }
 
-    // nếu có nhiều promotion thì lấy cái giảm nhiều nhất
-    if (discountFixed > map[key].discountFixed) {
-      map[key].discountFixed = discountFixed;
-      map[key].price = originalPrice - discountFixed;
+    map[key].discountFixed = discountFixed;
+    map[key].price = originalPrice - discountFixed;
 
-      if (forOrder) {
-        map[key].typePromotion = typePromotion;
-        map[key].valuePromotion = valuePromotion;
-      }
+    if (forOrder) {
+      map[key].typePromotion = typePromotion;
+      map[key].valuePromotion = valuePromotion;
     }
   }
 

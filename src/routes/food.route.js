@@ -13,7 +13,10 @@ import foodController from "../controllers/food.controller.js";
 import checkCategory from "../middlewares/checkCategory.js";
 import { checkFoodExists } from "../middlewares/checkFood.js";
 import { asyncHandler } from "../errors/errorHandler.js";
-import { createVariantController } from "../controllers/variant.controller.js";
+import {
+  createVariantController,
+  getVariantByFoodController,
+} from "../controllers/variant.controller.js";
 
 router.delete(
   "/:foodId",
@@ -50,6 +53,12 @@ router.post(
   checkAdmin,
   checkFoodExists,
   asyncHandler(createVariantController),
+);
+router.get(
+  "/:foodId/variants",
+  requireAuth,
+  checkAdmin,
+  asyncHandler(getVariantByFoodController),
 );
 router.get("/promotion", foodController.getFoodsPromotion);
 router.get("/best-selling", foodController.getAllBestSelling);
