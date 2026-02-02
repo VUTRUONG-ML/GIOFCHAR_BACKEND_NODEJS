@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
-import { addStatusPromotion } from "../utils/promotion.util.js";
+import { BadRequestError, NotFoundError } from "../errors/AppError.js";
+import { addStatusPromotion, validateUpdate } from "../utils/promotion.util.js";
 import { validatePromotion } from "./validators.js";
 
 export async function getPromotions(conn = pool) {
@@ -17,8 +18,7 @@ export async function getPromotions(conn = pool) {
     `;
     const [rows] = await conn.execute(sql); // [{promotionId, name, type, value, start_at, end_at, isActive}]
     const promotionsWithStatus = addStatusPromotion(rows);
-    console.log(">>> promotions:", promotionsWithStatus);
-    return rows;
+    return promotionsWithStatus;
   } catch (error) {
     console.log(">>> SERVICE get promotions ERROR:", error.message);
     throw error;
@@ -72,6 +72,10 @@ export async function updatePromotion(
 ) {
   try {
     validatePromotion({ name, type, value, start_at, end_at, isActive });
+    const promotion = await getPromotionById(promotionId, conn);
+    if (!promotion) throw new NotFoundError("Promotion not found");
+    const { start_at: start, end_at: end } = promotion;
+    validateUpdate({ start_at: start, end_at: end });
     const sql = `
         UPDATE promotions
         SET name = ?, type = ?, value = ?, start_at = ?, end_at = ?, isActive = ?
@@ -82,6 +86,28 @@ export async function updatePromotion(
     return result.affectedRows === 1;
   } catch (error) {
     console.log(">>> SERVICE update promotion ERROR:", error.message);
+    throw error;
+  }
+}
+
+export async function updateActivePromotion(
+  { promotionId, isActive },
+  conn = pool,
+) {
+  try {
+    const promotion = await getPromotionById(promotionId, conn);
+    if (!promotion) throw new NotFoundError("Promotion not found");
+    const { start_at, end_at } = promotion;
+    validateUpdate({ start_at, end_at }, "ACTIVE");
+    const sql = `
+      UPDATE promotions
+      SET isActive = ?
+      WHERE id = ?
+    `;
+    const [result] = await conn.execute(sql, [isActive, promotionId]);
+    return result.affectedRows === 1;
+  } catch (error) {
+    console.log(">>> SERVICE update active promo ERROR:", error);
     throw error;
   }
 }

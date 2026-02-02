@@ -2,6 +2,7 @@ import {
   createPromotion,
   deletePromotion,
   getPromotions,
+  updateActivePromotion,
   updatePromotion,
 } from "../services/promotion.service.js";
 import { asyncHandler } from "../errors/errorHandler.js";
@@ -67,6 +68,24 @@ export const updatePromotionController = async (req, res) => {
   return res.status(201).json({
     message: "Update promotion successful",
   });
+};
+export const updatedActiveController = async (req, res) => {
+  const { isActive } = req.body;
+  const { promotionId } = req.params;
+  if (typeof isActive !== "boolean") {
+    throw new BadRequestError("Invalid is active promotion");
+  }
+  const newActive =
+    isActive === "true" ||
+    isActive === true ||
+    isActive === 1 ||
+    isActive === "1"
+      ? true
+      : false;
+  await updateActivePromotion({ promotionId, isActive: newActive });
+  return res
+    .status(200)
+    .json({ message: "Update active promotion successful" });
 };
 
 export const deletePromotionController = async (req, res) => {

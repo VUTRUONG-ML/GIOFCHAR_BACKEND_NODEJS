@@ -6,6 +6,7 @@ import {
   createPromotionController,
   deletePromotionController,
   getPromotionsController,
+  updatedActiveController,
   updatePromotionController,
 } from "../controllers/promotion.controller.js";
 const router = express.Router();
@@ -21,6 +22,12 @@ router.put(
   requireAuth,
   checkAdmin,
   asyncHandler(updatePromotionController),
+);
+router.patch(
+  "/:promotionId/active",
+  requireAuth,
+  checkAdmin,
+  asyncHandler(updatedActiveController),
 );
 router.post(
   "/",
