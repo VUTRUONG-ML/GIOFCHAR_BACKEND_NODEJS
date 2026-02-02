@@ -1,10 +1,11 @@
-const pool = require("../config/db");
-const bcrypt = require("bcrypt");
-const saltRounds = 10;
-const jwt = require("jsonwebtoken");
-const userService = require("./user.service");
-require("dotenv").config();
+import pool from "../config/db.js";
+import bcrypt from "bcrypt";
 
+import jwt from "jsonwebtoken";
+import userService from "./user.service.js";
+import dotenv from "dotenv";
+dotenv.config();
+const saltRounds = 10;
 const register = async (userName, email, phone, password, address = null) => {
   const isAddress = address !== null;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -60,7 +61,7 @@ const login = async (email, password) => {
   }
 };
 
-module.exports = {
+export default {
   register,
   login,
 };

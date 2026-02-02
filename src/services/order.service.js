@@ -6,7 +6,7 @@ import {
 } from "../errors/AppError.js";
 import { generateOrderCode, groupOrders } from "../utils/order.util.js";
 import { switchCustomer } from "../utils/switchCustomer.js";
-import { getPaymentByOrderId, updatePaymentById } from "./payment.service.js";
+import paymentService from "./payment.service.js";
 import { validateOwner } from "./validators.js";
 
 const getAllOrders = async () => {
@@ -235,7 +235,10 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
       throw new BadRequestError("Invalid status order.");
 
     await connection.beginTransaction();
-    const payment = await getPaymentByOrderId(orderId, connection);
+    const payment = await paymentService.getPaymentByOrderId(
+      orderId,
+      connection,
+    );
     if (!payment) throw new NotFoundError("Payment not found for this order.");
 
     const { paymentId, paymentType } = payment;
@@ -253,7 +256,7 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
     );
     if (!updatedOrder) throw new NotFoundError("Order not found");
 
-    await updatePaymentById(
+    await paymentService.updatePaymentById(
       paymentId,
       newPaymentStatus,
       paymentType,

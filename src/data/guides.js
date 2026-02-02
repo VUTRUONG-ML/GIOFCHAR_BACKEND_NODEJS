@@ -1,4 +1,4 @@
-const guidesOrder = {
+export const guidesOrder = {
   huong_dan_dat_hang: `
     1. Chọn sản phẩm bạn muốn mua.
     2. Thêm sản phẩm vào giỏ hàng.
@@ -8,6 +8,5 @@ const guidesOrder = {
     6. Nhận email xác nhận và theo dõi trạng thái đơn hàng.
     `,
 };
-const greeting =
+export const greeting =
   "Bạn hãy chào hỏi người dùng với chức vụ bạn là trợ lý ảo hỗ trợ bán hàng giò chả. Hiện tại bạn chỉ có thể gợi ý món và hướng dẫn đặt hàng, không làm gì khác";
-module.exports = { guidesOrder, greeting };

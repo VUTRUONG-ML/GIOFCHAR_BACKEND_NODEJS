@@ -1,4 +1,4 @@
-const FOOD_IMAGE_OPTIONS = {
+export const FOOD_IMAGE_OPTIONS = {
   folder: "GIOFCHAR_BACKEND_NODEJS_SQL",
   use_filename: true,
   unique_filename: false,
@@ -15,8 +15,4 @@ const FOOD_IMAGE_OPTIONS = {
       fetch_format: "auto",
     },
   ],
-};
-
-module.exports = {
-  FOOD_IMAGE_OPTIONS,
 };

@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 import foodService from "../services/food.service.js";
-import safeDeleteCloudinary from "../utils/safeCloudinary.js";
+import { safeDeleteCloudinary } from "../utils/safeCloudinary.js";
 
 const getAllFoods = async (req, res) => {
   const { role } = req.user;

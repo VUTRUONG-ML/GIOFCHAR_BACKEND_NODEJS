@@ -1,8 +1,8 @@
-const { collectedFail } = require("../constants/resonAgent");
-const { guidesOrder, greeting } = require("../data/guides");
-const aiService = require("../services/ai.service");
-const { filterFood } = require("../services/food.service");
-const { isSlotComplete } = require("../utils/suportAi");
+import { collectedFail } from "../constants/resonAgent.js";
+import { guidesOrder, greeting } from "../data/guides.js";
+import aiService from "../services/ai.service.js";
+import foodService from "../services/food.service.js";
+import { isSlotComplete } from "../utils/suportAi.js";
 
 const resetChatAndReply = (req, res, response) => {
   req.session.chat = null;
@@ -15,7 +15,7 @@ const textResponse = (intent, text) => ({
   payload: { text },
 });
 
-const handleIntentData = async (req, res) => {
+export const handleIntentData = async (req, res) => {
   const chat = req.session.chat;
   const { intent, agent } = chat;
 
@@ -32,14 +32,18 @@ const handleIntentData = async (req, res) => {
           return res.json(
             textResponse(
               intent,
-              "Mình vẫn cần thêm chút thông tin (loại giò, ngân sách, số kg) để tư vấn chính xác hơn nhé"
-            )
+              "Mình vẫn cần thêm chút thông tin (loại giò, ngân sách, số kg) để tư vấn chính xác hơn nhé",
+            ),
           );
         }
 
         // Đã đủ dữ liệu
         const { preference, budget_vnd, quantity_kg } = agent.slots;
-        const products = await filterFood(preference, budget_vnd, quantity_kg);
+        const products = await foodService.filterFood(
+          preference,
+          budget_vnd,
+          quantity_kg,
+        );
 
         if (!products) {
           return resetChatAndReply(
@@ -47,8 +51,8 @@ const handleIntentData = async (req, res) => {
             res,
             textResponse(
               intent,
-              "Hiện tại tôi không thể tìm kiếm món phù hợp dựa trên thông tin bạn đưa cho tôi. Có thể món này đã hết hoặc lý do khác, bạn thông cảm cho shop nhé!"
-            )
+              "Hiện tại tôi không thể tìm kiếm món phù hợp dựa trên thông tin bạn đưa cho tôi. Có thể món này đã hết hoặc lý do khác, bạn thông cảm cho shop nhé!",
+            ),
           );
         }
 
@@ -86,5 +90,3 @@ const handleIntentData = async (req, res) => {
     });
   }
 };
-
-module.exports = { handleIntentData };

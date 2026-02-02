@@ -1,7 +1,7 @@
-const { FOOD_IMAGE_OPTIONS } = require("../constants/cloudinaryOptions");
-const { uploadImage, deleteImage } = require("../services/cloudinary.service");
-const fs = require("fs");
-const uploadToCloudinary = async (req, res, next) => {
+import { FOOD_IMAGE_OPTIONS } from "../constants/cloudinaryOptions.js";
+import { uploadImage, deleteImage } from "../services/cloudinary.service.js";
+import fs from "fs";
+export const uploadToCloudinary = async (req, res, next) => {
   if (!req.file) {
     console.log("No image upload");
     return next();
@@ -19,7 +19,7 @@ const uploadToCloudinary = async (req, res, next) => {
   next();
 };
 
-const deleteFromCloudinary = async (req, res, next) => {
+export const deleteFromCloudinary = async (req, res, next) => {
   const publicId = req.food.imagePublicId;
   if (!publicId) return next();
   try {
@@ -31,7 +31,7 @@ const deleteFromCloudinary = async (req, res, next) => {
 };
 
 // middleware xóa ảnh trên cloudinary khi mà sau khi upload cloudinary rồi thì gặp lỗi ở controller ko tạo food được
-const cleanupCloudinary = async (req, res, next) => {
+export const cleanupCloudinary = async (req, res, next) => {
   const oldJson = res.json;
   res.json = async function (data) {
     const publicIdImg = req.cloudinaryImage?.public_id;
@@ -48,10 +48,4 @@ const cleanupCloudinary = async (req, res, next) => {
   };
 
   next();
-};
-
-module.exports = {
-  uploadToCloudinary,
-  deleteFromCloudinary,
-  cleanupCloudinary,
 };

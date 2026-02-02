@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+import pool from "../config/db.js";
 
 const getAllCategories = async () => {
   try {
@@ -91,7 +91,7 @@ const deleteCategoryById = async (categoryId) => {
     throw err;
   }
 };
-module.exports = {
+export default {
   getAllCategories,
   createCategory,
   getCategoryById,

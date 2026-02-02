@@ -1,8 +1,6 @@
-const guidesOrder = require("../data/guides");
-const aiService = require("../services/ai.service");
-const { isSlotComplete } = require("../utils/suportAi");
+import aiService from "../services/ai.service.js";
 
-const validateInputMessage = (req, res, next) => {
+export const validateInputMessage = (req, res, next) => {
   if (!req.body.message)
     return res.status(400).json({ message: "Missing message" });
 
@@ -29,7 +27,7 @@ const validateInputMessage = (req, res, next) => {
   next();
 };
 
-const detectUserMessage = async (req, res, next) => {
+export const detectUserMessage = async (req, res, next) => {
   const { message } = req.body;
   const { chat } = req.session;
 
@@ -48,7 +46,7 @@ const detectUserMessage = async (req, res, next) => {
   next();
 };
 
-const handleIntent_goi_y_mon = async (req, res, next) => {
+export const handleIntent_goi_y_mon = async (req, res, next) => {
   const { chat } = req.session;
   const { intent } = chat;
   const CHAT_HISTORY = req.session.chat.history;
@@ -81,10 +79,4 @@ const handleIntent_goi_y_mon = async (req, res, next) => {
   };
 
   next();
-};
-
-module.exports = {
-  validateInputMessage,
-  detectUserMessage,
-  handleIntent_goi_y_mon,
 };

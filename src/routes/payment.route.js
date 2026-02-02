@@ -1,41 +1,36 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const paymentController = require("../controllers/payment.controller");
-const { requireAuth } = require("../middlewares/auth.middleware");
-const userMiddleware = require("../middlewares/user.middleware");
-const orderMiddleware = require("../middlewares/order.middleware");
+import paymentController from "../controllers/payment.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
+import { checkAdmin } from "../middlewares/user.middleware.js";
+import { checkOrderExists } from "../middlewares/order.middleware.js";
 router.delete(
   "/:paymentId",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   paymentController.deletePayment,
 );
 router.put(
   "/:paymentId",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   paymentController.updatePayment,
 );
 router.post(
   "/",
   requireAuth,
-  userMiddleware.checkAdmin,
-  orderMiddleware.checkOrderExists,
+  checkAdmin,
+  checkOrderExists,
   paymentController.createPayment,
 );
 router.get(
   "/:paymentId",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   paymentController.getPaymentById,
 );
-router.get(
-  "/",
-  requireAuth,
-  userMiddleware.checkAdmin,
-  paymentController.getAllPayments,
-);
+router.get("/", requireAuth, checkAdmin, paymentController.getAllPayments);
 
-module.exports = router;
+export default router;

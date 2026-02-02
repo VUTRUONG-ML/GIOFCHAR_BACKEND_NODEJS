@@ -1,5 +1,5 @@
-const categoryService = require("../services/category.service");
-const checkCategoryExists = async (req, res, next) => {
+import categoryService from "../services/category.service.js";
+export const checkCategoryExists = async (req, res, next) => {
   const categoryID = req.body.categoryID || req.params.categoryID;
 
   if (!categoryID) {
@@ -19,5 +19,3 @@ const checkCategoryExists = async (req, res, next) => {
       .json({ message: "Server error", error: err.message });
   }
 };
-
-module.exports = checkCategoryExists;

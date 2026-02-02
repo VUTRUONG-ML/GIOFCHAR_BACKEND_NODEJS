@@ -1,4 +1,4 @@
-const paymentService = require("../services/payment.service");
+import paymentService from "../services/payment.service.js";
 
 const getAllPayments = async (req, res) => {
   try {
@@ -48,7 +48,7 @@ const createPayment = async (req, res) => {
       paymentType,
       amount,
       transactionId,
-      paymentStatus
+      paymentStatus,
     );
 
     res.status(201).json({
@@ -71,7 +71,7 @@ const updatePayment = async (req, res) => {
     const result = await paymentService.updatePaymentById(
       paymentId,
       paymentStatus,
-      paymentType
+      paymentType,
     );
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Payment not found" });
@@ -97,7 +97,7 @@ const deletePayment = async (req, res) => {
   }
 };
 
-module.exports = {
+export default {
   getAllPayments,
   getPaymentById,
   createPayment,

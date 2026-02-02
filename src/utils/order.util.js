@@ -1,4 +1,4 @@
-const calculateOrderValues = (cartItems, orderId) => {
+export const calculateOrderValues = (cartItems, orderId) => {
   let totalPriceOrder = 0;
 
   const orderValues = cartItems.map((item) => {
@@ -28,13 +28,13 @@ const calculateOrderValues = (cartItems, orderId) => {
   return { orderValues, totalPriceOrder };
 };
 
-function generateOrderCode(orderId) {
+export function generateOrderCode(orderId) {
   const year = new Date().getFullYear();
   const padded = orderId.toString().padStart(6, "0");
   return `DH${year}-${padded}`;
 }
 
-function groupOrders(rows) {
+export function groupOrders(rows) {
   // rows = [{orderId, orderCode, status, time, amount, orderItemId, foodName, image, weight_gram, totalPrice, quantity}]
   if (rows.length === 0) return [];
   const mapOrder = new Map();
@@ -91,7 +91,7 @@ function groupOrders(rows) {
   return Array.from(mapOrder.values());
 }
 
-function groupOrderDetail(rows) {
+export function groupOrderDetail(rows) {
   // rows = [{orderId, orderCode, createdAt, updatedAt, customerName, email, phone, address, status, orderItemId, foodName, image, weight_gram, quantity, price, totalPriceOnOneItem, paymentType, paymentStatus}]
   if (rows.length === 0) return null;
   const {
@@ -152,10 +152,3 @@ function groupOrderDetail(rows) {
   };
   return order;
 }
-
-module.exports = {
-  calculateOrderValues,
-  generateOrderCode,
-  groupOrders,
-  groupOrderDetail,
-};

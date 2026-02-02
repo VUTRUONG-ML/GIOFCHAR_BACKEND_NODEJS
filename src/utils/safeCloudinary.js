@@ -1,11 +1,9 @@
-const { deleteImage } = require("../services/cloudinary.service");
+import { deleteImage } from "../services/cloudinary.service.js";
 
-const safeDeleteCloudinary = async (publicId) => {
+export const safeDeleteCloudinary = async (publicId) => {
   try {
     const result = await deleteImage(publicId);
   } catch (err) {
     console.error("Failed to delete cloudinary image:", err.message);
   }
 };
-
-module.exports = safeDeleteCloudinary;

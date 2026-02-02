@@ -1,6 +1,6 @@
-const orderService = require("../services/order.service");
+import orderService from "../services/order.service.js";
 
-const checkOrderExists = async (req, res, next) => {
+export const checkOrderExists = async (req, res, next) => {
   const orderId = req.body.orderId;
   try {
     const result = await orderService.getOrderById(orderId);
@@ -14,8 +14,4 @@ const checkOrderExists = async (req, res, next) => {
       .status(500)
       .json({ message: "Server error", error: err.message });
   }
-};
-
-module.exports = {
-  checkOrderExists,
 };

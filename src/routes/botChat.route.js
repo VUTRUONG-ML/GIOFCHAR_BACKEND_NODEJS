@@ -1,19 +1,19 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
   validateInputMessage,
   detectUserMessage,
   handleIntent_goi_y_mon,
-} = require("../middlewares/ai.middleware");
+} from "../middlewares/ai.middleware.js";
 
-const { handleIntentData } = require("../controllers/ai.controller");
+import { handleIntentData } from "../controllers/ai.controller.js";
 
 router.post(
   "/",
   validateInputMessage,
   detectUserMessage,
   handleIntent_goi_y_mon,
-  handleIntentData
+  handleIntentData,
 );
 
-module.exports = router;
+export default router;

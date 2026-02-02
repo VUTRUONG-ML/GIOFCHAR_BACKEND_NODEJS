@@ -1,6 +1,6 @@
-const pool = require("../config/db");
-const { NotFoundError } = require("../errors/AppError");
-const { groupOrderDetail } = require("../utils/order.util");
+import pool from "../config/db.js";
+import { NotFoundError } from "../errors/AppError.js";
+import { groupOrderDetail } from "../utils/order.util.js";
 
 const getOrderItemsByOrderId = async (orderId) => {
   try {
@@ -59,7 +59,7 @@ const createOrderItem = async (connection, orderValues) => {
   }
 };
 
-module.exports = {
+export default {
   getOrderItemsByOrderId,
   createOrderItem,
 };

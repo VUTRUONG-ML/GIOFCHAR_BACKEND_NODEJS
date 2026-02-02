@@ -1,7 +1,6 @@
-import { geminiModel } from "../config/gemini.js";
 import { collectedFail, collectedSuccess } from "../constants/resonAgent.js";
 import { formatAiRes } from "../utils/suportAi.js";
-import { getAllCategories, getNameCategory } from "./category.service.js";
+import cateService from "./category.service.js";
 
 import {
   keys,
@@ -9,7 +8,7 @@ import {
   switchKey,
 } from "../utils/switchGeminiKey.js";
 
-export const detectIntent = async (message) => {
+const detectIntent = async (message) => {
   for (let i = 0; i < keys.length; i++) {
     const geminiModel = createGeminiModel();
     try {
@@ -47,7 +46,7 @@ export const detectIntent = async (message) => {
         const currkey = switchKey(); // thử key khác
         console.log(
           `>>>>> SERVICE ERROR detectIntent key${currkey}: `,
-          error.message
+          error.message,
         );
       } else {
         console.log(">>>> SERVICE ERROR detectIntent:", error.message);
@@ -57,11 +56,11 @@ export const detectIntent = async (message) => {
   }
 };
 
-export const slotFillingAgent = async (CHAT_HISTORY) => {
+const slotFillingAgent = async (CHAT_HISTORY) => {
   for (let i = 0; i < keys.length; i++) {
     const geminiModel = createGeminiModel();
     try {
-      const categories = await getNameCategory({});
+      const categories = await cateService.getNameCategory({});
       console.log("category:", categories);
       const prompt = `
     You are a conversation agent for a Vietnamese ecommerce system selling giò chả.
@@ -132,7 +131,7 @@ export const slotFillingAgent = async (CHAT_HISTORY) => {
         const currkey = switchKey(); // thử key khác
         console.log(
           `>>>>> SERVICE ERROR slotFillingAgent key${currkey}: `,
-          error.message
+          error.message,
         );
       } else {
         console.log(">>>>> SERVICE slotFillingAgent ERROR:", error.message);
@@ -142,7 +141,7 @@ export const slotFillingAgent = async (CHAT_HISTORY) => {
   }
 };
 
-export const answer = async ({ intent, data }) => {
+const answer = async ({ intent, data }) => {
   const trueData = data ? data : "Shop không có data như mô tả";
   for (let i = 0; i < keys.length; i++) {
     const geminiModel = createGeminiModel();
@@ -163,7 +162,7 @@ export const answer = async ({ intent, data }) => {
         const currkey = switchKey(); // thử key khác
         console.log(
           `>>>>> SERVICE ERROR ai answer key${currkey}: `,
-          error.message
+          error.message,
         );
       } else {
         console.log(">>>>> SERVICE ERROR ai answer:", error.message);
@@ -171,4 +170,10 @@ export const answer = async ({ intent, data }) => {
       }
     }
   }
+};
+
+export default {
+  detectIntent,
+  slotFillingAgent,
+  answer,
 };

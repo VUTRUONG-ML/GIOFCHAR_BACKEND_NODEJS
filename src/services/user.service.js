@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+import pool from "../config/db.js";
 
 const getAllUsersWithOrderCount = async () => {
   try {
@@ -34,7 +34,7 @@ const getUserById = async (userId) => {
         address,
         role 
       FROM users WHERE id = ?`,
-      [userId]
+      [userId],
     );
     return users.length > 0 ? users[0] : null;
   } catch (err) {
@@ -48,7 +48,7 @@ const createUser = async (userName, email, phone, address, password) => {
     const [result] = await pool.execute(
       `INSERT INTO users (userName, email, phone, address, password)
                                         VALUES (?, ?, ?, ?, ?)`,
-      [userName, email, phone, address, password]
+      [userName, email, phone, address, password],
     );
     return { insertId: result.insertId };
   } catch (err) {
@@ -63,7 +63,7 @@ const updateUserById = async (userId, userName, email, phone, address) => {
       `UPDATE users 
         SET email = ?, userName = ?, phone = ?, address = ?
         WHERE id = ?`,
-      [email, userName, phone, address, userId]
+      [email, userName, phone, address, userId],
     );
     return result;
   } catch (err) {
@@ -78,7 +78,7 @@ const updateActiveUserById = async (userId, active) => {
       `UPDATE users 
         SET isActive = ?
         WHERE id = ?`,
-      [active, userId]
+      [active, userId],
     );
     return result;
   } catch (err) {
@@ -115,8 +115,8 @@ const countUser = async (conn = pool, time = "default") => {
     time === "today"
       ? "WHERE u.createdAt >= CURDATE() AND u.createdAt < CURDATE() + INTERVAL  1 DAY"
       : time === "yesterday"
-      ? "WHERE u.createdAt >= CURDATE() - INTERVAL 1 DAY AND u.createdAt < CURDATE()"
-      : "";
+        ? "WHERE u.createdAt >= CURDATE() - INTERVAL 1 DAY AND u.createdAt < CURDATE()"
+        : "";
   try {
     const [result] = await conn.execute(
       `
@@ -124,7 +124,7 @@ const countUser = async (conn = pool, time = "default") => {
           COUNT(*) as countUser
         FROM users u 
         ${condition}
-      `
+      `,
     );
     return result[0].countUser;
   } catch (error) {
@@ -133,7 +133,7 @@ const countUser = async (conn = pool, time = "default") => {
   }
 };
 
-module.exports = {
+export default {
   getAllUsersWithOrderCount,
   updateActiveUserById,
   getUserById,

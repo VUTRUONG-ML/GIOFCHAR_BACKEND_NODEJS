@@ -10,14 +10,14 @@ import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
 import { checkAdmin } from "../middlewares/user.middleware.js";
 
 import foodController from "../controllers/food.controller.js";
-import checkCategory from "../middlewares/checkCategory.js";
+
 import { checkFoodExists } from "../middlewares/checkFood.js";
 import { asyncHandler } from "../errors/errorHandler.js";
 import {
   createVariantController,
   getVariantByFoodController,
 } from "../controllers/variant.controller.js";
-
+import { checkCategoryExists } from "../middlewares/checkCategory.js";
 router.delete(
   "/:foodId",
   requireAuth,
@@ -33,7 +33,7 @@ router.put(
   uploadToCloudinary,
   cleanupCloudinary,
 
-  checkCategory,
+  checkCategoryExists,
   foodController.updateFoodById,
 );
 router.post(
@@ -44,7 +44,7 @@ router.post(
   uploadToCloudinary,
   cleanupCloudinary, // xóa ảnh nếu có lỗi xảy ra khi res.json() ở 2 controller sau
 
-  checkCategory,
+  checkCategoryExists,
   foodController.createFood,
 );
 router.post(

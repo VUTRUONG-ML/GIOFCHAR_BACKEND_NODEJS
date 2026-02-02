@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { ConflictError } from "../errors/AppError.js";
+import { addStatusPromotion } from "../utils/promotion.util.js";
 import { validatePromotion } from "./validators.js";
 
 export async function getPromotions(conn = pool) {
@@ -15,13 +15,16 @@ export async function getPromotions(conn = pool) {
         isActive
     FROM promotions p
     `;
-    const [rows] = await conn.execute(sql);
-    return rows; // [{promotionId, name, type, value, start_at, end_at, isActive}]
+    const [rows] = await conn.execute(sql); // [{promotionId, name, type, value, start_at, end_at, isActive}]
+    const promotionsWithStatus = addStatusPromotion(rows);
+    console.log(">>> promotions:", promotionsWithStatus);
+    return rows;
   } catch (error) {
     console.log(">>> SERVICE get promotions ERROR:", error.message);
     throw error;
   }
 }
+
 export async function getPromotionById(promotionId, conn = pool) {
   try {
     const sql = `

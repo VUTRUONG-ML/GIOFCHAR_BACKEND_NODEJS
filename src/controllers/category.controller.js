@@ -1,4 +1,4 @@
-const categoryService = require("../services/category.service");
+import categoryService from "../services/category.service.js";
 
 const getAllCategories = async (req, res) => {
   const { role } = req.user;
@@ -113,7 +113,7 @@ const deleteCategoryById = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-module.exports = {
+export default {
   getAllCategories,
   createCategory,
   getCategoryById,

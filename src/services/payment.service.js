@@ -1,5 +1,5 @@
-const pool = require("../config/db");
-const { BadRequestError } = require("../errors/AppError");
+import pool from "../config/db.js";
+import { BadRequestError } from "../errors/AppError.js";
 
 const getAllPayments = async () => {
   try {
@@ -112,7 +112,7 @@ const revenue = async (time = "default", conn = pool) => {
     throw error;
   }
 };
-module.exports = {
+export default {
   getAllPayments,
   getPaymentById,
   updatePaymentById,

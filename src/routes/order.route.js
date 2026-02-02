@@ -7,16 +7,16 @@ import {
   optionalAuth,
 } from "../middlewares/auth.middleware.js";
 
-import userMiddleware from "../middlewares/user.middleware.js";
 import orderController from "../controllers/order.controller.js";
 
 import { asyncHandler } from "../errors/errorHandler.js";
+import { checkAdmin } from "../middlewares/user.middleware.js";
 
 // Xóa order dành cho admin
 router.delete(
   "/:orderId",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   orderController.deleteOrder,
 );
 
@@ -32,7 +32,7 @@ router.put(
 router.patch(
   "/:orderId/status",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   asyncHandler(orderController.updateOrderStatus),
 );
 
@@ -54,14 +54,14 @@ router.post(
 router.get(
   "/stats/overviewCount",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   orderController.getStatusOverview,
 );
 
 router.get(
   "/stats/overviewRevenue",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   orderController.getStatusRevenue,
 );
 
@@ -84,14 +84,9 @@ router.get(
 router.get(
   "/user/:userId",
   requireAuth,
-  userMiddleware.checkAdmin,
+  checkAdmin,
   asyncHandler(orderController.getOrdersByUserId),
 );
-router.get(
-  "/",
-  requireAuth,
-  userMiddleware.checkAdmin,
-  orderController.getAllOrders,
-);
+router.get("/", requireAuth, checkAdmin, orderController.getAllOrders);
 
 export default router;
