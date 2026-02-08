@@ -18,17 +18,26 @@ export async function createVariantController(req, res) {
   if (!weight_gram || !originalPrice || !stock)
     throw new BadRequestError("Missing field");
 
-  const variantId = await createVariantWithPromotion({
+  const variant = await createVariantWithPromotion({
     foodId,
     weight_gram,
     originalPrice,
     stock,
     promotionId,
   });
+  const { variantId, promotionType, promotionValue } = variant;
 
-  return res
-    .status(201)
-    .json({ message: "Create food variant success ful", variantId });
+  return res.status(201).json({
+    message: "Create food variant success ful",
+    variant: {
+      variantId,
+      weight_gram,
+      originalPrice,
+      inStock: stock,
+      promotionType,
+      promotionValue,
+    },
+  });
 }
 
 export async function updateVariantController(req, res) {

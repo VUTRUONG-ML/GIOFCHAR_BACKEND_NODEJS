@@ -13,16 +13,13 @@ export function addStatusPromotion(rows) {
       start_at,
       end_at,
       status,
-      ...(status === "ACTIVE" && {
-        isActive,
-      }),
+      isActive,
     };
     return newRow;
   });
   return newRows;
 }
-
-function getStatusPromo({ start_at, end_at }) {
+export function getStatusPromo({ start_at, end_at }) {
   const now = new Date();
   const start = new Date(start_at);
   const end = new Date(end_at);
@@ -32,7 +29,6 @@ function getStatusPromo({ start_at, end_at }) {
 }
 
 export function validateUpdate({ start_at, end_at }, typeUpdate = "") {
-  console.log(">>> statuts", typeUpdate, getStatusPromo({ start_at, end_at }));
   if (
     typeUpdate === "ACTIVE" &&
     getStatusPromo({ start_at, end_at }) !== "ACTIVE"
@@ -45,4 +41,18 @@ export function validateUpdate({ start_at, end_at }, typeUpdate = "") {
   ) {
     throw new BadRequestError("Invalid status promotion");
   }
+}
+
+export function normalizeDatetime(input, type) {
+  if (!input) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    return type === "start" ? `${input} 00:00:00` : `${input} 23:59:59`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(input)) {
+    return input;
+  }
+
+  throw new BadRequestError("Invalid datetime format");
 }

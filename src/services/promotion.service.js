@@ -1,6 +1,11 @@
 import pool from "../config/db.js";
 import { BadRequestError, NotFoundError } from "../errors/AppError.js";
-import { addStatusPromotion, validateUpdate } from "../utils/promotion.util.js";
+import {
+  addStatusPromotion,
+  getStatusPromo,
+  normalizeDatetime,
+  validateUpdate,
+} from "../utils/promotion.util.js";
 import { validatePromotion } from "./validators.js";
 
 export async function getPromotions(conn = pool) {
@@ -31,8 +36,8 @@ export async function getPromotionById(promotionId, conn = pool) {
     SELECT
         id as promotionId,
         name,
-        type as typePromotion,
-        value as valuePromotion,
+        type,
+        value,
         start_at,
         end_at,
         isActive
@@ -52,14 +57,36 @@ export async function createPromotion(
   conn = pool,
 ) {
   try {
-    validatePromotion({ name, type, value, start_at, end_at, isActive });
+    const normalizedData = {
+      name,
+      type,
+      value,
+      isActive,
+      start_at: normalizeDatetime(start_at, "start"),
+      end_at: normalizeDatetime(end_at, "end"),
+    };
+
+    validatePromotion(normalizedData);
+
     const sql = `
-        INSERT INTO promotions (name, type, value, start_at, end_at, isActive)
-        VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO promotions (name, type, value, start_at, end_at, isActive)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
-    const values = [name, type, value, start_at, end_at, isActive];
+
+    const values = [
+      normalizedData.name,
+      normalizedData.type,
+      normalizedData.value,
+      normalizedData.start_at,
+      normalizedData.end_at,
+      normalizedData.isActive,
+    ];
     const [result] = await conn.execute(sql, values);
-    return result.insertId;
+    const statusPromotion = getStatusPromo({
+      start_at: normalizedData.start_at,
+      end_at: normalizedData.end_at,
+    });
+    return { promotionId: result.insertId, status: statusPromotion };
   } catch (error) {
     console.log(">>> SERVICE create promotion ERROR:", error.message);
     throw error;
@@ -71,19 +98,42 @@ export async function updatePromotion(
   conn = pool,
 ) {
   try {
-    validatePromotion({ name, type, value, start_at, end_at, isActive });
+    const normalizedData = {
+      name,
+      type,
+      value,
+      isActive,
+      start_at: normalizeDatetime(start_at, "start"),
+      end_at: normalizeDatetime(end_at, "end"),
+    };
+
+    validatePromotion(normalizedData);
+
     const promotion = await getPromotionById(promotionId, conn);
     if (!promotion) throw new NotFoundError("Promotion not found");
     const { start_at: start, end_at: end } = promotion;
     validateUpdate({ start_at: start, end_at: end });
+
     const sql = `
         UPDATE promotions
         SET name = ?, type = ?, value = ?, start_at = ?, end_at = ?, isActive = ?
         WHERE id = ?
     `;
-    const values = [name, type, value, start_at, end_at, isActive, promotionId];
+    const values = [
+      normalizedData.name,
+      normalizedData.type,
+      normalizedData.value,
+      normalizedData.start_at,
+      normalizedData.end_at,
+      normalizedData.isActive,
+      promotionId,
+    ];
     const [result] = await conn.execute(sql, values);
-    return result.affectedRows === 1;
+    const statusPromotion = getStatusPromo({
+      start_at: normalizedData.start_at,
+      end_at: normalizedData.end_at,
+    });
+    return { newStatus: statusPromotion };
   } catch (error) {
     console.log(">>> SERVICE update promotion ERROR:", error.message);
     throw error;

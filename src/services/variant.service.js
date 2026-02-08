@@ -21,6 +21,7 @@ export async function getVariantByFoodId(
             fv.weight_gram,
             fv.originalPrice,
             fv.stock as inStock,
+            fv.isActive,
             p.type as typePromotion,
             p.value as valuePromotion
         FROM food_variants fv 
@@ -138,14 +139,23 @@ export async function createVariantWithPromotion({
     );
 
     // 2. Nếu có promotion thì gán promotion cho variant
+    let promotionType = null;
+    let promotionValue = null;
     if (promotionId) {
       const promotion = await getPromotionById(promotionId, conn);
       if (!promotion) throw new BadRequestError("Promotion not found");
+
+      promotionType = promotion.type;
+      promotionValue = promotion.value;
       await createPromotionTarget({ promotionId, variantId }, conn);
     }
 
     await conn.commit();
-    return variantId;
+    return {
+      variantId,
+      promotionType,
+      promotionValue,
+    };
   } catch (error) {
     await conn.rollback();
     console.log(">>> SERVICE createVariantWithPromotion ERROR:", error.message);

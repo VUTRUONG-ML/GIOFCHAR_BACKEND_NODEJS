@@ -5,7 +5,7 @@ import {
   updateActivePromotion,
   updatePromotion,
 } from "../services/promotion.service.js";
-import { asyncHandler } from "../errors/errorHandler.js";
+
 import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 
 export const createPromotionController = async (req, res) => {
@@ -20,7 +20,7 @@ export const createPromotionController = async (req, res) => {
     isActive === "1"
       ? true
       : false;
-  const newPromotionId = await createPromotion({
+  const newPromotion = await createPromotion({
     name,
     type,
     value,
@@ -31,7 +31,8 @@ export const createPromotionController = async (req, res) => {
 
   return res.status(201).json({
     message: "Create promotion successful",
-    promotionId: newPromotionId,
+    promotionId: newPromotion.promotionId,
+    status: newPromotion.status,
   });
 };
 
@@ -62,11 +63,9 @@ export const updatePromotionController = async (req, res) => {
     end_at,
     isActive: newActive,
   });
-
-  if (!updated) throw new NotFoundError("Promotion not found");
-
   return res.status(201).json({
     message: "Update promotion successful",
+    newStatus: updated.newStatus,
   });
 };
 export const updatedActiveController = async (req, res) => {
