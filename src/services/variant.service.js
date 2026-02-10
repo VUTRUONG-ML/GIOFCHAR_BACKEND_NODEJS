@@ -22,6 +22,7 @@ export async function getVariantByFoodId(
             fv.originalPrice,
             fv.stock as inStock,
             fv.isActive,
+            p.id as promotionId,
             p.type as typePromotion,
             p.value as valuePromotion
         FROM food_variants fv 

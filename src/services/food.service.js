@@ -92,62 +92,43 @@ const createFood = async (
   foodName,
   foodDescription,
   ingredients,
-  originalPrice,
-  discount,
   rating,
-  stock,
   isActive,
   categoryID,
   image,
   imagePublicId,
 ) => {
   try {
-    const finalDiscount = discount ?? 0;
-    if (finalDiscount < 0 || finalDiscount > 100) {
-      throw new Error("Discount must be between 0 and 100");
-    }
-
-    const price = Number(
-      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2),
-    );
-
-    const [result] = await pool.execute(
-      `INSERT INTO foods (
+    const sql = `
+      INSERT INTO foods (
             foodName,
             foodDescription,
             ingredients,
-            originalPrice,
-            price,
-            discount,
             rating,
-            stock,
             isActive,
             categoryID,
             image,
             imagePublicId
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )`,
-      [
-        foodName,
-        foodDescription,
-        ingredients || [
-          "Thịt heo tươi",
-          "Da heo",
-          "Lá chuối",
-          "Gia vị truyền thống",
-        ],
-        originalPrice,
-        price,
-        finalDiscount,
-        rating ?? 0,
-        stock ?? 0,
-        isActive ?? true,
-        categoryID,
-        image || "",
-        imagePublicId || "",
+            ?, ?, ?, ?, ?, ?, ?, ?
+        )
+    `;
+    const values = [
+      foodName,
+      foodDescription,
+      ingredients || [
+        "Thịt heo tươi",
+        "Da heo",
+        "Lá chuối",
+        "Gia vị truyền thống",
       ],
-    );
+      rating ?? 0,
+      isActive ?? true,
+      categoryID,
+      image || "",
+      imagePublicId || "",
+    ];
+    const [result] = await pool.execute(sql, values);
 
     return { insertId: result.insertId };
   } catch (err) {

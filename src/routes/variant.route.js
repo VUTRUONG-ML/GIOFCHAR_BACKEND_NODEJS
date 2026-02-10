@@ -16,7 +16,7 @@ router.delete(
   asyncHandler(deleteVariantController),
 );
 
-router.patch(
+router.put(
   "/:variantId",
   requireAuth,
   checkAdmin,

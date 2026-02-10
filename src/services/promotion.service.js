@@ -188,6 +188,8 @@ export async function createPromotionTarget(
     const [result] = await conn.execute(sql, values);
     return result.insertId;
   } catch (error) {
+    if (error.code === "ER_DUP_ENTRY")
+      throw new ConflictError("Food variant already exists promotion");
     console.log(">>> SERVICE create promotion target ERROR:", error.message);
     throw error;
   }
