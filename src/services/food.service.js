@@ -88,6 +88,51 @@ const getAllFoods = async ({ option = "default" }, conn = pool) => {
   }
 };
 
+const getBestSellingFoods = async (conn = pool) => {
+  try {
+    const sql = `
+      SELECT
+          f.id           AS foodId,
+          f.foodName,
+          f.image,
+          f.rating,
+          f.categoryID,
+          c.categoryName,
+
+          fv.id          AS variantId,
+          fv.weight_gram,
+          fv.originalPrice,
+
+          p.id           AS promotionId,
+          p.type         AS promotionType,
+          p.value        AS promotionValue,
+          
+          fs.totalSold
+      FROM (
+        SELECT 
+          fv.foodID,
+          SUM(oi.quantity) as totalSold
+        FROM food_variants fv 
+        JOIN order_items oi ON fv.id = oi.food_variantID 
+        GROUP BY fv.foodID) fs 
+      JOIN foods f ON f.id = fs.foodID
+      JOIN categories c ON f.categoryID = c.id
+      LEFT JOIN food_variants fv ON fv.foodID = f.id AND fv.isActive = TRUE
+      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
+      LEFT JOIN promotions p ON p.id = pt.promotionID
+        AND p.isActive = TRUE
+        AND NOW() BETWEEN p.start_at AND p.end_at
+      WHERE f.isActive = TRUE
+      ORDER BY fs.totalSold DESC
+    `;
+    const [rows] = await conn.execute(sql);
+    const bestSelling = buildPreview(rows);
+    console.log(">>> foods[]:", bestSelling);
+  } catch (error) {
+    throw error;
+  }
+};
+await getBestSellingFoods();
 const createFood = async (
   foodName,
   foodDescription,
@@ -168,10 +213,8 @@ const getFoodById = async (foodId, { isAdmin = false }, conn = pool) => {
 const updateFoodById = async (
   foodName,
   foodDescription,
-  originalPrice,
-  discount,
+  ingredients,
   rating,
-  stock,
   isActive,
   categoryID,
   image,
@@ -179,45 +222,31 @@ const updateFoodById = async (
   foodId,
 ) => {
   try {
-    const finalDiscount = discount ?? 0;
-    if (finalDiscount < 0 || finalDiscount > 100) {
-      throw new Error("Discount must be between 0 and 100");
-    }
-
-    const price = Number(
-      ((originalPrice * (100 - finalDiscount)) / 100).toFixed(2),
-    );
-
-    const [result] = await pool.execute(
-      `UPDATE foods 
-       SET 
+    const sql = `
+      UPDATE foods 
+       SET
          foodName = ?,
          foodDescription = ?,
-         originalPrice = ?,
-         price = ?,
-         discount = ?,
+         ingredients = ?,
          rating = ?,
-         stock = ?,
          isActive = ?,
          categoryID = ?,
          image = ?,
          imagePublicId = ?
-       WHERE id = ?`,
-      [
-        foodName,
-        foodDescription,
-        originalPrice,
-        price,
-        finalDiscount,
-        rating ?? 0,
-        stock ?? 0,
-        isActive ?? true,
-        categoryID,
-        image || "",
-        imagePublicId || "",
-        foodId,
-      ],
-    );
+       WHERE id = ?
+    `;
+    const values = [
+      foodName,
+      foodDescription,
+      ingredients ?? [],
+      rating ?? 0,
+      isActive ?? true,
+      categoryID,
+      image || "",
+      imagePublicId || "",
+      foodId,
+    ];
+    const [result] = await pool.execute(sql, values);
 
     return result;
   } catch (err) {

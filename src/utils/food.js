@@ -46,51 +46,63 @@ export const classificationStockLevel = (rows) => {
 
 function calcVariantDiscount(rows) {
   // rows: [{foodId, foodName, image, rating, categoryID, categoryName, variantId, weight_gram, originalPrice, promotionId, promotionType, promotionValue, start_at, end_at, isActive}]
-  const map = {};
+  const map = new Map();
 
   for (const r of rows) {
     const key = r.variantId;
-    if (!map[key]) {
-      map[key] = {
+    const {
+      foodId,
+      foodName,
+      image,
+      rating,
+      categoryID,
+      categoryName,
+      ...otherInf
+    } = r;
+    if (!map.has(key)) {
+      map.set(key, {
         foodId: r.foodId,
         foodName: r.foodName,
         image: r.image,
         rating: r.rating,
         categoryID: r.categoryID,
         categoryName: r.categoryName,
-
-        maxDiscount: 0,
         originalPrice: Number(r.originalPrice),
-      };
+        maxDiscount: 0,
+      });
     }
 
+    const item = map.get(key);
     let discount = 0;
     if (r.promotionType && r.promotionValue) {
       if (r.promotionType === "FIXED") {
-        discount = Number(r.promotionValue);
+        discount = Math.min(Number(r.promotionValue), item.originalPrice);
       } else if (r.promotionType === "PERCENT") {
-        discount = (Number(r.promotionValue) / 100) * map[key].originalPrice;
+        discount = (Number(r.promotionValue) / 100) * item.originalPrice;
       }
     }
-    map[key].maxDiscount = Math.max(map[key].maxDiscount, discount);
-  }
 
-  return Object.values(map).map((v) => ({
+    item.maxDiscount = Math.max(item.maxDiscount, discount);
+  }
+  const foods = [...map.values()].map((v) => ({
     ...v,
     finalPrice:
       v.originalPrice - v.maxDiscount > 0 ? v.originalPrice - v.maxDiscount : 0,
   }));
+  return foods;
 }
-
+// rows: [{foodId, foodName, image, rating, categoryID, categoryName, variantId, weight_gram, originalPrice, promotionId, promotionType, promotionValue}]
 export const buildPreview = (rows) => {
-  // rows: [{foodId, foodName, image, rating, categoryID, categoryName, variantId, weight_gram, originalPrice, promotionId, promotionType, promotionValue, start_at, end_at, isActive}]
   if (!rows.length) return [];
-  const variants = calcVariantDiscount(rows); // group theo variant truoc
-  const foodMap = {};
+
+  const variants = calcVariantDiscount(rows); // group theo variant trước
+  const foodMap = new Map();
+
   for (const v of variants) {
     const { foodId, foodName, image, rating, categoryID, categoryName } = v;
-    if (!foodMap[v.foodId]) {
-      foodMap[v.foodId] = {
+
+    if (!foodMap.has(foodId)) {
+      foodMap.set(foodId, {
         foodId,
         foodName,
         image,
@@ -98,17 +110,19 @@ export const buildPreview = (rows) => {
         categoryID,
         categoryName,
         discount: 0,
-        price: Infinity,
-      };
+        minPrice: Infinity,
+        maxPrice: 0,
+      });
     }
 
-    foodMap[v.foodId].discount = Math.max(
-      foodMap[v.foodId].discount,
-      v.maxDiscount,
-    );
-    foodMap[v.foodId].price = Math.min(foodMap[v.foodId].price, v.finalPrice);
+    const food = foodMap.get(foodId);
+
+    food.discount = Math.max(food.discount, v.maxDiscount);
+    food.minPrice = Math.min(food.minPrice, v.finalPrice);
+    food.maxPrice = Math.max(food.maxPrice, v.finalPrice);
   }
-  return Object.values(foodMap);
+
+  return Array.from(foodMap.values());
 };
 
 export async function attachVariantToFood(food, variants) {

@@ -129,10 +129,8 @@ const updateFoodById = async (req, res) => {
   const {
     foodName,
     foodDescription,
-    originalPrice,
-    discount,
+    ingredients,
     rating,
-    stock,
     isActive,
     categoryID,
   } = req.body;
@@ -147,17 +145,8 @@ const updateFoodById = async (req, res) => {
     imagePublicId = req.cloudinaryImage?.public_id || null;
   }
 
-  if (
-    !foodName ||
-    !foodDescription ||
-    originalPrice == null ||
-    categoryID == null
-  ) {
+  if (!foodName || !foodDescription || categoryID == null) {
     return res.status(400).json({ message: "Missing field" });
-  }
-
-  if (Number.isNaN(Number(originalPrice))) {
-    return res.status(400).json({ message: "originalPrice must be a number" });
   }
 
   const isActiveValue =
@@ -167,14 +156,13 @@ const updateFoodById = async (req, res) => {
         ? 1
         : 0;
 
+  const ingredientsValue = JSON.parse(ingredients);
   try {
     const result = await foodService.updateFoodById(
       foodName,
       foodDescription,
-      originalPrice,
-      discount,
+      ingredientsValue,
       rating,
-      stock,
       isActiveValue,
       categoryID,
       image,

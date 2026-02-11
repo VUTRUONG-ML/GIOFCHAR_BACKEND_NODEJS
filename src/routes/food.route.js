@@ -33,6 +33,7 @@ router.put(
   uploadToCloudinary,
   cleanupCloudinary,
 
+  checkFoodExists,
   checkCategoryExists,
   foodController.updateFoodById,
 );
