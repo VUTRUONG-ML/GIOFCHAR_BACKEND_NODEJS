@@ -27,30 +27,7 @@ const getAllFoodsAdmin = async () => {
   }
 };
 
-const getAllFoods = async ({ option = "default" }, conn = pool) => {
-  // const typeOption = "default" | "bestSelling" | "promotion";
-  let optionGet;
-  switch (option) {
-    case "bestSelling":
-      optionGet = `
-        JOIN order_items oi ON f.id = oi.foodID
-        WHERE f.stock > 0
-        GROUP BY f.id
-        ORDER BY SUM(oi.quantity) DESC
-        `;
-      break;
-    case "promotion":
-      optionGet = `
-        JOIN order_items oi ON f.id = oi.foodID
-        WHERE f.stock > 0
-        GROUP BY f.id
-        ORDER BY f.discount DESC, SUM(oi.quantity) DESC
-        `;
-      break;
-    default:
-      optionGet = "";
-      break;
-  }
+const getAllFoods = async (conn = pool) => {
   try {
     const [rows] = await conn.execute(`
       SELECT
@@ -78,6 +55,7 @@ const getAllFoods = async ({ option = "default" }, conn = pool) => {
       LEFT JOIN promotions p ON p.id = pt.promotionID
         AND p.isActive = TRUE
         AND NOW() BETWEEN p.start_at AND p.end_at
+      WHERE f.isActive = true
       ORDER BY f.id, fv.weight_gram;
     `);
     const newRows = buildPreview(rows);
@@ -87,52 +65,97 @@ const getAllFoods = async ({ option = "default" }, conn = pool) => {
     throw err;
   }
 };
-
+const limitRow = 8;
 const getBestSellingFoods = async (conn = pool) => {
   try {
-    const sql = `
+    const sql = `   
       SELECT
-          f.id           AS foodId,
-          f.foodName,
-          f.image,
-          f.rating,
-          f.categoryID,
-          c.categoryName,
+            f.id           AS foodId,
+            f.foodName,
+            f.image,
+            f.rating,
+            f.categoryID,
+            c.categoryName,
 
-          fv.id          AS variantId,
-          fv.weight_gram,
-          fv.originalPrice,
+            fv.id          AS variantId,
+            fv.weight_gram,
+            fv.originalPrice,
 
-          p.id           AS promotionId,
-          p.type         AS promotionType,
-          p.value        AS promotionValue,
-          
-          fs.totalSold
-      FROM (
-        SELECT 
+            p.id           AS promotionId,
+            p.type         AS promotionType,
+            p.value        AS promotionValue,
+            
+            fs.totalSold
+        FROM (
+          SELECT 
           fv.foodID,
           SUM(oi.quantity) as totalSold
         FROM food_variants fv 
         JOIN order_items oi ON fv.id = oi.food_variantID 
-        GROUP BY fv.foodID) fs 
-      JOIN foods f ON f.id = fs.foodID
-      JOIN categories c ON f.categoryID = c.id
-      LEFT JOIN food_variants fv ON fv.foodID = f.id AND fv.isActive = TRUE
-      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
-      LEFT JOIN promotions p ON p.id = pt.promotionID
-        AND p.isActive = TRUE
-        AND NOW() BETWEEN p.start_at AND p.end_at
-      WHERE f.isActive = TRUE
-      ORDER BY fs.totalSold DESC
+        GROUP BY fv.foodID
+        ORDER BY totalSold DESC
+        LIMIT ${limitRow}) fs 
+        JOIN foods f ON f.id = fs.foodID
+        JOIN categories c ON f.categoryID = c.id
+        LEFT JOIN food_variants fv ON fv.foodID = f.id AND fv.isActive = TRUE
+        LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
+        LEFT JOIN promotions p ON p.id = pt.promotionID
+          AND p.isActive = TRUE
+          AND NOW() BETWEEN p.start_at AND p.end_at
+        WHERE f.isActive = TRUE
     `;
     const [rows] = await conn.execute(sql);
     const bestSelling = buildPreview(rows);
-    console.log(">>> foods[]:", bestSelling);
+    return bestSelling;
   } catch (error) {
     throw error;
   }
 };
-await getBestSellingFoods();
+const getPromotionFoods = async (conn = pool) => {
+  try {
+    const sql = `
+      SELECT
+        f.id           AS foodId,
+        f.foodName,
+        f.image,
+        f.rating,
+        f.categoryID,
+        c.categoryName,
+
+        fv.id          AS variantId,
+        fv.weight_gram,
+        fv.originalPrice,
+
+        p.id           AS promotionId,
+        p.type         AS promotionType,
+        p.value        AS promotionValue,
+        
+        fs.totalSold
+      FROM (
+        SELECT 
+        fv.foodID,
+        SUM(oi.quantity) as totalSold
+      FROM food_variants fv 
+      JOIN order_items oi ON fv.id = oi.food_variantID 
+      GROUP BY fv.foodID
+      ORDER BY totalSold DESC
+      LIMIT ${limitRow}) fs 
+      JOIN foods f ON f.id = fs.foodID
+      JOIN categories c ON f.categoryID = c.id
+      LEFT JOIN food_variants fv ON fv.foodID = f.id AND fv.isActive = TRUE
+      JOIN promotion_targets pt ON pt.food_variantID = fv.id
+      JOIN promotions p ON p.id = pt.promotionID
+        AND p.isActive = TRUE
+        AND NOW() BETWEEN p.start_at AND p.end_at
+      WHERE f.isActive = TRUE
+    `;
+    const [rows] = await conn.execute(sql);
+    const onSale = buildPreview(rows);
+    return onSale;
+  } catch (error) {
+    throw error;
+  }
+};
 const createFood = async (
   foodName,
   foodDescription,
@@ -371,4 +394,6 @@ export default {
   filterFood,
   getStock,
   getDetailFood,
+  getBestSellingFoods,
+  getPromotionFoods,
 };

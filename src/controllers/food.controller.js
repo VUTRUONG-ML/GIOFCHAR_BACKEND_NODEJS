@@ -11,7 +11,7 @@ const getAllFoods = async (req, res) => {
     if (role === "admin") {
       foods = await foodService.getAllFoodsAdmin();
     } else {
-      if (!search) foods = await foodService.getAllFoods({});
+      if (!search) foods = await foodService.getAllFoods();
       else foods = await foodService.searchFood((key = search));
     }
 
@@ -24,7 +24,7 @@ const getAllFoods = async (req, res) => {
 
 const getAllBestSelling = async (req, res) => {
   try {
-    const foods = await foodService.getAllFoods({ option: "bestSelling" });
+    const foods = await foodService.getBestSellingFoods();
     return res.status(200).json({ quantity: foods.length, foods });
   } catch (error) {
     console.log(">>>>> CONTROLLER ERROR", error.message);
@@ -34,7 +34,7 @@ const getAllBestSelling = async (req, res) => {
 
 const getFoodsPromotion = async (req, res) => {
   try {
-    const foods = await foodService.getAllFoods({ option: "promotion" });
+    const foods = await foodService.getPromotionFoods();
     return res.status(200).json({ quantity: foods.length, foods });
   } catch (error) {
     console.log(">>>>> CONTROLLER ERROR", error.message);

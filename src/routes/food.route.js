@@ -61,7 +61,7 @@ router.get(
   checkAdmin,
   asyncHandler(getVariantByFoodController),
 );
-router.get("/promotion", foodController.getFoodsPromotion);
+router.get("/promotions", foodController.getFoodsPromotion);
 router.get("/best-selling", foodController.getAllBestSelling);
 router.get("/:foodId", optionalAuth, foodController.getDetailFood);
 router.get("/", optionalAuth, foodController.getAllFoods);
