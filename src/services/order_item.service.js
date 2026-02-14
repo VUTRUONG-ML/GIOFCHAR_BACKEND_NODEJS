@@ -20,6 +20,9 @@ const getOrderItemsByOrderId = async (orderId) => {
         oi.quantity,
         oi.unitPrice,
         oi.totalPrice as totalPriceOnOneItem,
+        oi.discount_type,
+        oi.discount_value,
+        oi.discount_amount,
 
         f.foodName,
         f.image,
