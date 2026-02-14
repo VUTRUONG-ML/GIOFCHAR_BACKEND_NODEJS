@@ -45,13 +45,15 @@ export const revenue = async ({ conn = pool, range = 7 }) => {
 export const topProduct = async ({ conn = pool }) => {
   const top = 3;
   try {
-    const sql = `SELECT 
-      f.foodName,
-      SUM(oi.quantity  ) as countSold
-    FROM foods f 
-    JOIN order_items oi ON f.id = oi.foodID 
-    GROUP BY f.id
-    ORDER BY countSold DESC`;
+    const sql = `
+      SELECT 
+        f.foodName,
+        SUM(oi.quantity) as countSold
+      FROM food_variants fv
+      JOIN foods f ON fv.foodID = f.id
+      JOIN order_items oi ON fv.id = oi.food_variantID
+      GROUP BY f.id
+      ORDER BY countSold DESC`;
     const [rows] = await conn.execute(sql);
     return getTopProducts(rows, top);
   } catch (error) {
@@ -73,7 +75,7 @@ export const recentOrders = async ({ conn = pool }) => {
       FROM orders o 
       JOIN order_items oi  ON o.id = oi.orderID
       GROUP BY o.id
-      ORDER BY o.createdAt
+      ORDER BY o.createdAt DESC
     `;
     const [rows] = await conn.execute(sql);
     const result = rows.map((r) => ({ ...r, amount: Number(r.amount) }));

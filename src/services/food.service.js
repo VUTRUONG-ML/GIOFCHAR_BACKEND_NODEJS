@@ -103,6 +103,7 @@ const getBestSellingFoods = async (conn = pool) => {
           AND p.isActive = TRUE
           AND NOW() BETWEEN p.start_at AND p.end_at
         WHERE f.isActive = TRUE
+        ORDER BY fs.totalSold DESC
     `;
     const [rows] = await conn.execute(sql);
     const bestSelling = buildPreview(rows);
