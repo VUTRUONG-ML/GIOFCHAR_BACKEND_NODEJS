@@ -8,13 +8,14 @@ import orderService from "../services/order.service.js";
 export const optionalAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   let guestToken = req.headers["x-guest-token"];
+
+  if (!guestToken) {
+    guestToken = uuidv4();
+    res.setHeader("x-guest-token", guestToken);
+  }
+
   // nếu không gửi token
   if (!token) {
-    if (!guestToken) {
-      guestToken = uuidv4();
-      res.setHeader("x-guest-token", guestToken);
-    }
-
     req.user = {
       userId: null,
       guestToken,

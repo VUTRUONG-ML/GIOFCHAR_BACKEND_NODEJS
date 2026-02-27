@@ -129,27 +129,27 @@ const getPromotionFoods = async (conn = pool) => {
 
         p.id           AS promotionId,
         p.type         AS promotionType,
-        p.value        AS promotionValue,
-        
-        fs.totalSold
-      FROM (
-        SELECT 
-        fv.foodID,
-        SUM(oi.quantity) as totalSold
-      FROM food_variants fv 
-      JOIN order_items oi ON fv.id = oi.food_variantID 
-      GROUP BY fv.foodID
-      ORDER BY totalSold DESC
-      LIMIT ${limitRow}) fs 
-      JOIN foods f ON f.id = fs.foodID
+        p.value        AS promotionValue
+
+      FROM foods f
       JOIN categories c ON f.categoryID = c.id
       LEFT JOIN food_variants fv ON fv.foodID = f.id AND fv.isActive = TRUE
-      JOIN promotion_targets pt ON pt.food_variantID = fv.id
-      JOIN promotions p ON p.id = pt.promotionID
+      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
+      LEFT JOIN promotions p ON p.id = pt.promotionID
         AND p.isActive = TRUE
         AND NOW() BETWEEN p.start_at AND p.end_at
       WHERE f.isActive = TRUE
-    `;
+        AND EXISTS (
+          SELECT 1
+          FROM food_variants fv2
+          JOIN promotion_targets pt2 ON pt2.food_variantID = fv2.id
+          JOIN promotions p2 ON p2.id = pt2.promotionID
+          WHERE fv2.foodID = f.id
+            AND fv2.isActive = TRUE
+            AND p2.isActive = TRUE
+            AND NOW() BETWEEN p2.start_at AND p2.end_at
+          )
+    `; // trước WHERE thì  query lấy ra toàn bộ danh sách food đang giảm giá hoặc không, sau khi áp dụng WHERE thì nó sẽ lọc theo điều kiện ràng buộc EXISTS chắc chắn phải có ít nhất 1 variant giảm giá
     const [rows] = await conn.execute(sql);
     const onSale = buildPreview(rows);
     return onSale;
@@ -206,10 +206,7 @@ const createFood = async (
   }
 };
 
-const getFoodById = async (foodId, { isAdmin = false }, conn = pool) => {
-  // const field = isAdmin
-  //   ? "stock, imagePublicId, discount,"
-  //   : "discount, rating, ingredients,";
+const getFoodById = async (foodId, conn = pool) => {
   try {
     // For pool initialization, see above
     const [foods] = await conn.execute(
@@ -370,7 +367,7 @@ const getStock = async (conn, foodId, { forUpdate = false }) => {
 const getDetailFood = async (foodId) => {
   const connection = await pool.getConnection();
   try {
-    const food = await getFoodById(foodId, {}, connection);
+    const food = await getFoodById(foodId, connection);
     if (!food) {
       return null;
     }

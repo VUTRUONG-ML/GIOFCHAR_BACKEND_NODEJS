@@ -16,7 +16,6 @@ export const getAllCartsController = async (req, res) => {
 };
 
 export const getAllCartItemsController = async (req, res) => {
-  console.log(">>> user:", req.user);
   try {
     const cartItems = await cartService.withCart(
       req.user,

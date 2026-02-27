@@ -69,20 +69,32 @@ function calcVariantDiscount(rows) {
         categoryName: r.categoryName,
         originalPrice: Number(r.originalPrice),
         maxDiscount: 0,
+        maxDiscountPercent: 0,
       });
     }
 
     const item = map.get(key);
-    let discount = 0;
+    let discount = 0; // này để tính khoản giá
+    let discountPercent = 0; // này để hiển thị thêm tag giảm bao nhiêu phần trăm
     if (r.promotionType && r.promotionValue) {
       if (r.promotionType === "FIXED") {
         discount = Math.min(Number(r.promotionValue), item.originalPrice);
+        discountPercent = Math.floor(
+          (Math.min(Number(r.promotionValue), item.originalPrice) /
+            item.originalPrice) *
+            100,
+        );
       } else if (r.promotionType === "PERCENT") {
         discount = (Number(r.promotionValue) / 100) * item.originalPrice;
+        discountPercent = Math.min(Number(r.promotionValue), 100);
       }
     }
 
     item.maxDiscount = Math.max(item.maxDiscount, discount);
+    item.maxDiscountPercent = Math.max(
+      item.maxDiscountPercent,
+      discountPercent,
+    );
   }
   const foods = [...map.values()].map((v) => ({
     ...v,
@@ -117,7 +129,7 @@ export const buildPreview = (rows) => {
 
     const food = foodMap.get(foodId);
 
-    food.discount = Math.max(food.discount, v.maxDiscount);
+    food.discount = Math.max(food.discount, v.maxDiscountPercent);
     food.minPrice = Math.min(food.minPrice, v.finalPrice);
     food.maxPrice = Math.max(food.maxPrice, v.finalPrice);
   }

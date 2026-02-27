@@ -95,12 +95,8 @@ const getFoodById = async (req, res) => {
   const foodId = req.params.foodId;
   const { role } = req.user;
   try {
-    let food;
-    if (role === "admin") {
-      food = await foodService.getFoodById(foodId, { isAdmin: true });
-    } else {
-      food = await foodService.getFoodById(foodId, {});
-    }
+    const food = await foodService.getFoodById(foodId);
+
     if (!food) return res.status(404).json({ message: "Food not found" });
 
     res.status(200).json(food);

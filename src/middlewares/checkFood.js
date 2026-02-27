@@ -9,7 +9,7 @@ export const checkFoodExists = async (req, res, next) => {
   }
 
   try {
-    const food = await foodService.getFoodById(foodId, { isAdmin: true }, pool);
+    const food = await foodService.getFoodById(foodId, pool);
 
     if (!food) return res.status(404).json({ message: "Food not found" });
     req.food = food;
