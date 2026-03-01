@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { buildPreview } from "../utils/food.js";
 import { normalizeVN } from "../utils/normalize.js";
+import { getPriceRange } from "../utils/variant.js";
 import { getVariantByFoodId } from "./variant.service.js";
 
 const getAllFoodsAdmin = async () => {
@@ -371,8 +372,9 @@ const getDetailFood = async (foodId) => {
     if (!food) {
       return null;
     }
-    const variants = await getVariantByFoodId(foodId, connection);
-    const newFood = { ...food, variants };
+    const variants = await getVariantByFoodId(foodId, false, connection);
+    const priceRange = getPriceRange(variants);
+    const newFood = { ...food, variants, ...priceRange };
     return newFood;
   } catch (error) {
     console.log(">>> SERVICE get detail food ERROR:", error.message);

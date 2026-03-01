@@ -30,7 +30,7 @@ export async function getVariantByFoodId(
         LEFT JOIN promotions p ON p.id = pt.promotionID 
             AND NOW() BETWEEN p.start_at AND p.end_at 
             AND p.isActive = TRUE
-        WHERE fv.foodID = ?
+        WHERE fv.foodID = ?  AND fv.isActive = true AND fv.stock > 0
         ORDER BY fv.weight_gram 
     `; // Nếu bỏ AND NOW() BETWEEN p.start_at AND p.end_at và AND p.isActive = TRUE xuống dưới where thì nó sẽ không khớp đk where nên nó sẽ bỏ các dòng mà promotion null
     const [rows] = await conn.execute(sql, [foodId]);
@@ -96,9 +96,16 @@ export async function getVariantById(variantId, moreInf = false, conn = pool) {
           fv.stock as inStock,
           fv.foodID as foodId,
           f.foodName,
-          f.image
+          f.image,
+
+          p.type as typePromotion,
+          p.value as valuePromotion
       FROM food_variants fv 
       JOIN foods f ON fv.foodID  = f.id
+      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id 
+      LEFT JOIN promotions p ON p.id = pt.promotionID 
+          AND NOW() BETWEEN p.start_at AND p.end_at 
+          AND p.isActive = TRUE
       WHERE fv.id = ?
     `;
   } else {
@@ -107,14 +114,22 @@ export async function getVariantById(variantId, moreInf = false, conn = pool) {
         fv.id as variantId,
         fv.weight_gram,
         fv.originalPrice,
-        fv.stock as inStock
+        fv.stock as inStock,
+        
+        p.type as typePromotion,
+        p.value as valuePromotion
       FROM food_variants fv 
+      LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id 
+      LEFT JOIN promotions p ON p.id = pt.promotionID 
+          AND NOW() BETWEEN p.start_at AND p.end_at 
+          AND p.isActive = TRUE
       WHERE fv.id = ?
     `;
   }
   try {
     const [rows] = await conn.execute(sql, [variantId]);
-    return rows.length > 0 ? rows[0] : null;
+    const res = groupVariant(rows);
+    return res.length > 0 ? res[0] : null;
   } catch (error) {
     console.log(">>> SERVICE getVariantById ERROR:", error.message);
     throw error;

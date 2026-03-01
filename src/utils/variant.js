@@ -62,3 +62,16 @@ export function groupVariant(rows, forOrder = false) {
 
   return Object.values(map);
 }
+export function getPriceRange(rows) {
+  // rows: [{variant}]
+
+  let minPrice = Infinity;
+  let maxPrice = 0;
+
+  for (const variant of rows) {
+    const { price } = variant;
+    minPrice = Math.min(minPrice, price);
+    maxPrice = Math.max(maxPrice, price);
+  }
+  return { minPrice, maxPrice };
+}

@@ -202,7 +202,6 @@ const ensureCart = async ({ userId, guestToken }, conn = pool) => {
 async function withCart(context, handler) {
   const { guestToken: incomingGuestToken, userId } = context ?? {};
   const conn = await pool.getConnection();
-  console.log(">>> service:", context);
   try {
     await conn.beginTransaction();
 
