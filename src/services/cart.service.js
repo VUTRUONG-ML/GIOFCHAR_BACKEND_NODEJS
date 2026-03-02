@@ -140,7 +140,7 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
         const existed = await cartItemService.findCartItem(
           {
             cartId: cartUser.id,
-            foodId: guestItem.foodId,
+            variantId: guestItem.variantId,
           },
           connection,
         );
@@ -155,7 +155,7 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
           //Nếu chưa có
           await cartItemService.insertCartItem(
             cartUser.id,
-            guestItem.foodId,
+            guestItem.variantId,
             guestItem.quantity,
             connection,
           );

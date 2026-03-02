@@ -60,6 +60,7 @@ export const loginApi = async (req, res) => {
   try {
     const result = await authService.login(email, password);
 
+    let mergeStatus = true;
     if (guestToken) {
       try {
         await cartService.mergeGuestCartToUser({
@@ -68,10 +69,14 @@ export const loginApi = async (req, res) => {
         });
       } catch (error) {
         console.log(">>>>> Merge cart failed:", error.message);
+        mergeStatus = false;
       }
     }
 
-    res.status(200).json({ message: "Login successful", data: result });
+    res.status(200).json({
+      message: "Login successful",
+      data: { ...result, mergeCart: mergeStatus ? "success" : "failed" },
+    });
   } catch (err) {
     console.error(">>>>> LOGIN ERROR:", err.message);
     const status = err.statusCode || 500;
