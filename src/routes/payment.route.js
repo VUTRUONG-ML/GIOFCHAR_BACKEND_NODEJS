@@ -6,6 +6,11 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 
 import { checkAdmin } from "../middlewares/user.middleware.js";
 import { checkOrderExists } from "../middlewares/order.middleware.js";
+import { asyncHandler } from "../errors/errorHandler.js";
+import {
+  checkVnpayOrder,
+  verifyVnpaySignature,
+} from "../middlewares/payment.middleware.js";
 router.delete(
   "/:paymentId",
   requireAuth,
@@ -25,6 +30,14 @@ router.post(
   checkOrderExists,
   paymentController.createPayment,
 );
+
+router.get(
+  "/vnpay/ipn",
+  verifyVnpaySignature,
+  asyncHandler(checkVnpayOrder),
+  asyncHandler(paymentController.handleIpn),
+);
+
 router.get(
   "/:paymentId",
   requireAuth,

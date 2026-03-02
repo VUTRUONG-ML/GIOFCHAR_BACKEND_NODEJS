@@ -8,6 +8,7 @@ import pool from "../config/db.js";
 import { statusOverview } from "../utils/status.js";
 import { deductStockForOrder } from "../services/variant.service.js";
 import { BadRequestError } from "../errors/AppError.js";
+import { buildVnpayPaymentUrl } from "../services/payments/vnpay.service.js";
 
 const getStatusOverview = async (req, res) => {
   try {
@@ -67,8 +68,8 @@ const getOrderItemsByOrderId = async (req, res) => {
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
   const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
-  const { customerName, email, phone, address } = req.body;
-  if (!address || !customerName || !email || !phone)
+  const { customerName, email, phone, address, paymentMethod } = req.body;
+  if (!address || !customerName || !email || !phone || !paymentMethod)
     return res.status(400).json({ message: "Missing field" });
 
   const result = await cartService.withCart(
@@ -104,49 +105,65 @@ const createOrder = async (req, res) => {
 
       await orderItemService.createOrderItem(conn, orderValues);
 
-      const paymentTypeDefault = "COD";
-      const transactionDefault = "COD";
+      // Nếu paymentMethod = card | ? => build url return để trả về thêm field paymentUrl => Fe kiểm tra nếu có trường này -> redirect sang url đó .
+      const transactionDefault = paymentMethod === "COD" ? "COD" : "";
       const paymentStatusDefault = "pending";
+
       await paymentService.createPayment(
         conn,
         orderId,
-        paymentTypeDefault,
+        paymentMethod,
         totalPriceOrder,
         transactionDefault,
         paymentStatusDefault,
       );
+      let paymentUrl = "";
+      if (paymentMethod === "CARD") {
+        const ipAddr =
+          req.headers["x-forwarded-for"] ||
+          req.socket.remoteAddress ||
+          "127.0.0.1";
+
+        paymentUrl = buildVnpayPaymentUrl({
+          orderId: orderCode,
+          amount: totalPriceOrder,
+          ipAddr,
+        });
+      }
       await cartService.clearCart(cartId, conn);
 
-      return { orderId, orderCode, totalPriceOrder };
+      return { orderId, orderCode, totalPriceOrder, paymentUrl };
     },
   );
 
-  const { orderId, orderCode, totalPriceOrder } = result;
+  const { orderId, orderCode, totalPriceOrder, paymentUrl } = result;
 
   res.status(200).json({
     message: "Create order successful",
     orderCode,
     orderId,
     totalPriceOrder,
+    paymentUrl,
   });
 };
 
 const updateOrderStatus = async (req, res) => {
   const orderId = req.params.orderId;
-  const status = req.body.status;
+  const newStatus = req.body.status;
+
   if (
-    !status ||
-    (status !== "delivering" &&
-      status !== "unconfirmed" &&
-      status !== "cancelled" &&
-      status !== "delivered")
+    !newStatus ||
+    (newStatus !== "delivering" &&
+      newStatus !== "unconfirmed" &&
+      newStatus !== "cancelled" &&
+      newStatus !== "delivered")
   ) {
     throw new BadRequestError("Missing or incorrect status");
   }
-  if (status !== "delivered") {
-    await orderService.updateOrderStatus(orderId, status);
+  if (newStatus !== "delivered") {
+    await orderService.updateOrderStatus(orderId, newStatus);
   } else {
-    await orderService.confirmCodOrderPayment(orderId, status);
+    await orderService.confirmCodOrderPayment(orderId, newStatus);
   }
   res.status(200).json({ message: "Update order status successful" });
 };
@@ -154,15 +171,10 @@ const updateOrderStatus = async (req, res) => {
 const cancelOrder = async (req, res) => {
   const orderId = req.params.orderId;
   const status = "cancelled";
-  try {
-    const result = await orderService.updateOrderStatus(orderId, status);
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Order not found" });
-    res.status(200).json({ message: "Cancel order successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+
+  const result = await orderService.updateOrderStatus(orderId, status);
+
+  res.status(200).json({ message: "Cancel order successful" });
 };
 
 const deleteOrder = async (req, res) => {
@@ -179,6 +191,19 @@ const deleteOrder = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+const getPaymentStatus = async (req, res) => {
+  const { orderId } = req.order;
+
+  try {
+    const order = await orderService.getPaymentStatus(orderId);
+    return res.status(200).json({ ...order });
+  } catch (error) {
+    console.log(">>> CONTROLLER ERROR:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
 export default {
   getAllOrders,
   getOrdersByUserId,
@@ -189,4 +214,5 @@ export default {
   deleteOrder,
   getStatusOverview,
   getStatusRevenue,
+  getPaymentStatus,
 };

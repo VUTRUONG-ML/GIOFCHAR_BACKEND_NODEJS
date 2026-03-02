@@ -11,6 +11,7 @@ import orderController from "../controllers/order.controller.js";
 
 import { asyncHandler } from "../errors/errorHandler.js";
 import { checkAdmin } from "../middlewares/user.middleware.js";
+import { checkOrderByOrderCode } from "../middlewares/order.middleware.js";
 
 // Xóa order dành cho admin
 router.delete(
@@ -25,7 +26,7 @@ router.put(
   "/:orderId/cancel",
   optionalAuth,
   authorizeOrderAccess,
-  orderController.cancelOrder,
+  asyncHandler(orderController.cancelOrder),
 );
 
 // Cập nhật trạng thái order dành cho admin
@@ -72,7 +73,11 @@ router.get(
   authorizeOrderAccess,
   asyncHandler(orderController.getOrderItemsByOrderId),
 );
-
+router.get(
+  "/payment-status/by-code/:orderCode",
+  checkOrderByOrderCode,
+  orderController.getPaymentStatus,
+);
 // Xem tất cả order của chính bản thân dành cho user
 router.get(
   "/user/my-orders",

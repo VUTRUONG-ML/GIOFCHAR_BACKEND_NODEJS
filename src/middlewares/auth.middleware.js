@@ -57,7 +57,7 @@ export const requireAuth = (req, res, next) => {
 
 export const authorizeOrderAccess = async (req, res, next) => {
   const { userId, guestToken } = req.user;
-  const { orderId } = req.params;
+  const orderId = req.params.orderId || req.order.orderId;
   if (req.user.role === "admin") return next();
   try {
     const order = await orderService.getOrderByIdAndUser(orderId, {
@@ -66,7 +66,6 @@ export const authorizeOrderAccess = async (req, res, next) => {
     });
     if (!order)
       return res.status(403).json({ message: "You do not have access" });
-
     next();
   } catch (error) {
     console.log(">>>>> MIDDLEEWARE AUTH ERROR", error.message);

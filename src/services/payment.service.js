@@ -13,9 +13,10 @@ const getAllPayments = async () => {
 
 const getPaymentById = async (paymentId) => {
   try {
-    const [rows] = await pool.execute("SELECT * FROM payments WHERE id = ?", [
-      paymentId,
-    ]);
+    const [rows] = await pool.execute(
+      "SELECT id as paymentId, paymentType, status, amount  FROM payments WHERE id = ?",
+      [paymentId],
+    );
     return rows;
   } catch (err) {
     throw err;
@@ -23,17 +24,15 @@ const getPaymentById = async (paymentId) => {
 };
 
 const updatePaymentById = async (
-  paymentId,
-  paymentStatus,
-  paymentType,
+  { paymentId, paymentStatus, paymentType, transactionId = "" },
   conn = pool,
 ) => {
   try {
     const [result] = await conn.execute(
       `UPDATE payments p 
-        SET paymentType = ?, status = ? 
+        SET paymentType = ?, status = ?, transactionID = ? 
         WHERE id = ?`,
-      [paymentType, paymentStatus, paymentId],
+      [paymentType, paymentStatus, transactionId, paymentId],
     );
     return result.affectedRows === 1;
   } catch (err) {
@@ -50,11 +49,26 @@ const createPayment = async (
   paymentStatus,
 ) => {
   try {
-    const [result] = await conn.execute(
-      `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
-        VALUES (?, ?, ?, ?, ?)`,
-      [orderID, paymentType, amount, transactionId, paymentStatus],
-    );
+    const provider = "vnpay";
+    let sql = "";
+    let values = [];
+    if (paymentType === "COD") {
+      sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
+              VALUES (?, ?, ?, ?, ?)`;
+      values = [orderID, paymentType, amount, transactionId, paymentStatus];
+    } else {
+      sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status, provider) 
+              VALUES (?, ?, ?, ?, ?, ?)`;
+      values = [
+        orderID,
+        paymentType,
+        amount,
+        transactionId,
+        paymentStatus,
+        provider,
+      ];
+    }
+    const [result] = await conn.execute(sql, values);
     return result;
   } catch (err) {
     throw err;
@@ -72,16 +86,21 @@ const deletePayment = async (paymentId) => {
   }
 };
 
-const getPaymentByOrderId = async (orderId, conn = pool) => {
+const getByOrderId = async (orderId) => {
   try {
     const sql = `
-     SELECT id as paymentId, paymentType, status as paymentStatus
-     FROM payments
-     WHERE orderID = ?
-    `;
-    const [rows] = await conn.execute(sql, [orderId]);
-    return rows[0];
+      SELECT 
+        p.id as paymentId,
+        p.amount,
+        p.transactionID,
+        p.paymentType,
+        p.status as paymentStatus
+      FROM  payments p
+      WHERE p.orderID  = ?`;
+    const [rows] = await pool.execute(sql, [orderId]);
+    return rows.length > 0 ? rows[0] : null;
   } catch (error) {
+    console.log(">>> SERVICE payment ERROR:", error.message);
     throw error;
   }
 };
@@ -118,6 +137,6 @@ export default {
   updatePaymentById,
   createPayment,
   deletePayment,
-  getPaymentByOrderId,
+  getByOrderId,
   revenue,
 };

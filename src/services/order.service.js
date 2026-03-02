@@ -228,6 +228,18 @@ const updateOrderDeliveredCOD = async (
   }
 };
 
+const updatePaymentStatus = async ({ orderId, paymentStatus }, conn = pool) => {
+  try {
+    const [result] = await conn.execute(
+      "UPDATE orders o SET paymentStatus = ? WHERE id = ?",
+      [paymentStatus, orderId],
+    );
+    return result;
+  } catch (err) {
+    throw err;
+  }
+};
+
 const confirmCodOrderPayment = async (orderId, status = "delivered") => {
   const connection = await pool.getConnection();
   try {
@@ -235,10 +247,7 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
       throw new BadRequestError("Invalid status order.");
 
     await connection.beginTransaction();
-    const payment = await paymentService.getPaymentByOrderId(
-      orderId,
-      connection,
-    );
+    const payment = await paymentService.getByOrderId(orderId, connection);
     if (!payment) throw new NotFoundError("Payment not found for this order.");
 
     const { paymentId, paymentType } = payment;
@@ -257,9 +266,7 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
     if (!updatedOrder) throw new NotFoundError("Order not found");
 
     await paymentService.updatePaymentById(
-      paymentId,
-      newPaymentStatus,
-      paymentType,
+      { paymentId, paymentStatus, paymentType },
       connection,
     );
     await connection.commit();
@@ -298,16 +305,15 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
   }
 };
 
-const attachOrderToUser = async ({ guestToken, userId, orderId }) => {
-  if (!guestToken) return;
+const attachOrderToUser = async ({ email, userId }) => {
   try {
     await pool.execute(
       `
     UPDATE orders
     SET userID = ?, guestToken = NULL
-    WHERE guestToken = ? AND userID IS NULL AND id = ?
+    WHERE email = ? 
     `,
-      [userId, guestToken, orderId],
+      [userId, email],
     );
   } catch (error) {
     console.log(">>>>> SERVICE ERROR attach order:", error.message);
@@ -341,6 +347,52 @@ const revenue = async (conn = pool, time = "default") => {
     throw error;
   }
 };
+const getPaymentStatus = async (orderId) => {
+  try {
+    const sql = `SELECT id as orderId, paymentStatus FROM orders WHERE id = ?`;
+    const [rows] = await pool.execute(sql, [orderId]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.log(">>> SERVICE ORDER ERROR:", error.message);
+    throw error;
+  }
+};
+const getByOrderCode = async ({ orderCode }, conn = pool) => {
+  try {
+    const sql = `
+      SELECT
+        o.id as orderId,
+        o.status,
+        o.paymentStatus,
+        o.has_viewed_payment_result,
+        SUM(oi.totalPrice) as amount
+      FROM orders o 
+      JOIN order_items oi ON o.id = oi.orderID 
+      WHERE o.orderCode = ?
+      GROUP BY  o.id
+    `;
+    const [rows] = await conn.execute(sql, [orderCode]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.log(">>> SERVICE ORDER ERROR:", error.message);
+    throw error;
+  }
+};
+const markPaymentResultViewed = async ({ orderId }, conn = pool) => {
+  try {
+    const sql = `
+      UPDATE orders o
+      SET has_viewed_payment_result = TRUE, payment_result_viewed_at = CURRENT_TIMESTAMP()
+      WHERE id = ? 
+        AND o.has_viewed_payment_result = FALSE
+    `;
+    const [rows] = await conn.execute(sql, [orderId]);
+    return rows;
+  } catch (error) {
+    console.log(">>> SERVICE markPaymentResultViewed ERROR:", error.message);
+    throw error;
+  }
+};
 export default {
   getAllOrders,
   countTodayOrders,
@@ -354,4 +406,8 @@ export default {
   attachOrderToUser,
   revenue,
   confirmCodOrderPayment,
+  getByOrderCode,
+  getPaymentStatus,
+  markPaymentResultViewed,
+  updatePaymentStatus,
 };

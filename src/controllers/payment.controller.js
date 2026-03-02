@@ -1,4 +1,6 @@
+import pool from "../config/db.js";
 import paymentService from "../services/payment.service.js";
+import { processIpn } from "../services/payments/vnpay.service.js";
 
 const getAllPayments = async (req, res) => {
   try {
@@ -69,9 +71,8 @@ const updatePayment = async (req, res) => {
 
   try {
     const result = await paymentService.updatePaymentById(
-      paymentId,
-      paymentStatus,
-      paymentType,
+      { paymentId, paymentStatus, paymentType },
+      pool,
     );
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Payment not found" });
@@ -96,6 +97,28 @@ const deletePayment = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+const handleIpn = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  const order = req.order;
+  const payment = req.payment;
+  const vnpayParams = req.vnpayParams;
+  try {
+    await connection.beginTransaction();
+    const result = await processIpn({
+      order,
+      payment,
+      vnp_Params: vnpayParams,
+      connection,
+    });
+    await connection.commit();
+    return res.status(200).json(result);
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
 
 export default {
   getAllPayments,
@@ -103,4 +126,5 @@ export default {
   createPayment,
   updatePayment,
   deletePayment,
+  handleIpn,
 };
