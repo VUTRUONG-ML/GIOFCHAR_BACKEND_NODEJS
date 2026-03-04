@@ -8,35 +8,36 @@ import orderService from "../services/order.service.js";
 export const optionalAuth = (req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   let guestToken = req.headers["x-guest-token"];
-  console.log(">>> x guest token:", guestToken);
-  if (!guestToken) {
-    guestToken = uuidv4();
-    res.setHeader("x-guest-token", guestToken);
-  }
+
+  let user = {
+    userId: null,
+    guestToken: null,
+    role: "user",
+  };
 
   // nếu không gửi token
   if (!token) {
-    req.user = {
-      userId: null,
-      guestToken,
-      role: "user",
-    };
-    return next();
+    user.guestToken = guestToken;
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { ...decoded, guestToken: null }; // { userId, role }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // { userId, role }
+    user = { ...decoded, guestToken: null };
   } catch (err) {
     // token sai coi như guest
     console.log(">>>>> Optional auth failed:", err.message);
-    res.setHeader("x-guest-token", guestToken);
-    req.user = {
-      userId: null,
-      guestToken: guestToken,
-      role: "user",
-    };
+    user.guestToken = guestToken;
   }
+
+  if (!user.userId && !user.guestToken) {
+    return res.status(401).json({
+      error: {
+        code: "GUEST_TOKEN_MISSING",
+        message: "Guest token required",
+      },
+    });
+  }
+  req.user = user;
 
   next();
 };

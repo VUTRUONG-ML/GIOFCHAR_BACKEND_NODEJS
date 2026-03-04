@@ -17,6 +17,7 @@ import { checkOrigin } from "./middlewares/session.middleware.js";
 import { errorHandler } from "./errors/errorHandler.js";
 import promotionRoutes from "./routes/promotion.route.js";
 import variantRoutes from "./routes/variant.route.js";
+import guestRoutes from "./routes/guest.route.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -44,6 +45,7 @@ app.use(
   }),
 );
 
+app.use("/api/guest", guestRoutes);
 app.use("/api/variants", variantRoutes);
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/statistic", statisticRoutes);
