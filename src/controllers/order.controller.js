@@ -7,7 +7,7 @@ import { calculateOrderValues } from "../utils/order.util.js";
 import pool from "../config/db.js";
 import { statusOverview } from "../utils/status.js";
 import { deductStockForOrder } from "../services/variant.service.js";
-import { BadRequestError } from "../errors/AppError.js";
+import { BadRequestError, ConflictError } from "../errors/AppError.js";
 import { buildVnpayPaymentUrl } from "../services/payments/vnpay.service.js";
 
 const getStatusOverview = async (req, res) => {
@@ -68,13 +68,24 @@ const getOrderItemsByOrderId = async (req, res) => {
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
   const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
-  const { customerName, email, phone, address, paymentMethod } = req.body;
+  const {
+    cartVersion: clientVersion,
+    customerName,
+    email,
+    phone,
+    address,
+    paymentMethod,
+  } = req.body;
   if (!address || !customerName || !email || !phone || !paymentMethod)
     return res.status(400).json({ message: "Missing field" });
 
   const result = await cartService.withCart(
     req.user,
-    async ({ cartId, conn }) => {
+    async ({ cartId, conn, cartVersion }) => {
+      if (cartVersion !== clientVersion) {
+        throw new ConflictError("CART_CHANGED");
+      }
+
       //Lay ve cartItem cua nguoi dung hien tai
       const cartItems = await cartItemService.getCartItemsByCartId(
         cartId,

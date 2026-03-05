@@ -55,6 +55,7 @@ const createCart = async ({ userId, guestToken }, conn = pool) => {
 };
 
 const addToCart = async (variantId, delta, cartId, connection) => {
+  // Trước khi update item trong cart thì update version cart
   const variant = await getVariantById(variantId, true, connection);
   if (!variant) throw new NotFoundError("Food variant not found");
 
@@ -64,19 +65,20 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     connection,
     true,
   );
+  let result;
   if (!cartItem) {
     if (delta <= 0) throw new BadRequestError("Item not found in cart");
 
-    const result = await cartItemService.insertCartItem(
+    const resInsert = await cartItemService.insertCartItem(
       cartId,
       variantId,
       delta,
       connection,
     );
-    return {
+    result = {
       message: "Added new item to cart",
       cartId: cartId,
-      cartItemId: result.insertId,
+      cartItemId: resInsert.insertId,
       ...variant,
       quantity: delta,
     };
@@ -85,7 +87,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     const newQuantity = cartItem.quantity + delta;
     if (newQuantity <= 0) {
       await cartItemService.deleteCartItem(cartItemId, cartId, connection);
-      return {
+      result = {
         message: "Remove item from cart successful",
         cartId: cartId,
         cartItemId,
@@ -98,7 +100,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
       delta,
       connection,
     );
-    return {
+    result = {
       message: "Updated quantity item successful",
       cartId: cartId,
       cartItemId,
@@ -106,6 +108,8 @@ const addToCart = async (variantId, delta, cartId, connection) => {
       quantity: newQuantity,
     };
   }
+  const cartVersion = await updateVersion(cartId, connection);
+  return { ...result, cartVersion };
 };
 
 const mergeGuestCartToUser = async ({ userId, guestToken }) => {
@@ -190,7 +194,7 @@ const clearCart = async (cartId, conn = pool) => {
 const ensureCart = async ({ userId, guestToken }, conn = pool) => {
   validateOwner({ userId, guestToken });
   try {
-    let cart = await getCart({ userId, guestToken }, { conn });
+    let cart = await getCart({ userId, guestToken }, { conn, forUpdate: true });
     if (!cart) cart = await createCart({ userId, guestToken }, conn);
     return cart;
   } catch (error) {
@@ -216,6 +220,7 @@ async function withCart(context, handler) {
     const result = await handler({
       cartId: cart.id,
       conn,
+      cartVersion: cart.cartVersion,
     });
 
     await conn.commit();
@@ -229,6 +234,28 @@ async function withCart(context, handler) {
   }
 }
 
+async function updateVersion(cartId, conn = pool) {
+  try {
+    const sqlUpdateVersion = `
+      UPDATE carts
+      SET cartVersion = cartVersion + 1
+      WHERE id = ?
+    `;
+    const sqlGetVersion = `
+      SELECT cartVersion
+      FROM carts
+      WHERE id = ?
+    `;
+    const [result] = await conn.execute(sqlUpdateVersion, [cartId]);
+    if (result.affectedRows !== 1) throw new NotFoundError("Cart not found");
+
+    const [rows] = await conn.execute(sqlGetVersion, [cartId]);
+    const version = rows[0].cartVersion;
+    return version;
+  } catch (error) {
+    throw error;
+  }
+}
 export default {
   withCart,
   getAllCarts,
@@ -238,4 +265,5 @@ export default {
   clearCart,
   ensureCart,
   mergeGuestCartToUser,
+  updateVersion,
 };

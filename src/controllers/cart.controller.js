@@ -63,7 +63,12 @@ export const deleteCartItemController = async (req, res) => {
     },
   );
 
-  return res.status(200).json({ message: "Delete cart item successful" });
+  return res
+    .status(200)
+    .json({
+      message: "Delete cart item successful",
+      cartVersion: result.cartVersion,
+    });
 };
 
 export const clearCartController = async (req, res) => {

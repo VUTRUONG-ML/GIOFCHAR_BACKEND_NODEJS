@@ -5,6 +5,7 @@ import {
   NotFoundError,
 } from "../errors/AppError.js";
 import { groupVariant } from "../utils/variant.js";
+import cartService from "./cart.service.js";
 
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
 const getCartItemsByCartId = async (cartId, conn, forOrder = false) => {
@@ -107,7 +108,8 @@ const deleteCartItem = async (cartItemId, cartId, conn = pool) => {
       [cartItemId, cartId],
     );
     if (!result.affectedRows) throw new NotFoundError("Cart item not found");
-    return true;
+    const version = await cartService.updateVersion(cartId, conn);
+    return { cartVersion: version };
   } catch (err) {
     throw err;
   }

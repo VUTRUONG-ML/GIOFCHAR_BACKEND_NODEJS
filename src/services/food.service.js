@@ -51,7 +51,7 @@ const getAllFoods = async (conn = pool) => {
         p.isActive
       FROM foods f
       JOIN categories c ON f.categoryID = c.id
-      LEFT JOIN food_variants fv ON fv.foodID = f.id
+      JOIN food_variants fv ON fv.foodID = f.id
       LEFT JOIN promotion_targets pt ON pt.food_variantID = fv.id
       LEFT JOIN promotions p ON p.id = pt.promotionID
         AND p.isActive = TRUE
