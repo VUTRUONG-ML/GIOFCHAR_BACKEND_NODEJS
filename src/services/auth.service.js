@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import userService from "./user.service.js";
 import dotenv from "dotenv";
+import { createRefreshToken } from "./refreshToken.service.js";
 dotenv.config();
 const saltRounds = 10;
 const register = async (userName, email, phone, password, address = null) => {
@@ -43,17 +44,31 @@ const login = async (email, password) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw errorLogin;
 
-    const payload = {
+    const payloadAccessToken = {
       userId: user.id,
       role: user.role,
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
+    const accessToken = jwt.sign(
+      payloadAccessToken,
+      process.env.ACCESS_TOKEN_SECRET,
+      {
+        expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN,
+      },
+    );
 
+    const payloadRefreshToken = { userId: user.id };
+    const refreshToken = jwt.sign(
+      payloadRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET,
+      {
+        expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN,
+      },
+    );
+    await createRefreshToken({ userId: user.id, refreshToken });
     const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
     return {
-      access_token: token,
+      refresh_token: refreshToken,
+      access_token: accessToken,
       user: userWithoutPassword,
     };
   } catch (err) {

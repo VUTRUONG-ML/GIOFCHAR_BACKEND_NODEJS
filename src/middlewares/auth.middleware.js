@@ -21,7 +21,7 @@ export const optionalAuth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // { userId, role }
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // { userId, role }
     user = { ...decoded, guestToken: null };
   } catch (err) {
     // token sai coi như guest
@@ -47,7 +47,7 @@ export const requireAuth = (req, res, next) => {
   if (!token) return res.status(401).json({ message: "Access token missing" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     req.user = { ...decoded, guestToken: null }; // {userId, role}
     return next();
   } catch (err) {
