@@ -4,6 +4,7 @@ dotenv.config();
 import "./config/db.js";
 import express from "express";
 import session from "express-session";
+import cookieParser from "cookie-parser";
 import userRoutes from "./routes/user.route.js";
 import categoryRoutes from "./routes/category.route.js";
 import foodRoutes from "./routes/food.route.js";
@@ -33,6 +34,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(checkOrigin);
+
+app.use(cookieParser());
 
 app.use(
   session({

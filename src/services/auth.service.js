@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import userService from "./user.service.js";
 import dotenv from "dotenv";
 import { createRefreshToken } from "./refreshToken.service.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
 dotenv.config();
 const saltRounds = 10;
 const register = async (userName, email, phone, password, address = null) => {
@@ -48,27 +49,20 @@ const login = async (email, password) => {
       userId: user.id,
       role: user.role,
     };
-    const accessToken = jwt.sign(
-      payloadAccessToken,
-      process.env.ACCESS_TOKEN_SECRET,
-      {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN,
-      },
-    );
+    const access_token = generateAccessToken(payloadAccessToken);
 
-    const payloadRefreshToken = { userId: user.id };
-    const refreshToken = jwt.sign(
-      payloadRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET,
-      {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN,
-      },
-    );
-    await createRefreshToken({ userId: user.id, refreshToken });
+    const payloadRefreshToken = {
+      userId: user.id,
+      role: user.role,
+    };
+    const refresh_token = generateRefreshToken(payloadRefreshToken);
+
+    await createRefreshToken({ userId: user.id, refreshToken: refresh_token });
+
     const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
     return {
-      refresh_token: refreshToken,
-      access_token: accessToken,
+      refresh_token,
+      access_token,
       user: userWithoutPassword,
     };
   } catch (err) {

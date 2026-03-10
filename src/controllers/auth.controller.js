@@ -1,6 +1,7 @@
 import authService from "../services/auth.service.js";
 import cartService from "../services/cart.service.js";
 import orderService from "../services/order.service.js";
+import { refreshNewToken } from "../services/refreshToken.service.js";
 import userService from "../services/user.service.js";
 
 export const registerApi = async (req, res) => {
@@ -57,6 +58,13 @@ export const loginApi = async (req, res) => {
   const guestToken = req.headers["x-guest-token"];
   try {
     const result = await authService.login(email, password);
+    const { refresh_token, ...loginInfo } = result;
+
+    res.cookie("refreshToken", refresh_token, {
+      httpOnly: true,
+      secure: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     let mergeStatus = true;
     if (guestToken) {
@@ -73,7 +81,7 @@ export const loginApi = async (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
-      data: { ...result, mergeCart: mergeStatus ? "success" : "failed" },
+      data: { ...loginInfo, mergeCart: mergeStatus ? "success" : "failed" },
     });
   } catch (err) {
     console.error(">>>>> LOGIN ERROR:", err.message);
@@ -93,4 +101,19 @@ export const getAccount = async (req, res) => {
     console.log(">>>>> CONTROLLER ERROR", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
+};
+
+export const refreshTokenController = async (req, res) => {
+  const { refreshToken: oldToken } = req.cookies;
+  if (!oldToken) {
+    throw new UnauthorizedError("Missing refresh token");
+  }
+  const { accessToken, refreshToken } = await refreshNewToken(oldToken);
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+  console.log(">> Token:", refreshToken);
+  return res.status(200).json({ accessToken });
 };
