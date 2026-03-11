@@ -4,8 +4,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import orderService from "../services/order.service.js";
+import { UnauthorizedError } from "../errors/AppError.js";
+import { asyncHandler } from "../errors/errorHandler.js";
 
-export const optionalAuth = (req, res, next) => {
+export const optionalAuth = asyncHandler((req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   let guestToken = req.headers["x-guest-token"];
 
@@ -16,45 +18,68 @@ export const optionalAuth = (req, res, next) => {
   };
 
   // nếu không gửi token
-  if (!token) {
-    user.guestToken = guestToken;
-  }
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // { userId, role }
+      user = { userId: decoded.userId, role: decoded.role, guestToken: null };
+    } catch (err) {
+      // token sai trả về mã lỗi để fe biết tự gọi refreshToken
+      console.log(">>>>> Optional auth failed:", err.message);
+      if (err.name === "TokenExpiredError") {
+        throw new UnauthorizedError(
+          "Invalid or expired token",
+          "ACCESS_TOKEN_EXPIRED",
+        );
+      }
 
-  try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // { userId, role }
-    user = { ...decoded, guestToken: null };
-  } catch (err) {
-    // token sai coi như guest
-    console.log(">>>>> Optional auth failed:", err.message);
+      if (err.name === "JsonWebTokenError") {
+        throw new UnauthorizedError(
+          "Invalid or expired token",
+          "INVALID_ACCESS_TOKEN",
+        );
+      }
+      throw err;
+    }
+  } else {
     user.guestToken = guestToken;
   }
 
   if (!user.userId && !user.guestToken) {
-    return res.status(401).json({
-      error: {
-        code: "GUEST_TOKEN_MISSING",
-        message: "Guest token required",
-      },
-    });
+    throw new UnauthorizedError("Guest token required", "GUEST_TOKEN_MISSING");
   }
+
   req.user = user;
 
   next();
-};
+});
 
-export const requireAuth = (req, res, next) => {
+export const requireAuth = asyncHandler((req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "Access token missing" });
-
+  if (!token) throw new UnauthorizedError("Access token missing");
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    req.user = { ...decoded, guestToken: null }; // {userId, role}
+    req.user = { userId: decoded.userId, role: decoded.role, guestToken: null }; // {userId, role}
     return next();
   } catch (err) {
     console.log(">>>>> AUTH MIDDLE WARE ERROR", err.message);
-    return res.status(401).json({ message: "Invalid or expired token" });
+
+    if (err.name === "TokenExpiredError") {
+      throw new UnauthorizedError(
+        "Invalid or expired token",
+        "ACCESS_TOKEN_EXPIRED",
+      );
+    }
+
+    if (err.name === "JsonWebTokenError") {
+      throw new UnauthorizedError(
+        "Invalid or expired token",
+        "INVALID_ACCESS_TOKEN",
+      );
+    }
+
+    throw err;
   }
-};
+});
 
 export const authorizeOrderAccess = async (req, res, next) => {
   const { userId, guestToken } = req.user;

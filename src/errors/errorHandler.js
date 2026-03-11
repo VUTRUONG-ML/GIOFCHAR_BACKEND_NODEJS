@@ -18,6 +18,7 @@ export function errorHandler(err, req, res, next) {
   }
   return res.status(statusCode).json({
     message: err.message,
+    code: err.code || "INTERNAL_ERROR",
   });
 }
 

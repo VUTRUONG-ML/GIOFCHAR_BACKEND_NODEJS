@@ -6,6 +6,7 @@ import userService from "./user.service.js";
 import dotenv from "dotenv";
 import { createRefreshToken } from "./refreshToken.service.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
+import { ConflictError, UnauthorizedError } from "../errors/AppError.js";
 dotenv.config();
 const saltRounds = 10;
 const register = async (userName, email, phone, password, address = null) => {
@@ -30,6 +31,13 @@ const register = async (userName, email, phone, password, address = null) => {
     const [result] = await pool.execute({ ...optionExecute });
     return result;
   } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      let field = "";
+      if (err.message.includes("email")) field = "email";
+      else if (err.message.includes("phone")) field = "phone";
+
+      throw new ConflictError(`${field} already exists`);
+    }
     throw err;
   }
 };
@@ -38,12 +46,11 @@ const login = async (email, password) => {
   try {
     const user = await userService.getUserByEmail(email);
 
-    const errorLogin = new Error("Email/password không chính xác!");
-    errorLogin.statusCode = 401;
-    if (!user) throw errorLogin;
+    if (!user) throw new UnauthorizedError("Email/password không chính xác!");
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw errorLogin;
+    if (!isMatch)
+      throw new UnauthorizedError("Email/password không chính xác!");
 
     const payloadAccessToken = {
       userId: user.id,

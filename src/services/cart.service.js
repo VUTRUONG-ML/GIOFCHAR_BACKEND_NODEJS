@@ -140,7 +140,7 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
         connection,
       );
       for (const guestItem of guestItems) {
-        //Kiểm tra trong cartUser đã có foodId này chưa
+        //Kiểm tra trong cartUser đã có variant này chưa
         const existed = await cartItemService.findCartItem(
           {
             cartId: cartUser.id,
