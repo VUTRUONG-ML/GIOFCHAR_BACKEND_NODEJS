@@ -26,6 +26,9 @@ export const verifyRefreshToken = (token) => {
     const decode = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
     return decode;
   } catch (error) {
-    throw new UnauthorizedError("Refresh token expired or invalid signature");
+    throw new UnauthorizedError(
+      "Refresh token expired or invalid signature",
+      "INVALID_REFRESH_TOKEN",
+    );
   }
 };
