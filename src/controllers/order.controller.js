@@ -9,6 +9,7 @@ import { statusOverview } from "../utils/status.js";
 import { deductStockForOrder } from "../services/variant.service.js";
 import { BadRequestError, ConflictError } from "../errors/AppError.js";
 import { buildVnpayPaymentUrl } from "../services/payments/vnpay.service.js";
+import { ORDER_STATUS } from "../constants/field.js";
 
 const getStatusOverview = async (req, res) => {
   try {
@@ -162,20 +163,10 @@ const updateOrderStatus = async (req, res) => {
   const orderId = req.params.orderId;
   const newStatus = req.body.status;
 
-  if (
-    !newStatus ||
-    (newStatus !== "delivering" &&
-      newStatus !== "unconfirmed" &&
-      newStatus !== "cancelled" &&
-      newStatus !== "delivered")
-  ) {
+  if (!newStatus || !ORDER_STATUS.includes(newStatus)) {
     throw new BadRequestError("Missing or incorrect status");
   }
-  if (newStatus !== "delivered") {
-    await orderService.updateOrderStatus(orderId, newStatus);
-  } else {
-    await orderService.confirmCodOrderPayment(orderId, newStatus);
-  }
+  await orderService.updateOrder(orderId, newStatus);
   res.status(200).json({ message: "Update order status successful" });
 };
 

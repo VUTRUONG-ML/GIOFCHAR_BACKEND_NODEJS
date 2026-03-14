@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { PAYMENT_STATUS } from "../constants/field.js";
 import { BadRequestError } from "../errors/AppError.js";
 
 const getAllPayments = async () => {
@@ -27,6 +28,8 @@ const updatePaymentById = async (
   { paymentId, paymentStatus, paymentType, transactionId = "" },
   conn = pool,
 ) => {
+  if (!PAYMENT_STATUS.includes(paymentStatus))
+    throw new BadRequestError("Invalid payment status.");
   try {
     const [result] = await conn.execute(
       `UPDATE payments p 
@@ -48,6 +51,8 @@ const createPayment = async (
   transactionId,
   paymentStatus,
 ) => {
+  if (!PAYMENT_STATUS.includes(paymentStatus))
+    throw new BadRequestError("Invalid payment status.");
   try {
     const provider = "vnpay";
     let sql = "";

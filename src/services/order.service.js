@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { ORDER_STATUS, PAYMENT_STATUS } from "../constants/field.js";
 import {
   BadRequestError,
   ConflictError,
@@ -122,7 +123,7 @@ const getOrdersByUserId = async (userId) => {
       JOIN food_variants fv ON oi.food_variantID = fv.id
       JOIN foods f ON fv.foodID = f.id
       WHERE o.userID = ?
-      ORDER BY o.createdAt`,
+      ORDER BY o.createdAt DESC`,
       [userId],
     );
     const newRows = groupOrders(rows);
@@ -171,16 +172,44 @@ const createOrder = async (
   }
 };
 
+const updateOrder = async (orderId, status) => {
+  if (!ORDER_STATUS.includes(status))
+    throw new BadRequestError("Invalid order status");
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    if (status !== "delivered") {
+      await updateOrderStatus(orderId, status, connection);
+      await connection.commit();
+      return true;
+    }
+
+    const payment = await paymentService.getByOrderId(orderId, connection);
+    if (!payment) throw new NotFoundError("Payment not found");
+
+    if (payment.paymentType === "COD") {
+      await confirmCodOrderPayment(orderId, status, connection);
+    } else {
+      await updateOrderStatus(orderId, status, connection);
+    }
+
+    await connection.commit();
+    return true;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+};
+
 const updateOrderStatus = async (orderId, status, conn = pool) => {
   try {
-    if (
-      status !== "delivering" &&
-      status !== "unconfirmed" &&
-      status !== "cancelled" &&
-      status !== "delivered"
-    )
-      throw new BadRequestError("Invalid status order.");
-    await assertOrderUpdatable(orderId, conn);
+    if (!ORDER_STATUS.includes(status))
+      throw new BadRequestError("Invalid order status");
+    await assertOrderUpdatable(orderId, conn); // check order đang ở một trạng thái cuối ko thể cập nhật lại: đã giao | đã hủy
     const [result] = await conn.execute(
       "UPDATE orders o SET status = ? WHERE id = ?",
       [status, orderId],
@@ -198,19 +227,10 @@ const updateOrderDeliveredCOD = async (
   orderStatus,
   conn = pool,
 ) => {
-  if (
-    paymentStatus !== "success" &&
-    paymentStatus !== "failed" &&
-    paymentStatus !== "pending"
-  )
+  if (!PAYMENT_STATUS.includes(paymentStatus))
     throw BadRequestError("Invalid status payment");
-  if (
-    orderStatus !== "delivering" &&
-    orderStatus !== "unconfirmed" &&
-    orderStatus !== "cancelled" &&
-    orderStatus !== "delivered"
-  )
-    throw new BadRequestError("Invalid status order.");
+  if (!ORDER_STATUS.includes(orderStatus))
+    throw new BadRequestError("Invalid order status");
   try {
     const sql = `
       UPDATE orders
@@ -240,8 +260,12 @@ const updatePaymentStatus = async ({ orderId, paymentStatus }, conn = pool) => {
   }
 };
 
-const confirmCodOrderPayment = async (orderId, status = "delivered") => {
-  const connection = await pool.getConnection();
+const confirmCodOrderPayment = async (
+  orderId,
+  status = "delivered",
+  conn = pool,
+) => {
+  const connection = await conn.getConnection();
   try {
     if (status !== "delivered")
       throw new BadRequestError("Invalid status order.");
@@ -252,7 +276,7 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
 
     const { paymentId, paymentType } = payment;
     if (paymentType !== "COD")
-      throw new BadRequestError("Only COD orders can be confirmed manually");
+      throw new BadRequestError("Only COD orders can be confirmed manually"); // không thể update trạng thái payment cho order CARD được
 
     await assertOrderUpdatable(orderId, connection);
 
@@ -266,7 +290,12 @@ const confirmCodOrderPayment = async (orderId, status = "delivered") => {
     if (!updatedOrder) throw new NotFoundError("Order not found");
 
     await paymentService.updatePaymentById(
-      { paymentId, paymentStatus, paymentType },
+      {
+        paymentId,
+        paymentStatus: newPaymentStatus,
+        paymentType,
+        transactionId: "COD",
+      },
       connection,
     );
     await connection.commit();
@@ -399,6 +428,7 @@ export default {
   countYesterdayOrders,
   getOrdersByUserId,
   createOrder,
+  updateOrder,
   updateOrderStatus,
   deleteOrder,
   getOrderById,
