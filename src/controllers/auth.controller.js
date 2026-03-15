@@ -95,3 +95,18 @@ export const refreshTokenController = async (req, res) => {
   });
   return res.status(200).json({ accessToken });
 };
+
+export const logoutController = async (req, res) => {
+  const { refreshToken: oldToken } = req.cookies;
+  try {
+    if (oldToken) {
+      await authService.logout(oldToken);
+    }
+  } catch (error) {
+    // ignore
+  }
+  res.clearCookie("refreshToken");
+  res.status(200).json({
+    message: "Logout successful",
+  });
+};

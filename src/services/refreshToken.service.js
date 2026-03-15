@@ -113,7 +113,7 @@ export const refreshNewToken = async (refreshToken) => {
     // hash token
     const tokenHash = hashToken(refreshToken);
     // lấy token thông quua tokenHash và userId và xem có revoked không
-    const oldToken = await findValidToken({ tokenHash, userId }, connection);
+    const oldToken = await findValidToken(tokenHash, connection);
     // nếu không có trả về lỗi
     if (!oldToken) throw new UnauthorizedError("Invalid refresh token.");
     // nếu có thì tạo token mới và revoke token cũ
@@ -145,7 +145,7 @@ export const refreshNewToken = async (refreshToken) => {
   }
 };
 
-export const findValidToken = async ({ tokenHash, userId }, conn = pool) => {
+export const findValidToken = async (tokenHash, conn = pool) => {
   const sql = `
     SELECT 
       id as tokenId,
@@ -154,10 +154,10 @@ export const findValidToken = async ({ tokenHash, userId }, conn = pool) => {
       revoked,
       expiresAt
     FROM refresh_tokens
-    WHERE tokenHash = ? AND userID = ? AND revoked = FALSE AND NOW() < expiresAt
+    WHERE tokenHash = ? AND revoked = FALSE AND NOW() < expiresAt
   `;
   try {
-    const [rows] = await conn.execute(sql, [tokenHash, userId]);
+    const [rows] = await conn.execute(sql, [tokenHash]);
     return rows[0];
   } catch (error) {
     console.log(">>> SERVICE refresh token ERROR:", error.message);

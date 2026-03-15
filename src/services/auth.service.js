@@ -4,8 +4,17 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import userService from "./user.service.js";
 import dotenv from "dotenv";
-import { createRefreshToken } from "./refreshToken.service.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
+import {
+  createRefreshToken,
+  findValidToken,
+  markRevoked,
+} from "./refreshToken.service.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+  verifyRefreshToken,
+} from "../utils/token.js";
 import { ConflictError, UnauthorizedError } from "../errors/AppError.js";
 dotenv.config();
 const saltRounds = 10;
@@ -77,7 +86,26 @@ const login = async (email, password) => {
   }
 };
 
-export default {
-  register,
-  login,
+const logout = async (refreshToken, conn = pool) => {
+  const connection = await conn.getConnection();
+  try {
+    await connection.beginTransaction();
+    // hash token
+    const tokenHash = hashToken(refreshToken);
+    // tim token
+    const tokenInDB = await findValidToken(tokenHash, connection);
+    if (!tokenInDB) throw new UnauthorizedError("Invalid refresh token.");
+    // revoke token
+    await markRevoked(tokenInDB.tokenId, connection);
+    await connection.commit();
+    return true;
+  } catch (error) {
+    console.log(">>> LOGOUT SERVICE ERROR:", error.message);
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 };
+
+export default { logout, register, login };
