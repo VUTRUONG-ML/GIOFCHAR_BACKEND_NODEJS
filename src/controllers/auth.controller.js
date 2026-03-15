@@ -2,6 +2,7 @@ import {
   BadRequestError,
   ConflictError,
   NotFoundError,
+  UnauthorizedError,
 } from "../errors/AppError.js";
 import { asyncHandler } from "../errors/errorHandler.js";
 import authService from "../services/auth.service.js";
