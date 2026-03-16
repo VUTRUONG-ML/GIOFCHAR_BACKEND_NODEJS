@@ -1,4 +1,9 @@
 import pool from "../config/db.js";
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from "../errors/AppError.js";
 
 const getAllCategories = async () => {
   try {
@@ -47,7 +52,9 @@ const createCategory = async (name, description) => {
     );
     return result;
   } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
+    console.log(">>>>> CATEGORY SERVICE ERROR", err.message);
+    if (err.code === "ER_DUP_ENTRY")
+      throw new ConflictError("Category name already exists");
     throw err;
   }
 };
@@ -58,7 +65,7 @@ const getCategoryById = async (categoryId) => {
       "SELECT * FROM categories WHERE id = ?",
       [categoryId],
     );
-    return categories.length > 0 ? categories[0] : null;
+    return categories[0];
   } catch (err) {
     console.log(">>>> SERVICE ERROR", err.message);
     throw err;
@@ -73,21 +80,31 @@ const updateCategoryById = async (name, description, categoryId) => {
         WHERE id = ?`,
       [name, description, categoryId],
     );
-    return result;
+    if (result.affectedRows === 0)
+      throw new NotFoundError("Category not found.");
+    return true;
   } catch (err) {
     console.log(">>>> SERVICE ERROR", err.message);
+    if (err.code === "ER_DUP_ENTRY")
+      throw new ConflictError("Category name already exists");
     throw err;
   }
 };
 
 const deleteCategoryById = async (categoryId) => {
   try {
-    const result = await pool.execute("DELETE FROM categories WHERE id = ?", [
+    const [result] = await pool.execute("DELETE FROM categories WHERE id = ?", [
       categoryId,
     ]);
-    return result;
+    if (result.affectedRows === 0)
+      throw new NotFoundError("Category not found.");
+    return true;
   } catch (err) {
     console.log(">>>>> SERVICE ERROR", err.message);
+    if (err.code === "ER_ROW_IS_REFERENCED_2") {
+      // Còn tồn tại category trong food
+      throw new BadRequestError("Cannot delete category.");
+    }
     throw err;
   }
 };
