@@ -94,19 +94,20 @@ const addToCart = async (variantId, delta, cartId, connection) => {
         ...variant,
         quantity: 0,
       };
+    } else {
+      await cartItemService.updateCartItemQuantity(
+        cartItem.id,
+        delta,
+        connection,
+      );
+      result = {
+        message: "Updated quantity item successful",
+        cartId: cartId,
+        cartItemId,
+        ...variant,
+        quantity: newQuantity,
+      };
     }
-    await cartItemService.updateCartItemQuantity(
-      cartItem.id,
-      delta,
-      connection,
-    );
-    result = {
-      message: "Updated quantity item successful",
-      cartId: cartId,
-      cartItemId,
-      ...variant,
-      quantity: newQuantity,
-    };
   }
   const cartVersion = await updateVersion(cartId, connection);
   return { ...result, cartVersion };
