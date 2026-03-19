@@ -1,26 +1,23 @@
 import pool from "../config/db.js";
+import { asyncHandler } from "../errors/errorHandler.js";
 import foodService from "../services/food.service.js";
 import { safeDeleteCloudinary } from "../utils/safeCloudinary.js";
 
-const getAllFoods = async (req, res) => {
+const getAllFoods = asyncHandler(async (req, res) => {
   const { role } = req.user;
   const { search } = req.query;
-  try {
-    let foods;
 
-    if (role === "admin") {
-      foods = await foodService.getAllFoodsAdmin();
-    } else {
-      if (!search) foods = await foodService.getAllFoods();
-      else foods = await foodService.searchFood((key = search));
-    }
+  let foods;
 
-    res.status(200).json({ quantity: foods.length, foods });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
+  if (role === "admin") {
+    foods = await foodService.getAllFoodsAdmin();
+  } else {
+    if (!search) foods = await foodService.getAllFoods();
+    else foods = await foodService.searchFood((key = search));
   }
-};
+
+  return res.status(200).json({ quantity: foods.length, foods });
+});
 
 const getAllBestSelling = async (req, res) => {
   try {

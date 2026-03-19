@@ -1,6 +1,6 @@
-export function errorHandler(err, req, res, next) {
-  console.error(">>> Error global:", err);
+import logger from "../config/logger.js";
 
+export function errorHandler(err, req, res, next) {
   // IPN VNPAY: luôn trả 200
   if (req.originalUrl.includes("/vnpay/ipn")) {
     return res.status(200).json({
@@ -8,9 +8,13 @@ export function errorHandler(err, req, res, next) {
       Message: "Internal server error",
     });
   }
-
   const statusCode = err.statusCode || 500;
   if (statusCode === 500) {
+    logger.error("Unhandled error", {
+      requestId: req.requestId,
+      message: err.message,
+      stack: err.stack,
+    });
     return res.status(statusCode).json({
       message: "Server error",
       error: err.message,

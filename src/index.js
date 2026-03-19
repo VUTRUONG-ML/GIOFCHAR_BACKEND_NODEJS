@@ -19,6 +19,7 @@ import { errorHandler } from "./errors/errorHandler.js";
 import promotionRoutes from "./routes/promotion.route.js";
 import variantRoutes from "./routes/variant.route.js";
 import guestRoutes from "./routes/guest.route.js";
+import { requestLogger } from "./middlewares/request.middleware.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -30,6 +31,9 @@ app.use(
     exposedHeaders: ["X-Guest-Token"], // Cho phép frontend đọc header này
   }),
 );
+
+app.use(requestLogger);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
