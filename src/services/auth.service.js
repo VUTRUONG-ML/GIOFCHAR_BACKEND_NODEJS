@@ -46,6 +46,7 @@ const register = async (userName, email, phone, password, address = null) => {
       logger.warn("Register conflict", { field, email, userName });
       throw new ConflictError(`${field} already exists`);
     }
+    err.context = { email, action: "USER_REGISTRATION" };
     throw err;
   }
 };
@@ -53,27 +54,30 @@ const register = async (userName, email, phone, password, address = null) => {
 const login = async (email, password) => {
   try {
     const user = await userService.getUserByEmail(email);
-
-    if (!user) throw new UnauthorizedError("Email/password không chính xác!");
+    // 1. Kiểm tra email/ password
+    if (!user) {
+      logger.warn("Login attempt failed: Email not found", { email });
+      throw new UnauthorizedError("Email/password không chính xác!");
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
+    if (!isMatch) {
+      logger.warn("Login attempt failed: Wrong password", {
+        email,
+        userId: user.id,
+      });
       throw new UnauthorizedError("Email/password không chính xác!");
+    }
 
-    const payloadAccessToken = {
-      userId: user.id,
-      role: user.role,
-    };
-    const access_token = generateAccessToken(payloadAccessToken);
+    // 2. Tạo Token
+    const payload = { userId: user.id, role: user.role };
+    const access_token = generateAccessToken(payload);
+    const refresh_token = generateRefreshToken(payload);
 
-    const payloadRefreshToken = {
-      userId: user.id,
-      role: user.role,
-    };
-    const refresh_token = generateRefreshToken(payloadRefreshToken);
-
+    // 3. Lưu Refresh Token vào DB
     await createRefreshToken({ userId: user.id, refreshToken: refresh_token });
 
+    logger.info("User login success", { userId: user.id, email });
     const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
     return {
       refresh_token,
@@ -81,6 +85,7 @@ const login = async (email, password) => {
       user: userWithoutPassword,
     };
   } catch (err) {
+    err.context = { action: "LOGIN_SYSTEM_ERROR", email };
     throw err;
   }
 };
@@ -93,13 +98,19 @@ const logout = async (refreshToken, conn = pool) => {
     const tokenHash = hashToken(refreshToken);
     // tim token
     const tokenInDB = await findValidToken(tokenHash, connection);
-    if (!tokenInDB) throw new UnauthorizedError("Invalid refresh token.");
+    if (!tokenInDB) {
+      logger.warn("Invalid refresh token attempt", {
+        action: "logout",
+        tokenHash,
+      });
+      throw new UnauthorizedError("Invalid refresh token.");
+    }
     // revoke token
     await markRevoked(tokenInDB.tokenId, connection);
     await connection.commit();
+    logger.info("User logout success", { userId: tokenInDB.userId });
     return true;
   } catch (error) {
-    console.log(">>> LOGOUT SERVICE ERROR:", error.message);
     await connection.rollback();
     throw error;
   } finally {

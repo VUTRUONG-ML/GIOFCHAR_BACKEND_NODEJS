@@ -14,6 +14,7 @@ export function errorHandler(err, req, res, next) {
       requestId: req.requestId,
       message: err.message,
       stack: err.stack,
+      context: err.context || {},
     });
     return res.status(statusCode).json({
       message: "Server error",
