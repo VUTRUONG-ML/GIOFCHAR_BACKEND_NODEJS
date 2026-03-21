@@ -1,7 +1,5 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
-
-import jwt from "jsonwebtoken";
 import userService from "./user.service.js";
 import dotenv from "dotenv";
 import {
@@ -13,13 +11,12 @@ import {
   generateAccessToken,
   generateRefreshToken,
   hashToken,
-  verifyRefreshToken,
 } from "../utils/token.js";
 import { ConflictError, UnauthorizedError } from "../errors/AppError.js";
+import logger from "../config/logger.js";
 dotenv.config();
 const saltRounds = 10;
 const register = async (userName, email, phone, password, address = null) => {
-  const isAddress = address !== null;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   let optionExecute = {
     sql: "",
@@ -38,6 +35,7 @@ const register = async (userName, email, phone, password, address = null) => {
   }
   try {
     const [result] = await pool.execute({ ...optionExecute });
+    logger.info("User created", { userId: result.insertId, email });
     return result;
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
@@ -45,6 +43,7 @@ const register = async (userName, email, phone, password, address = null) => {
       if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
+      logger.warn("Register conflict", { field, email, userName });
       throw new ConflictError(`${field} already exists`);
     }
     throw err;
