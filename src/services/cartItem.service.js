@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import logger from "../config/logger.js";
 import {
   ConflictError,
   ForbiddenError,
@@ -10,9 +11,8 @@ import cartService from "./cart.service.js";
 // -> người dùng userID sẽ có cartID thêm vào giỏ hàng foodID -> mình tìm cartItemID nào mà có cartID - foodID -> nếu có update quantity - nếu không insert vào cartItem
 const getCartItemsByCartId = async (cartId, conn, forOrder = false) => {
   // trả về toàn bộ food bên trong một giỏ hàng
-  try {
-    const [rows] = await conn.execute(
-      `SELECT 
+  const [rows] = await conn.execute(
+    `SELECT 
         ci.id AS cartItemId, 
         f.id  AS foodId,
         f.foodName,
@@ -36,14 +36,10 @@ const getCartItemsByCartId = async (cartId, conn, forOrder = false) => {
           AND NOW() BETWEEN p.start_at AND p.end_at 
           AND p.isActive = TRUE
       WHERE ci.cartID = ?`,
-      [cartId],
-    );
-    const cartItems = groupVariant(rows, forOrder);
-    return cartItems;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
-  }
+    [cartId],
+  );
+  const cartItems = groupVariant(rows, forOrder);
+  return cartItems;
 };
 
 const findCartItem = async (
@@ -56,49 +52,36 @@ const findCartItem = async (
   const field = cartItemId ? "ci.id" : "ci.food_variantID";
   const option = forUpdate && conn ? "FOR UPDATE" : "";
   const value = cartItemId ?? variantId;
-  try {
-    const [result] = await conn.execute(
-      `
+
+  const [result] = await conn.execute(
+    `
         SELECT *
         FROM cart_items ci 
         WHERE ci.cartID = ? AND ${field} = ?
         ${option}`,
-      [cartId, value],
-    );
-    return result.length ? result[0] : null;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR findCartItem", err.message);
-    throw new Error("Database query failed while checking cart item");
-  }
+    [cartId, value],
+  );
+  return result.length ? result[0] : null;
 };
 
 const updateCartItemQuantity = async (cartItemId, delta, conn) => {
   // Nếu món ăn tồn tại trong cart
-  try {
-    const [result] = await conn.execute(
-      "UPDATE cart_items SET quantity = quantity + ? WHERE id = ?",
-      [delta, cartItemId],
-    );
-    return result;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR updateCartItem", err.message);
-    throw err;
-  }
+
+  const [result] = await conn.execute(
+    "UPDATE cart_items SET quantity = quantity + ? WHERE id = ?",
+    [delta, cartItemId],
+  );
+  return result;
 };
 
 // -> Lấy cartID của người dùng hiện tại -> thêm vào food cho cartID đó thông qua bảng cart_items
 const insertCartItem = async (cartId, variantId, quantity, conn) => {
-  try {
-    const [result] = await conn.execute(
-      `INSERT INTO cart_items (cartID, food_variantID, quantity)
+  const [result] = await conn.execute(
+    `INSERT INTO cart_items (cartID, food_variantID, quantity)
         VALUES (?, ?, ?)`,
-      [cartId, variantId, quantity],
-    );
-    return result;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR insertCartItem", err.message);
-    throw err;
-  }
+    [cartId, variantId, quantity],
+  );
+  return result;
 };
 
 const deleteCartItem = async (cartItemId, cartId, conn = pool) => {
@@ -107,7 +90,14 @@ const deleteCartItem = async (cartItemId, cartId, conn = pool) => {
       "DELETE FROM cart_items WHERE id = ? AND cartID = ?",
       [cartItemId, cartId],
     );
-    if (!result.affectedRows) throw new NotFoundError("Cart item not found");
+    if (!result.affectedRows) {
+      logger.warn("CART_REMOVE_ITEM_FAILED", {
+        reason: "CART_ITEM_NOT_FOUND",
+        cartId,
+        cartItemId,
+      });
+      throw new NotFoundError("Cart item not found");
+    }
     const version = await cartService.updateVersion(cartId, conn);
     return { cartVersion: version };
   } catch (err) {

@@ -59,9 +59,12 @@ export const deleteCartItemController = asyncHandler(async (req, res) => {
 });
 
 export const clearCartController = asyncHandler(async (req, res) => {
-  const result = cartService.withCart(req.user, async ({ cartId, conn }) => {
-    return await cartService.clearCart(cartId, conn);
-  });
+  const result = await cartService.withCart(
+    req.user,
+    async ({ cartId, conn }) => {
+      return await cartService.clearCart(cartId, conn);
+    },
+  );
 
   return res.status(200).json({ message: "Clear cart successful" });
 });

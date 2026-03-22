@@ -126,14 +126,10 @@ export async function getVariantById(variantId, moreInf = false, conn = pool) {
       WHERE fv.id = ?
     `;
   }
-  try {
-    const [rows] = await conn.execute(sql, [variantId]);
-    const res = groupVariant(rows);
-    return res.length > 0 ? res[0] : null;
-  } catch (error) {
-    console.log(">>> SERVICE getVariantById ERROR:", error.message);
-    throw error;
-  }
+
+  const [rows] = await conn.execute(sql, [variantId]);
+  const res = groupVariant(rows);
+  return res.length > 0 ? res[0] : null;
 }
 
 export async function createVariantWithPromotion({

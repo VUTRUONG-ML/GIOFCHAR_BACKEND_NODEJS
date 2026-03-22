@@ -3,6 +3,8 @@ import { validateOwner } from "./validators.js";
 import cartItemService from "./cartItem.service.js";
 import { getVariantById } from "./variant.service.js";
 import { BadRequestError, NotFoundError } from "../errors/AppError.js";
+import logger from "../config/logger.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
 
 const getAllCarts = async () => {
   try {
@@ -55,9 +57,21 @@ const createCart = async ({ userId, guestToken }, conn = pool) => {
 };
 
 const addToCart = async (variantId, delta, cartId, connection) => {
+  const objLog = {
+    variantId,
+    cartId,
+    delta,
+  };
+  logger.debug("Start addToCart", objLog);
   // Trước khi update item trong cart thì update version cart
   const variant = await getVariantById(variantId, true, connection);
-  if (!variant) throw new NotFoundError("Food variant not found");
+  if (!variant) {
+    logger.warn(LOG_EVENTS.CART.ADD_ITEM_FAILED, {
+      reason: "VARIANT_NOT_FOUND",
+      ...objLog,
+    });
+    throw new NotFoundError("Food variant not found");
+  }
 
   // Kiểm tra variantId đã có trong cartId chưa
   const cartItem = await cartItemService.findCartItem(
@@ -67,7 +81,13 @@ const addToCart = async (variantId, delta, cartId, connection) => {
   );
   let result;
   if (!cartItem) {
-    if (delta <= 0) throw new BadRequestError("Item not found in cart");
+    if (delta <= 0) {
+      logger.warn(LOG_EVENTS.CART.ADD_ITEM_FAILED, {
+        reason: "NEGATIVE_QUANTITY",
+        ...objLog,
+      });
+      throw new BadRequestError("Item not found in cart");
+    }
 
     const resInsert = await cartItemService.insertCartItem(
       cartId,
@@ -75,6 +95,13 @@ const addToCart = async (variantId, delta, cartId, connection) => {
       delta,
       connection,
     );
+
+    logger.info(LOG_EVENTS.CART.ADD_ITEM_SUCCESS, {
+      ...objLog,
+      action: "INSERT",
+      quantity: delta,
+    });
+
     result = {
       message: "Added new item to cart",
       cartId: cartId,
@@ -87,6 +114,11 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     const newQuantity = cartItem.quantity + delta;
     if (newQuantity <= 0) {
       await cartItemService.deleteCartItem(cartItemId, cartId, connection);
+      logger.info(LOG_EVENTS.CART.ADD_ITEM_SUCCESS, {
+        ...objLog,
+        action: "REMOVE",
+        quantity: 0,
+      });
       result = {
         message: "Remove item from cart successful",
         cartId: cartId,
@@ -100,6 +132,11 @@ const addToCart = async (variantId, delta, cartId, connection) => {
         delta,
         connection,
       );
+      logger.info(LOG_EVENTS.CART.ADD_ITEM_SUCCESS, {
+        ...objLog,
+        action: "UPDATE",
+        quantity: newQuantity,
+      });
       result = {
         message: "Updated quantity item successful",
         cartId: cartId,
@@ -181,15 +218,14 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
 };
 
 const clearCart = async (cartId, conn = pool) => {
-  try {
-    const [result] = await conn.execute("DELETE FROM carts WHERE id = ?", [
-      cartId,
-    ]);
-    if (result.affectedRows === 0) throw new NotFoundError("Cart not found");
-    return true;
-  } catch (err) {
-    throw err;
+  const [result] = await conn.execute("DELETE FROM carts WHERE id = ?", [
+    cartId,
+  ]);
+  if (result.affectedRows === 0) {
+    logger.warn("CART_CLEAR", { reason: "CART_NOT_FOUND", cartId });
+    throw new NotFoundError("Cart not found");
   }
+  return true;
 };
 
 const ensureCart = async ({ userId, guestToken }, conn = pool) => {
@@ -207,6 +243,9 @@ const ensureCart = async ({ userId, guestToken }, conn = pool) => {
 async function withCart(context, handler) {
   const { guestToken: incomingGuestToken, userId } = context ?? {};
   const conn = await pool.getConnection();
+
+  let currentCartId = null; // Biến tạm để cứu hộ khi lỗi
+
   try {
     await conn.beginTransaction();
 
@@ -217,6 +256,12 @@ async function withCart(context, handler) {
     } else {
       cart = await ensureCart({ guestToken }, conn);
     }
+    currentCartId = cart.id;
+    logger.debug("Starting cart transaction", {
+      cartId: currentCartId,
+      incomingGuestToken,
+      userId,
+    });
 
     const result = await handler({
       cartId: cart.id,
@@ -228,7 +273,13 @@ async function withCart(context, handler) {
     return result;
   } catch (err) {
     await conn.rollback();
-    console.log("SERVICE with cart ERROR:", err);
+    err.context = {
+      ...err.context,
+      action: "CART_TRANSACTION",
+      cartId: currentCartId, // để biết giỏ hàng nào bị lỗi transaction
+      incomingGuestToken,
+      userId,
+    };
     throw err;
   } finally {
     conn.release();

@@ -14,6 +14,7 @@ import {
 } from "../utils/token.js";
 import { ConflictError, UnauthorizedError } from "../errors/AppError.js";
 import logger from "../config/logger.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
 dotenv.config();
 const saltRounds = 10;
 const register = async (userName, email, phone, password, address = null) => {
@@ -43,7 +44,12 @@ const register = async (userName, email, phone, password, address = null) => {
       if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
-      logger.warn("Register conflict", { field, email, userName });
+      logger.warn(LOG_EVENTS.AUTH.REGISTER_FAILED, {
+        reason: "CONFLICT",
+        field,
+        email,
+        userName,
+      });
       throw new ConflictError(`${field} already exists`);
     }
     err.context = { email, action: "USER_REGISTRATION" };
@@ -56,13 +62,17 @@ const login = async (email, password) => {
     const user = await userService.getUserByEmail(email);
     // 1. Kiểm tra email/ password
     if (!user) {
-      logger.warn("Login attempt failed: Email not found", { email });
+      logger.warn(LOG_EVENTS.AUTH.LOGIN_FAILED, {
+        reason: "EMAIL_NOT_FOUND",
+        email,
+      });
       throw new UnauthorizedError("Email/password không chính xác!");
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      logger.warn("Login attempt failed: Wrong password", {
+      logger.warn(LOG_EVENTS.AUTH.LOGIN_FAILED, {
+        reason: "WRONG_PASSWORD",
         email,
         userId: user.id,
       });
@@ -99,7 +109,8 @@ const logout = async (refreshToken, conn = pool) => {
     // tim token
     const tokenInDB = await findValidToken(tokenHash, connection);
     if (!tokenInDB) {
-      logger.warn("Invalid refresh token attempt", {
+      logger.warn(LOG_EVENTS.AUTH.LOGOUT_FAILED, {
+        reason: "Invalid refresh token",
         action: "logout",
         tokenHash,
       });
