@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
@@ -6,6 +5,8 @@ dotenv.config();
 import orderService from "../services/order.service.js";
 import { UnauthorizedError } from "../errors/AppError.js";
 import { asyncHandler } from "../errors/errorHandler.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
+import logger from "../config/logger.js";
 
 export const optionalAuth = asyncHandler((req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
@@ -22,29 +23,47 @@ export const optionalAuth = asyncHandler((req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // { userId, role }
       user = { userId: decoded.userId, role: decoded.role, guestToken: null };
+      logger.debug(LOG_EVENTS.AUTH.AUTHENTICATION.success, {
+        userId: user.userId,
+        path: req.originalUrl,
+      });
     } catch (err) {
       // token sai trả về mã lỗi để fe biết tự gọi refreshToken
-      console.log(">>>>> Optional auth failed:", err.message);
-      if (err.name === "TokenExpiredError") {
-        throw new UnauthorizedError(
-          "Invalid or expired token",
-          "ACCESS_TOKEN_EXPIRED",
-        );
-      }
+      if (
+        err.name === "TokenExpiredError" ||
+        err.name === "JsonWebTokenError"
+      ) {
+        const reason =
+          err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "TOKEN_INVALID";
+        const code =
+          err.name === "TokenExpiredError"
+            ? "ACCESS_TOKEN_EXPIRED"
+            : "INVALID_ACCESS_TOKEN";
 
-      if (err.name === "JsonWebTokenError") {
-        throw new UnauthorizedError(
-          "Invalid or expired token",
-          "INVALID_ACCESS_TOKEN",
-        );
+        logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+          reason,
+          path: req.originalUrl,
+          message: err.message,
+        });
+
+        throw new UnauthorizedError("Invalid or expired token", code);
       }
       throw err;
     }
   } else {
     user.guestToken = guestToken;
+    logger.debug(LOG_EVENTS.AUTH.AUTHENTICATION.success, {
+      guestToken: guestToken,
+      path: req.originalUrl,
+    });
   }
 
   if (!user.userId && !user.guestToken) {
+    logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+      reason: "GUEST_TOKEN_MISSING",
+      path: req.originalUrl,
+      ip: req.ip,
+    });
     throw new UnauthorizedError("Guest token required", "GUEST_TOKEN_MISSING");
   }
 
@@ -55,28 +74,39 @@ export const optionalAuth = asyncHandler((req, res, next) => {
 
 export const requireAuth = asyncHandler((req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
-  if (!token) throw new UnauthorizedError("Access token missing");
+  if (!token) {
+    logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+      reason: "TOKEN_MISSING",
+      path: req.originalUrl,
+      ip: req.ip,
+    });
+    throw new UnauthorizedError("Access token missing");
+  }
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     req.user = { userId: decoded.userId, role: decoded.role, guestToken: null }; // {userId, role}
+    logger.debug(LOG_EVENTS.AUTH.AUTHENTICATION.success, {
+      userId: decoded.userId,
+      path: req.originalUrl,
+    });
     return next();
   } catch (err) {
-    console.log(">>>>> AUTH MIDDLE WARE ERROR", err.message);
+    if (err.name === "TokenExpiredError" || err.name === "JsonWebTokenError") {
+      const reason =
+        err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "TOKEN_INVALID";
+      const code =
+        err.name === "TokenExpiredError"
+          ? "ACCESS_TOKEN_EXPIRED"
+          : "INVALID_ACCESS_TOKEN";
 
-    if (err.name === "TokenExpiredError") {
-      throw new UnauthorizedError(
-        "Invalid or expired token",
-        "ACCESS_TOKEN_EXPIRED",
-      );
+      logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+        reason,
+        path: req.originalUrl,
+        message: err.message,
+      });
+
+      throw new UnauthorizedError("Invalid or expired token", code);
     }
-
-    if (err.name === "JsonWebTokenError") {
-      throw new UnauthorizedError(
-        "Invalid or expired token",
-        "INVALID_ACCESS_TOKEN",
-      );
-    }
-
     throw err;
   }
 });
