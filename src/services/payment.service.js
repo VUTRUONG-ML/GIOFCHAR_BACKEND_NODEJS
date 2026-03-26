@@ -1,5 +1,7 @@
 import pool from "../config/db.js";
+import logger from "../config/logger.js";
 import { PAYMENT_STATUS } from "../constants/field.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
 import { BadRequestError } from "../errors/AppError.js";
 
 const getAllPayments = async () => {
@@ -51,33 +53,37 @@ const createPayment = async (
   transactionId,
   paymentStatus,
 ) => {
-  if (!PAYMENT_STATUS.includes(paymentStatus))
+  if (!PAYMENT_STATUS.includes(paymentStatus)) {
+    logger.warn("PAYMENT_CREATE_FAILED", { reason: "INVALID_STATUS" });
     throw new BadRequestError("Invalid payment status.");
-  try {
-    const provider = "vnpay";
-    let sql = "";
-    let values = [];
-    if (paymentType === "COD") {
-      sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
-              VALUES (?, ?, ?, ?, ?)`;
-      values = [orderID, paymentType, amount, transactionId, paymentStatus];
-    } else {
-      sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status, provider) 
-              VALUES (?, ?, ?, ?, ?, ?)`;
-      values = [
-        orderID,
-        paymentType,
-        amount,
-        transactionId,
-        paymentStatus,
-        provider,
-      ];
-    }
-    const [result] = await conn.execute(sql, values);
-    return result;
-  } catch (err) {
-    throw err;
   }
+
+  const provider = "vnpay";
+  let sql = "";
+  let values = [];
+  if (paymentType === "COD") {
+    sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status) 
+              VALUES (?, ?, ?, ?, ?)`;
+    values = [orderID, paymentType, amount, transactionId, paymentStatus];
+  } else {
+    sql = `INSERT INTO payments (orderID, paymentType, amount, transactionID, status, provider) 
+              VALUES (?, ?, ?, ?, ?, ?)`;
+    values = [
+      orderID,
+      paymentType,
+      amount,
+      transactionId,
+      paymentStatus,
+      provider,
+    ];
+  }
+  const [result] = await conn.execute(sql, values);
+  logger.debug(LOG_EVENTS.PAYMENT.success.CREATE, {
+    paymentId: result.insertId,
+    amount,
+    paymentStatus,
+  });
+  return result;
 };
 
 const deletePayment = async (paymentId) => {

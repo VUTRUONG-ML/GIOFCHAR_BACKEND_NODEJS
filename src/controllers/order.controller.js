@@ -1,15 +1,16 @@
 import orderService from "../services/order.service.js";
 import orderItemService from "../services/order_item.service.js";
-import cartItemService from "../services/cartItem.service.js";
+
 import cartService from "../services/cart.service.js";
 import paymentService from "../services/payment.service.js";
-import { calculateOrderValues } from "../utils/order.util.js";
-import pool from "../config/db.js";
+
 import { statusOverview } from "../utils/status.js";
-import { deductStockForOrder } from "../services/variant.service.js";
+
 import { BadRequestError, ConflictError } from "../errors/AppError.js";
-import { buildVnpayPaymentUrl } from "../services/payments/vnpay.service.js";
+
 import { ORDER_STATUS } from "../constants/field.js";
+import logger from "../config/logger.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
 
 const getStatusOverview = async (req, res) => {
   try {
@@ -68,7 +69,7 @@ const getOrderItemsByOrderId = async (req, res) => {
 
 const createOrder = async (req, res) => {
   // cần phải có userId từ params, từ userId -> cartId -> cartItems
-  const { userId, guestToken } = req.user; // sau này sẽ lấy từ middleware req.userId
+  const { userId, guestToken } = req.user;
   const {
     cartVersion: clientVersion,
     customerName,
@@ -80,71 +81,32 @@ const createOrder = async (req, res) => {
   if (!address || !customerName || !email || !phone || !paymentMethod)
     return res.status(400).json({ message: "Missing field" });
 
+  const ipAddr =
+    req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
   const result = await cartService.withCart(
     req.user,
     async ({ cartId, conn, cartVersion }) => {
       if (cartVersion !== clientVersion) {
+        logger.warn(LOG_EVENTS.ORDER.failed.CHECKOUT, {
+          reason: "CART_VERSION_CHANGED",
+          cartId,
+        });
         throw new ConflictError("CART_CHANGED");
       }
-
-      //Lay ve cartItem cua nguoi dung hien tai
-      const cartItems = await cartItemService.getCartItemsByCartId(
-        cartId,
-        conn,
-        true,
-      );
-      if (cartItems.length === 0)
-        throw new BadRequestError("Your shopping cart is empty.");
-
-      // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
-      await deductStockForOrder(conn, cartItems);
-
-      //Tao order
-      const { orderId, orderCode } = await orderService.createOrder(
-        conn,
-        { userId, guestToken },
-        customerName,
-        email,
-        phone,
-        address,
-      );
-
-      // Tinh cac gia tri de dua vao tao orderItem
-      const { orderValues, totalPriceOrder } = calculateOrderValues(
-        cartItems,
-        orderId,
-      );
-
-      await orderItemService.createOrderItem(conn, orderValues);
-
-      // Nếu paymentMethod = card | ? => build url return để trả về thêm field paymentUrl => Fe kiểm tra nếu có trường này -> redirect sang url đó .
-      const transactionDefault = paymentMethod === "COD" ? "COD" : "";
-      const paymentStatusDefault = "pending";
-
-      await paymentService.createPayment(
-        conn,
-        orderId,
-        paymentMethod,
-        totalPriceOrder,
-        transactionDefault,
-        paymentStatusDefault,
-      );
-      let paymentUrl = "";
-      if (paymentMethod === "CARD") {
-        const ipAddr =
-          req.headers["x-forwarded-for"] ||
-          req.socket.remoteAddress ||
-          "127.0.0.1";
-
-        paymentUrl = buildVnpayPaymentUrl({
-          orderId: orderCode,
-          amount: totalPriceOrder,
+      return await orderService.checkout(
+        {
+          cartId,
+          customerName,
+          email,
+          phone,
+          address,
+          paymentMethod,
+          userId,
+          guestToken,
           ipAddr,
-        });
-      }
-      await cartService.clearCart(cartId, conn);
-
-      return { orderId, orderCode, totalPriceOrder, paymentUrl };
+        },
+        conn,
+      );
     },
   );
 

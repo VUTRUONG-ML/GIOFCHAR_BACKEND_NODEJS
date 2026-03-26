@@ -6,6 +6,7 @@ import { vnpayConfig } from "../../config/vnpay.js";
 import { sortObject } from "../../utils/payment.js";
 import orderService from "../order.service.js";
 import paymentService from "../payment.service.js";
+import logger from "../../config/logger.js";
 
 export function buildVnpayPaymentUrl({
   orderId,
@@ -44,6 +45,7 @@ export function buildVnpayPaymentUrl({
   const url = `${vnpayConfig.vnpUrl}?${qs.stringify(vnp_Params, {
     encode: false,
   })}`;
+  logger.debug("BUILD_VNPAY_URL_SUCCESS", { orderId, amount, ipAddr });
   return url;
 }
 

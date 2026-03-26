@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import logger from "../config/logger.js";
 import {
   BadRequestError,
   ConflictError,
@@ -50,6 +51,7 @@ const createCategory = async (name, description) => {
         VALUES (?, ?)`,
       [name, description],
     );
+    logger.info("CATEGORY_CREATED", { categoryId: result.insertId });
     return result;
   } catch (err) {
     console.log(">>>>> CATEGORY SERVICE ERROR", err.message);

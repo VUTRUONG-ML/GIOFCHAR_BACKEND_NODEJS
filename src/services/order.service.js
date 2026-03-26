@@ -1,14 +1,25 @@
 import pool from "../config/db.js";
+import logger from "../config/logger.js";
 import { ORDER_STATUS, PAYMENT_STATUS } from "../constants/field.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
 import {
   BadRequestError,
   ConflictError,
   NotFoundError,
 } from "../errors/AppError.js";
-import { generateOrderCode, groupOrders } from "../utils/order.util.js";
+import {
+  calculateOrderValues,
+  generateOrderCode,
+  groupOrders,
+} from "../utils/order.util.js";
 import { switchCustomer } from "../utils/switchCustomer.js";
+import cartService from "./cart.service.js";
+import cartItemService from "./cartItem.service.js";
+import order_itemService from "./order_item.service.js";
 import paymentService from "./payment.service.js";
+import { buildVnpayPaymentUrl } from "./payments/vnpay.service.js";
 import { validateOwner } from "./validators.js";
+import { deductStockForOrder } from "./variant.service.js";
 
 const getAllOrders = async () => {
   try {
@@ -141,35 +152,36 @@ const createOrder = async (
   phone,
   address,
 ) => {
-  try {
-    validateOwner({ userId, guestToken });
+  validateOwner({ userId, guestToken });
 
-    let field, value;
-    if (userId) {
-      field = "userID";
-      value = userId;
-    } else {
-      field = "guestToken";
-      value = guestToken;
-    }
-
-    const [result] = await connection.execute(
-      `INSERT INTO orders (${field}, customerName, email, phone, address) VALUES (?, ?, ?, ?, ?)`,
-      [value, customerName, email, phone, address],
-    );
-
-    const orderId = result.insertId;
-    const orderCode = generateOrderCode(orderId);
-
-    await connection.execute("UPDATE orders SET orderCode = ? WHERE id = ?", [
-      orderCode,
-      orderId,
-    ]);
-
-    return { orderId: result.insertId, orderCode };
-  } catch (err) {
-    throw err;
+  let field, value;
+  if (userId) {
+    field = "userID";
+    value = userId;
+  } else {
+    field = "guestToken";
+    value = guestToken;
   }
+
+  const [result] = await connection.execute(
+    `INSERT INTO orders (${field}, customerName, email, phone, address) VALUES (?, ?, ?, ?, ?)`,
+    [value, customerName, email, phone, address],
+  );
+
+  const orderId = result.insertId;
+  const orderCode = generateOrderCode(orderId);
+
+  await connection.execute("UPDATE orders SET orderCode = ? WHERE id = ?", [
+    orderCode,
+    orderId,
+  ]);
+
+  logger.debug(LOG_EVENTS.ORDER.success.CREATE, {
+    orderId: result.insertId,
+    customerName,
+    email,
+  });
+  return { orderId: result.insertId, orderCode };
 };
 
 const updateOrder = async (orderId, status) => {
@@ -422,6 +434,84 @@ const markPaymentResultViewed = async ({ orderId }, conn = pool) => {
     throw error;
   }
 };
+
+const checkout = async (
+  {
+    cartId,
+    customerName,
+    email,
+    phone,
+    address,
+    paymentMethod,
+    userId,
+    guestToken,
+    ipAddr,
+  },
+  conn = pool,
+) => {
+  logger.info("CHECKOUT_INITIATED", { userId, guestToken, cartId });
+  //Lay ve cartItem cua nguoi dung hien tai
+  const cartItems = await cartItemService.getCartItemsByCartId(
+    cartId,
+    conn,
+    true,
+  );
+  if (cartItems.length === 0) {
+    logger.warn(LOG_EVENTS.ORDER.failed.CHECKOUT, {
+      reason: "CART_EMPTY",
+      userId,
+      guestToken,
+      cartId,
+    });
+    throw new BadRequestError("Your shopping cart is empty.");
+  }
+
+  // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
+  await deductStockForOrder(conn, cartItems);
+
+  //Tao order
+  const { orderId, orderCode } = await createOrder(
+    conn,
+    { userId, guestToken },
+    customerName,
+    email,
+    phone,
+    address,
+  );
+
+  // Tinh cac gia tri de dua vao tao orderItem
+  const { orderValues, totalPriceOrder } = calculateOrderValues(
+    cartItems,
+    orderId,
+  );
+  logger.debug("CHECKOUT_AMOUNT", { orderId, amount: totalPriceOrder });
+
+  await order_itemService.createOrderItem(conn, orderValues);
+
+  // Nếu paymentMethod = card | ? => build url return để trả về thêm field paymentUrl => Fe kiểm tra nếu có trường này -> redirect sang url đó .
+  const transactionDefault = paymentMethod === "COD" ? "COD" : "";
+  const paymentStatusDefault = "pending";
+
+  await paymentService.createPayment(
+    conn,
+    orderId,
+    paymentMethod,
+    totalPriceOrder,
+    transactionDefault,
+    paymentStatusDefault,
+  );
+  let paymentUrl = "";
+  if (paymentMethod === "CARD") {
+    paymentUrl = buildVnpayPaymentUrl({
+      orderId: orderCode,
+      amount: totalPriceOrder,
+      ipAddr,
+    });
+  }
+  await cartService.clearCart(cartId, conn);
+  logger.info("ORDER_CHECKOUT_SUCCESS", { orderId, amount: totalPriceOrder });
+  return { orderId, orderCode, totalPriceOrder, paymentUrl };
+};
 export default {
   getAllOrders,
   countTodayOrders,
@@ -440,4 +530,5 @@ export default {
   getPaymentStatus,
   markPaymentResultViewed,
   updatePaymentStatus,
+  checkout,
 };

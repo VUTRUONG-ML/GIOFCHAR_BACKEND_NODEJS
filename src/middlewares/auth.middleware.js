@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import orderService from "../services/order.service.js";
-import { UnauthorizedError } from "../errors/AppError.js";
+import { ForbiddenError, UnauthorizedError } from "../errors/AppError.js";
 import { asyncHandler } from "../errors/errorHandler.js";
 import { LOG_EVENTS } from "../constants/logEvents.js";
 import logger from "../config/logger.js";
@@ -23,7 +23,7 @@ export const optionalAuth = asyncHandler((req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // { userId, role }
       user = { userId: decoded.userId, role: decoded.role, guestToken: null };
-      logger.debug(LOG_EVENTS.AUTH.AUTHENTICATION.success, {
+      logger.debug(LOG_EVENTS.AUTH.success.AUTHENTICATION, {
         userId: user.userId,
         path: req.originalUrl,
       });
@@ -40,7 +40,7 @@ export const optionalAuth = asyncHandler((req, res, next) => {
             ? "ACCESS_TOKEN_EXPIRED"
             : "INVALID_ACCESS_TOKEN";
 
-        logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+        logger.warn(LOG_EVENTS.AUTH.failed.AUTHENTICATION, {
           reason,
           path: req.originalUrl,
           message: err.message,
@@ -52,14 +52,14 @@ export const optionalAuth = asyncHandler((req, res, next) => {
     }
   } else {
     user.guestToken = guestToken;
-    logger.debug(LOG_EVENTS.AUTH.AUTHENTICATION.success, {
+    logger.debug(LOG_EVENTS.AUTH.success.AUTHENTICATION, {
       guestToken: guestToken,
       path: req.originalUrl,
     });
   }
 
   if (!user.userId && !user.guestToken) {
-    logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+    logger.warn(LOG_EVENTS.AUTH.failed.AUTHENTICATION, {
       reason: "GUEST_TOKEN_MISSING",
       path: req.originalUrl,
       ip: req.ip,
@@ -75,7 +75,7 @@ export const optionalAuth = asyncHandler((req, res, next) => {
 export const requireAuth = asyncHandler((req, res, next) => {
   const token = req.headers?.authorization?.split(" ")[1];
   if (!token) {
-    logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+    logger.warn(LOG_EVENTS.AUTH.failed.AUTHENTICATION, {
       reason: "TOKEN_MISSING",
       path: req.originalUrl,
       ip: req.ip,
@@ -85,7 +85,7 @@ export const requireAuth = asyncHandler((req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     req.user = { userId: decoded.userId, role: decoded.role, guestToken: null }; // {userId, role}
-    logger.debug(LOG_EVENTS.AUTH.AUTHENTICATION.success, {
+    logger.debug(LOG_EVENTS.AUTH.success.AUTHENTICATION, {
       userId: decoded.userId,
       path: req.originalUrl,
     });
@@ -99,7 +99,7 @@ export const requireAuth = asyncHandler((req, res, next) => {
           ? "ACCESS_TOKEN_EXPIRED"
           : "INVALID_ACCESS_TOKEN";
 
-      logger.warn(LOG_EVENTS.AUTH.AUTHENTICATION.failed, {
+      logger.warn(LOG_EVENTS.AUTH.failed.AUTHENTICATION, {
         reason,
         path: req.originalUrl,
         message: err.message,
@@ -111,22 +111,22 @@ export const requireAuth = asyncHandler((req, res, next) => {
   }
 });
 
-export const authorizeOrderAccess = async (req, res, next) => {
+export const authorizeOrderAccess = asyncHandler(async (req, res, next) => {
   const { userId, guestToken } = req.user;
   const orderId = req.params.orderId || req.order.orderId;
+
+  logger.debug("ORDER_AUTHORIZE_START", { orderId, userId, role });
+
   if (req.user.role === "admin") return next();
-  try {
-    const order = await orderService.getOrderByIdAndUser(orderId, {
-      userId,
-      guestToken,
-    });
-    if (!order)
-      return res.status(403).json({ message: "You do not have access" });
-    next();
-  } catch (error) {
-    console.log(">>>>> MIDDLEEWARE AUTH ERROR", error.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
+
+  const order = await orderService.getOrderByIdAndUser(orderId, {
+    userId,
+    guestToken,
+  });
+  if (!order) {
+    logger.warn("ORDER_ACCESS_DENIED", { orderId, userId, guestToken });
+    throw new ForbiddenError("You do not have access");
   }
-};
+
+  next();
+});

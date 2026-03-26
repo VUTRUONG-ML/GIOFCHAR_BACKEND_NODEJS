@@ -222,7 +222,7 @@ const clearCart = async (cartId, conn = pool) => {
     cartId,
   ]);
   if (result.affectedRows === 0) {
-    logger.warn("CART_CLEAR", { reason: "CART_NOT_FOUND", cartId });
+    logger.warn("CART_CLEAR_FAILED", { reason: "CART_NOT_FOUND", cartId });
     throw new NotFoundError("Cart not found");
   }
   return true;

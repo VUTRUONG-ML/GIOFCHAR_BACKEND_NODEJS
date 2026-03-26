@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import logger from "../config/logger.js";
 import { NotFoundError } from "../errors/AppError.js";
 import { groupOrderDetail } from "../utils/order.util.js";
 
@@ -50,16 +51,17 @@ const getOrderItemsByOrderId = async (orderId) => {
 
 const createOrderItem = async (connection, orderValues) => {
   // orderValues : array[[orderID, food_variantID, item_name, weight_gram, originalPrice, discount_type, discount_value, discount_amount, unitPrice, quantity, totalPrice]]
-  try {
-    // muốn thêm nhiều dòng dữ liệu thì dùng query
-    const [result] = await connection.query(
-      "INSERT INTO order_items (orderID, food_variantID, item_name, weight_gram, originalPrice, discount_type, discount_value, discount_amount, unitPrice, quantity, totalPrice) VALUES ?",
-      [orderValues],
-    );
-    return result.insertId;
-  } catch (err) {
-    throw err;
-  }
+
+  // muốn thêm nhiều dòng dữ liệu thì dùng query
+  const [result] = await connection.query(
+    "INSERT INTO order_items (orderID, food_variantID, item_name, weight_gram, originalPrice, discount_type, discount_value, discount_amount, unitPrice, quantity, totalPrice) VALUES ?",
+    [orderValues],
+  );
+  logger.debug("BULK_INSERT_ORDER_ITEMS", {
+    count: orderValues.length,
+    sample: orderValues[0],
+  });
+  return result.insertId;
 };
 
 export default {

@@ -44,7 +44,7 @@ const register = async (userName, email, phone, password, address = null) => {
       if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
-      logger.warn(LOG_EVENTS.AUTH.REGISTER_FAILED, {
+      logger.warn(LOG_EVENTS.AUTH.failed.REGISTER, {
         reason: "CONFLICT",
         field,
         email,
@@ -62,7 +62,7 @@ const login = async (email, password) => {
     const user = await userService.getUserByEmail(email);
     // 1. Kiểm tra email/ password
     if (!user) {
-      logger.warn(LOG_EVENTS.AUTH.LOGIN_FAILED, {
+      logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
         reason: "EMAIL_NOT_FOUND",
         email,
       });
@@ -71,7 +71,7 @@ const login = async (email, password) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      logger.warn(LOG_EVENTS.AUTH.LOGIN_FAILED, {
+      logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
         reason: "WRONG_PASSWORD",
         email,
         userId: user.id,
@@ -109,7 +109,7 @@ const logout = async (refreshToken, conn = pool) => {
     // tim token
     const tokenInDB = await findValidToken(tokenHash, connection);
     if (!tokenInDB) {
-      logger.warn(LOG_EVENTS.AUTH.LOGOUT_FAILED, {
+      logger.warn(LOG_EVENTS.AUTH.failed.LOGOUT, {
         reason: "Invalid refresh token",
         action: "logout",
         tokenHash,
