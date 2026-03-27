@@ -347,19 +347,15 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
 };
 
 const attachOrderToUser = async ({ email, userId }) => {
-  try {
-    await pool.execute(
-      `
+  await pool.execute(
+    `
     UPDATE orders
     SET userID = ?, guestToken = NULL
     WHERE email = ? 
     `,
-      [userId, email],
-    );
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR attach order:", error.message);
-    throw error;
-  }
+    [userId, email],
+  );
+  logger.debug(LOG_EVENTS.ORDER.success.ATTACH_ORDER, { email, userId });
 };
 
 const revenue = async (conn = pool, time = "default") => {

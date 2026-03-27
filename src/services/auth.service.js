@@ -2,6 +2,7 @@ import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import userService from "./user.service.js";
 import dotenv from "dotenv";
+dotenv.config();
 import {
   createRefreshToken,
   findValidToken,
@@ -15,9 +16,18 @@ import {
 import { ConflictError, UnauthorizedError } from "../errors/AppError.js";
 import logger from "../config/logger.js";
 import { LOG_EVENTS } from "../constants/logEvents.js";
-dotenv.config();
+import orderService from "./order.service.js";
+import cartService from "./cart.service.js";
+
 const saltRounds = 10;
-const register = async (userName, email, phone, password, address = null) => {
+const register = async (
+  userName,
+  email,
+  phone,
+  password,
+  address = null,
+  guestToken = null,
+) => {
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   let optionExecute = {
     sql: "",
@@ -36,7 +46,24 @@ const register = async (userName, email, phone, password, address = null) => {
   }
   try {
     const [result] = await pool.execute({ ...optionExecute });
-    logger.info("User created", { userId: result.insertId, email });
+    const userId = result.insertId;
+    logger.info("User created", { userId, email });
+
+    if (guestToken) {
+      try {
+        await orderService.attachOrderToUser({
+          email,
+          userId,
+        });
+      } catch (error) {
+        logger.warn(LOG_EVENTS.AUTH.failed.ATTACH_ORDER, {
+          email,
+          userId,
+          reason: error.message,
+        });
+      }
+    }
+
     return result;
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
@@ -57,7 +84,7 @@ const register = async (userName, email, phone, password, address = null) => {
   }
 };
 
-const login = async (email, password) => {
+const login = async (email, password, guestToken = null) => {
   try {
     const user = await userService.getUserByEmail(email);
     // 1. Kiểm tra email/ password
@@ -89,10 +116,34 @@ const login = async (email, password) => {
 
     logger.info("User login success", { userId: user.id, email });
     const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
+
+    // 4. Đăng nhập xong thì merge giỏ hàng
+    let mergeStatus = true;
+    if (guestToken) {
+      try {
+        await cartService.mergeGuestCartToUser({
+          userId: user.id,
+          guestToken,
+        });
+        logger.debug(LOG_EVENTS.AUTH.success.MERGE_CART, {
+          userId: user.id,
+          guestToken,
+        });
+      } catch (error) {
+        logger.warn(LOG_EVENTS.AUTH.failed.MERGE_CART, {
+          reason: error.message,
+          userId: user.id,
+          guestToken,
+        });
+        mergeStatus = false;
+      }
+    }
+
     return {
       refresh_token,
       access_token,
       user: userWithoutPassword,
+      mergeStatus,
     };
   } catch (err) {
     err.context = { action: "LOGIN_SYSTEM_ERROR", email };

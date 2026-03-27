@@ -206,7 +206,6 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
       await clearCart(cartGuest.id, connection);
     }
     await connection.commit();
-    console.log(">>>>> Merge cart success");
     return;
   } catch (error) {
     await connection.rollback();
