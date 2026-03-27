@@ -154,6 +154,7 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    logger.debug("CART_TX_TRY_MERGE_START", { userId, guestToken });
     const cartUser = await getCart(
       { userId },
       { conn: connection, forUpdate: true },
@@ -163,6 +164,11 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
       { conn: connection, forUpdate: true },
     );
     if (!cartGuest) {
+      logger.warn(LOG_EVENTS.CART.TRANSACTION_ERROR, {
+        reason: "CART_GUEST_NOT_FOUND",
+        userId,
+        guestToken,
+      });
       await connection.commit();
       return;
     }
@@ -206,11 +212,15 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
       await clearCart(cartGuest.id, connection);
     }
     await connection.commit();
-    return;
+    logger.debug(LOG_EVENTS.CART.MERGE_SUCCESS, { userId, guestToken });
+    return true;
   } catch (error) {
     await connection.rollback();
-    console.log(">>>>> SERVICE ERROR merge cart:", error.message);
-    throw error;
+    logger.warn(LOG_EVENTS.CART.TRANSACTION_ERROR, {
+      action: "CART_MERGE",
+      reason: error.message,
+    });
+    return false;
   } finally {
     connection.release();
   }
@@ -256,7 +266,7 @@ async function withCart(context, handler) {
       cart = await ensureCart({ guestToken }, conn);
     }
     currentCartId = cart.id;
-    logger.debug("Starting cart transaction", {
+    logger.debug(LOG_EVENTS.CART.TRANSACTION_START, {
       cartId: currentCartId,
       incomingGuestToken,
       userId,

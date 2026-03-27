@@ -30,13 +30,9 @@ export const createRefreshToken = async (
     VALUES (?, ?, ?)
   `;
   const values = [userId, tokenHash, expiresAt];
-  try {
-    const [result] = await conn.execute(sql, values);
-    return { tokenId: result.insertId };
-  } catch (error) {
-    console.log(">>> SERVICE refresh_token ERROR:", error.message);
-    throw error;
-  }
+
+  const [result] = await conn.execute(sql, values);
+  return { tokenId: result.insertId };
 };
 
 export const getByTokenId = async (tokenId, conn = pool) => {

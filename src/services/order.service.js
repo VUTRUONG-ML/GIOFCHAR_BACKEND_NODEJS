@@ -346,16 +346,25 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
   }
 };
 
-const attachOrderToUser = async ({ email, userId }) => {
-  await pool.execute(
-    `
+const tryAttachOrderToUser = async ({ email, userId }) => {
+  try {
+    await pool.execute(
+      `
     UPDATE orders
     SET userID = ?, guestToken = NULL
     WHERE email = ? 
     `,
-    [userId, email],
-  );
-  logger.debug(LOG_EVENTS.ORDER.success.ATTACH_ORDER, { email, userId });
+      [userId, email],
+    );
+    logger.debug(LOG_EVENTS.ORDER.success.ATTACH_ORDER, { email, userId });
+  } catch (error) {
+    //ignore
+    logger.warn(LOG_EVENTS.AUTH.failed.ATTACH_ORDER, {
+      email,
+      userId,
+      reason: error.message,
+    });
+  }
 };
 
 const revenue = async (conn = pool, time = "default") => {
@@ -519,7 +528,7 @@ export default {
   deleteOrder,
   getOrderById,
   getOrderByIdAndUser,
-  attachOrderToUser,
+  tryAttachOrderToUser,
   revenue,
   confirmCodOrderPayment,
   getByOrderCode,

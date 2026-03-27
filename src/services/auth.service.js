@@ -50,18 +50,10 @@ const register = async (
     logger.info("User created", { userId, email });
 
     if (guestToken) {
-      try {
-        await orderService.attachOrderToUser({
-          email,
-          userId,
-        });
-      } catch (error) {
-        logger.warn(LOG_EVENTS.AUTH.failed.ATTACH_ORDER, {
-          email,
-          userId,
-          reason: error.message,
-        });
-      }
+      await orderService.tryAttachOrderToUser({
+        email,
+        userId,
+      });
     }
 
     return result;
@@ -120,23 +112,10 @@ const login = async (email, password, guestToken = null) => {
     // 4. Đăng nhập xong thì merge giỏ hàng
     let mergeStatus = true;
     if (guestToken) {
-      try {
-        await cartService.mergeGuestCartToUser({
-          userId: user.id,
-          guestToken,
-        });
-        logger.debug(LOG_EVENTS.AUTH.success.MERGE_CART, {
-          userId: user.id,
-          guestToken,
-        });
-      } catch (error) {
-        logger.warn(LOG_EVENTS.AUTH.failed.MERGE_CART, {
-          reason: error.message,
-          userId: user.id,
-          guestToken,
-        });
-        mergeStatus = false;
-      }
+      mergeStatus = await cartService.mergeGuestCartToUser({
+        userId: user.id,
+        guestToken,
+      });
     }
 
     return {
