@@ -23,8 +23,9 @@ const getAllCategories = asyncHandler(async (req, res) => {
 const createCategory = asyncHandler(async (req, res) => {
   const { categoryName, categoryDescription } = req.body;
 
-  if (!categoryName || !categoryDescription)
+  if (!categoryName || !categoryDescription) {
     throw new BadRequestError("Missing field");
+  }
 
   const result = await categoryService.createCategory(
     categoryName,
@@ -41,7 +42,6 @@ const getCategoryById = asyncHandler(async (req, res) => {
   const categoryId = req.params.categoryId;
 
   const category = await categoryService.getCategoryById(categoryId);
-  if (!category) throw new NotFoundError("Category not found");
   return res.status(200).json(category);
 });
 

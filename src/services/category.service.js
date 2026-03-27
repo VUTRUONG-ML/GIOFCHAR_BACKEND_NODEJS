@@ -7,9 +7,8 @@ import {
 } from "../errors/AppError.js";
 
 const getAllCategories = async () => {
-  try {
-    // For pool initialization, see above
-    const [categories] = await pool.execute(`
+  // For pool initialization, see above
+  const [categories] = await pool.execute(`
       SELECT 
         c.id AS categoryID,
         c.categoryName,
@@ -18,30 +17,22 @@ const getAllCategories = async () => {
       FROM categories c 
       LEFT JOIN foods f ON c.id = f.categoryID
       GROUP BY c.id`);
-    return categories;
-  } catch (err) {
-    console.log(">>>>> Service error", err.message);
-    throw err;
-  }
+  return categories;
 };
 
 const getNameCategory = async ({ categoryId = 0 }) => {
   const isWhere = categoryId ? "WHERE id = ?" : "";
-  try {
-    const [categories] = await pool.execute(
-      `
+
+  const [categories] = await pool.execute(
+    `
       SELECT 
         c.categoryName
       FROM categories c
       ${isWhere}
       `,
-      [categoryId],
-    );
-    return categories;
-  } catch (err) {
-    console.log(">>>>> Service error", err.message);
-    throw err;
-  }
+    [categoryId],
+  );
+  return categories;
 };
 
 const createCategory = async (name, description) => {
@@ -51,27 +42,31 @@ const createCategory = async (name, description) => {
         VALUES (?, ?)`,
       [name, description],
     );
-    logger.info("CATEGORY_CREATED", { categoryId: result.insertId });
+    logger.debug("CATEGORY_CREATED", { categoryId: result.insertId });
     return result;
   } catch (err) {
-    console.log(">>>>> CATEGORY SERVICE ERROR", err.message);
-    if (err.code === "ER_DUP_ENTRY")
+    if (err.code === "ER_DUP_ENTRY") {
+      logger.warn("CATEGORY_CREATE_FAILED", {
+        reason: "DUPLICATE_CATEGORY",
+        nameCategory: name,
+      });
       throw new ConflictError("Category name already exists");
+    }
+
     throw err;
   }
 };
 
 const getCategoryById = async (categoryId) => {
-  try {
-    const [categories] = await pool.execute(
-      "SELECT * FROM categories WHERE id = ?",
-      [categoryId],
-    );
-    return categories[0];
-  } catch (err) {
-    console.log(">>>> SERVICE ERROR", err.message);
-    throw err;
+  const [categories] = await pool.execute(
+    "SELECT * FROM categories WHERE id = ?",
+    [categoryId],
+  );
+  if (!categories[0]) {
+    logger.warn("CATEGORY_NOT_FOUND", { categoryId });
+    throw new NotFoundError("Category not found.");
   }
+  return categories[0];
 };
 
 const updateCategoryById = async (name, description, categoryId) => {
@@ -82,13 +77,21 @@ const updateCategoryById = async (name, description, categoryId) => {
         WHERE id = ?`,
       [name, description, categoryId],
     );
-    if (result.affectedRows === 0)
+    if (result.affectedRows === 0) {
+      logger.warn("CATEGORY_NOT_FOUND", { categoryId });
       throw new NotFoundError("Category not found.");
+    }
+    logger.debug("CATEGORY_UPDATED", { categoryId, name });
     return true;
   } catch (err) {
-    console.log(">>>> SERVICE ERROR", err.message);
-    if (err.code === "ER_DUP_ENTRY")
+    if (err.code === "ER_DUP_ENTRY") {
+      logger.warn("CATEGORY_UPDATE_FAILED", {
+        reason: "DUPLICATE_CATEGORY",
+        categoryId,
+        nameCategory: name,
+      });
       throw new ConflictError("Category name already exists");
+    }
     throw err;
   }
 };
@@ -98,12 +101,18 @@ const deleteCategoryById = async (categoryId) => {
     const [result] = await pool.execute("DELETE FROM categories WHERE id = ?", [
       categoryId,
     ]);
-    if (result.affectedRows === 0)
+    if (result.affectedRows === 0) {
+      logger.warn("CATEGORY_NOT_FOUND", { categoryId });
       throw new NotFoundError("Category not found.");
+    }
+    logger.debug("CATEGORY_DELETE_SUCCESS", { categoryId });
     return true;
   } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
     if (err.code === "ER_ROW_IS_REFERENCED_2") {
+      logger.warn("CATEGORY_DELETE_FAILED", {
+        reason: "CATEGORY_REFERENCED",
+        categoryId,
+      });
       // Còn tồn tại category trong food
       throw new BadRequestError("Cannot delete category.");
     }
