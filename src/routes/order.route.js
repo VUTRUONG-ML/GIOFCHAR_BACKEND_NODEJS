@@ -9,7 +9,6 @@ import {
 
 import orderController from "../controllers/order.controller.js";
 
-import { asyncHandler } from "../errors/errorHandler.js";
 import { checkAdmin } from "../middlewares/user.middleware.js";
 import { checkOrderByOrderCode } from "../middlewares/order.middleware.js";
 
@@ -26,7 +25,7 @@ router.put(
   "/:orderId/cancel",
   optionalAuth,
   authorizeOrderAccess,
-  asyncHandler(orderController.cancelOrder),
+  orderController.cancelOrder,
 );
 
 // Cập nhật trạng thái order dành cho admin
@@ -34,21 +33,21 @@ router.patch(
   "/:orderId/status",
   requireAuth,
   checkAdmin,
-  asyncHandler(orderController.updateOrderStatus),
+  orderController.updateOrderStatus,
 );
 
 // Tạo order dành cho user
 router.post(
   "/user/cod",
   requireAuth,
-  asyncHandler(orderController.createOrder),
+  orderController.createOrder,
 );
 
 // Tạo order dành cho khách
 router.post(
   "/guest/cod",
   optionalAuth,
-  asyncHandler(orderController.createOrder),
+  orderController.createOrder,
 );
 
 // Xem trạng thái order của hôm nay so với hôm qua
@@ -71,7 +70,7 @@ router.get(
   "/:orderId/detail",
   optionalAuth,
   authorizeOrderAccess,
-  asyncHandler(orderController.getOrderItemsByOrderId),
+  orderController.getOrderItemsByOrderId,
 );
 router.get(
   "/payment-status/by-code/:orderCode",
@@ -82,7 +81,7 @@ router.get(
 router.get(
   "/user/my-orders",
   requireAuth,
-  asyncHandler(orderController.getOrdersByUserId),
+  orderController.getOrdersByUserId,
 );
 
 // Xem tất cả order của user đó dành cho admin
@@ -90,7 +89,7 @@ router.get(
   "/user/:userId",
   requireAuth,
   checkAdmin,
-  asyncHandler(orderController.getOrdersByUserId),
+orderController.getOrdersByUserId,
 );
 router.get("/", requireAuth, checkAdmin, orderController.getAllOrders);
 

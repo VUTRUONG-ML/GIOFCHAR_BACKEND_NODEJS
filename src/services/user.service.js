@@ -1,9 +1,10 @@
 import pool from "../config/db.js";
+import { NotFoundError, ConflictError } from "../errors/AppError.js";
+import logger from "../config/logger.js";
+import { LOG_EVENTS } from "../constants/logEvents.js";
 
 const getAllUsersWithOrderCount = async () => {
-  try {
-    // For pool initialization, see above
-    const [users] = await pool.execute(`
+  const [users] = await pool.execute(`
       SELECT 
         u.id as userId,
         u.userName,
@@ -16,31 +17,24 @@ const getAllUsersWithOrderCount = async () => {
       FROM users u
       LEFT JOIN orders o ON o.userID = u.id
       GROUP BY u.id`);
-    return users;
-  } catch (err) {
-    console.log(">>>>> Service error", err.message);
-    throw err;
-  }
+  return users;
 };
 
 const getUserById = async (userId) => {
-  try {
-    // For pool initialization, see above
-    const [users] = await pool.execute(
-      `SELECT 
+  const [users] = await pool.execute(
+    `SELECT 
         userName,
         email,
         phone,
         address,
         role 
       FROM users WHERE id = ?`,
-      [userId],
-    );
-    return users.length > 0 ? users[0] : null;
-  } catch (err) {
-    console.log(">>>>> Service error", err);
-    throw err;
+    [userId],
+  );
+  if (users.length === 0) {
+    throw new NotFoundError("User not found");
   }
+  return users[0];
 };
 
 const createUser = async (userName, email, phone, address, password) => {
@@ -50,9 +44,22 @@ const createUser = async (userName, email, phone, address, password) => {
                                         VALUES (?, ?, ?, ?, ?)`,
       [userName, email, phone, address, password],
     );
+    logger.info("User created successfully", {
+      event: LOG_EVENTS.USER.success.CREATE,
+      userId: result.insertId,
+    });
     return { insertId: result.insertId };
   } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
+    if (err.code === "ER_DUP_ENTRY") {
+      let field = "Field";
+      if (err.message.includes("email")) field = "email";
+      else if (err.message.includes("phone")) field = "phone";
+
+      logger.warn(LOG_EVENTS.USER.failed.CREATE, {
+        reason: `duplicate ${field}`
+      });
+      throw new ConflictError(`${field} already exists`);
+    }
     throw err;
   }
 };
@@ -65,49 +72,63 @@ const updateUserById = async (userId, userName, email, phone, address) => {
         WHERE id = ?`,
       [email, userName, phone, address, userId],
     );
+    if (result.affectedRows === 0) {
+      throw new NotFoundError("User not found");
+    }
+    logger.info(LOG_EVENTS.USER.success.UPDATE, {
+      userId,
+    });
     return result;
   } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
+    if (err.code === "ER_DUP_ENTRY") {
+      let field = "Field";
+      if (err.message.includes("email")) field = "email";
+      else if (err.message.includes("phone")) field = "phone";
+
+      logger.warn(LOG_EVENTS.USER.failed.UPDATE, {
+        reason: `duplicate ${field}`,
+        userId,
+      });
+      throw new ConflictError(`${field} already exists`);
+    }
     throw err;
   }
 };
 
 const updateActiveUserById = async (userId, active) => {
-  try {
-    const [result] = await pool.execute(
-      `UPDATE users 
+  const [result] = await pool.execute(
+    `UPDATE users 
         SET isActive = ?
         WHERE id = ?`,
-      [active, userId],
-    );
-    return result;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
+    [active, userId],
+  );
+  if (result.affectedRows === 0) {
+    throw new NotFoundError("User not found");
   }
+  logger.info(LOG_EVENTS.USER.success.UPDATE, {
+    userId,
+  });
+  return result;
 };
 
 const deleteUserById = async (userId) => {
-  try {
-    const [result] = await pool.execute(`DELETE FROM users WHERE id = ?`, [
-      userId,
-    ]);
-    return result;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
+  const [result] = await pool.execute(`DELETE FROM users WHERE id = ?`, [
+    userId,
+  ]);
+  if (result.affectedRows === 0) {
+    throw new NotFoundError("User not found");
   }
+  logger.info(LOG_EVENTS.USER.success.DELETE, {
+    userId,
+  });
+  return result;
 };
 
 const getUserByEmail = async (email) => {
-  try {
-    const [result] = await pool.execute(`SELECT * FROM users WHERE email = ?`, [
-      email,
-    ]);
-    return result.length > 0 ? result[0] : null;
-  } catch (err) {
-    throw err;
-  }
+  const [result] = await pool.execute(`SELECT * FROM users WHERE email = ?`, [
+    email,
+  ]);
+  return result.length > 0 ? result[0] : null;
 };
 
 const countUser = async (conn = pool, time = "default") => {
@@ -117,20 +138,15 @@ const countUser = async (conn = pool, time = "default") => {
       : time === "yesterday"
         ? "WHERE u.createdAt >= CURDATE() - INTERVAL 1 DAY AND u.createdAt < CURDATE()"
         : "";
-  try {
-    const [result] = await conn.execute(
-      `
+  const [result] = await conn.execute(
+    `
         SELECT 
           COUNT(*) as countUser
         FROM users u 
         ${condition}
       `,
-    );
-    return result[0].countUser;
-  } catch (error) {
-    console.log(">>>>> SERVICE countUser ERROR:", error.message);
-    throw error;
-  }
+  );
+  return result[0].countUser;
 };
 
 export default {

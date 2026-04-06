@@ -57,7 +57,7 @@ export const getAccount = asyncHandler(async (req, res) => {
   return res.status(200).json(user);
 });
 
-export const refreshTokenController = async (req, res) => {
+export const refreshTokenController = asyncHandler(async (req, res) => {
   const { refreshToken: oldToken } = req.cookies;
   if (!oldToken) {
     throw new UnauthorizedError("Missing refresh token");
@@ -69,9 +69,9 @@ export const refreshTokenController = async (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
   return res.status(200).json({ accessToken });
-};
+});
 
-export const logoutController = async (req, res) => {
+export const logoutController = asyncHandler(async (req, res) => {
   const { refreshToken: oldToken } = req.cookies;
   try {
     if (oldToken) {
@@ -84,4 +84,4 @@ export const logoutController = async (req, res) => {
   res.status(200).json({
     message: "Logout successful",
   });
-};
+});

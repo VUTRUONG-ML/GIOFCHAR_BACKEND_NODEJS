@@ -6,51 +6,34 @@ import paymentService from "../services/payment.service.js";
 
 import { statusOverview } from "../utils/status.js";
 
-import { BadRequestError, ConflictError } from "../errors/AppError.js";
+import { BadRequestError, ConflictError, NotFoundError } from "../errors/AppError.js";
+import { asyncHandler } from "../errors/errorHandler.js";
 
 import { ORDER_STATUS } from "../constants/field.js";
 import logger from "../config/logger.js";
 import { LOG_EVENTS } from "../constants/logEvents.js";
 
 const getStatusOverview = async (req, res) => {
-  try {
-    const resultToday = await orderService.countTodayOrders();
-    const resultYes = await orderService.countYesterdayOrders();
+  const resultToday = await orderService.countTodayOrders();
+  const resultYes = await orderService.countYesterdayOrders();
 
-    const { status, percent } = statusOverview(resultToday, resultYes);
-    return res
-      .status(200)
-      .json({ countTodayOrders: resultToday, status, percent });
-  } catch (error) {
-    console.log(">>> CONTROLLER ERROR:", error.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
+  const { status, percent } = statusOverview(resultToday, resultYes);
+  return res
+    .status(200)
+    .json({ countTodayOrders: resultToday, status, percent });
 };
 
 const getStatusRevenue = async (req, res) => {
-  try {
-    const revenueToday = await paymentService.revenue("today");
-    const revenueYesterday = await paymentService.revenue("yesterday");
-    const { status, percent } = statusOverview(revenueToday, revenueYesterday);
-    return res.status(200).json({ revenueToday, status, percent });
-  } catch (error) {
-    console.log(">>> CONTROLLER ERROR:", error.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
+  const revenueToday = await paymentService.revenue("today");
+  const revenueYesterday = await paymentService.revenue("yesterday");
+  
+  const { status, percent } = statusOverview(revenueToday, revenueYesterday);
+  return res.status(200).json({ revenueToday, status, percent });
 };
 
 const getAllOrders = async (req, res) => {
-  try {
-    const orders = await orderService.getAllOrders();
-    res.status(200).json({ total: orders.length, orders: orders });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  const orders = await orderService.getAllOrders();
+  res.status(200).json({ total: orders.length, orders });
 };
 
 const getOrdersByUserId = async (req, res) => {
@@ -78,11 +61,13 @@ const createOrder = async (req, res) => {
     address,
     paymentMethod,
   } = req.body;
+  
   if (!address || !customerName || !email || !phone || !paymentMethod)
-    return res.status(400).json({ message: "Missing field" });
+    throw new BadRequestError("Missing field");
 
   const ipAddr =
     req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+    
   const result = await cartService.withCart(
     req.user,
     async ({ cartId, conn, cartVersion }) => {
@@ -136,47 +121,38 @@ const cancelOrder = async (req, res) => {
   const orderId = req.params.orderId;
   const status = "cancelled";
 
-  const result = await orderService.updateOrderStatus(orderId, status);
+  await orderService.updateOrderStatus(orderId, status);
 
   res.status(200).json({ message: "Cancel order successful" });
 };
 
 const deleteOrder = async (req, res) => {
   const orderId = req.params.orderId;
-  try {
-    const result = await orderService.deleteOrder(orderId);
+  
+  const result = await orderService.deleteOrder(orderId);
 
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Order not found" });
+  if (result.affectedRows === 0)
+    throw new NotFoundError("Order not found");
 
-    res.status(200).json({ message: "Delete order successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res.status(200).json({ message: "Delete order successful" });
 };
+
 const getPaymentStatus = async (req, res) => {
   const { orderId } = req.order;
 
-  try {
-    const order = await orderService.getPaymentStatus(orderId);
-    return res.status(200).json({ ...order });
-  } catch (error) {
-    console.log(">>> CONTROLLER ERROR:", error.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
+  const order = await orderService.getPaymentStatus(orderId);
+  return res.status(200).json({ ...order });
 };
+
 export default {
-  getAllOrders,
-  getOrdersByUserId,
-  getOrderItemsByOrderId,
-  createOrder,
-  updateOrderStatus,
-  cancelOrder,
-  deleteOrder,
-  getStatusOverview,
-  getStatusRevenue,
-  getPaymentStatus,
+  getAllOrders: asyncHandler(getAllOrders),
+  getOrdersByUserId: asyncHandler(getOrdersByUserId),
+  getOrderItemsByOrderId: asyncHandler(getOrderItemsByOrderId),
+  createOrder: asyncHandler(createOrder),
+  updateOrderStatus: asyncHandler(updateOrderStatus),
+  cancelOrder: asyncHandler(cancelOrder),
+  deleteOrder: asyncHandler(deleteOrder),
+  getStatusOverview: asyncHandler(getStatusOverview),
+  getStatusRevenue: asyncHandler(getStatusRevenue),
+  getPaymentStatus: asyncHandler(getPaymentStatus),
 };

@@ -1,156 +1,89 @@
 import pool from "../config/db.js";
 import userService from "../services/user.service.js";
 import { statusOverview } from "../utils/status.js";
+import { asyncHandler } from "../errors/errorHandler.js";
+import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 
 const getAllUsers = async (req, res) => {
-  try {
-    const users = await userService.getAllUsersWithOrderCount();
-    if (userService.length === 0)
-      return res.status(404).json({ message: "Empty Users list" });
-
-    res.status(200).json({ totalUser: users.length, users });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
+  const users = await userService.getAllUsersWithOrderCount();
+  if (users.length === 0) {
+    throw new NotFoundError("Empty Users list");
   }
+
+  res.status(200).json({ totalUser: users.length, users });
 };
 
 const getUserById = async (req, res) => {
   const userId = req.params.userId;
-  try {
-    const user = await userService.getUserById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+  const user = await userService.getUserById(userId);
 
-    res.status(200).json(user);
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res.status(200).json(user);
 };
 
 const createUser = async (req, res) => {
   const { userName, email, phone, address, password } = req.body;
   if (!userName || !email || !phone || !address || !password) {
-    return res.status(400).json({ message: "Missing field" });
+    throw new BadRequestError("Missing field");
   }
 
-  try {
-    const result = await userService.createUser(
-      userName,
-      email,
-      phone,
-      address,
-      password,
-    );
+  const result = await userService.createUser(
+    userName,
+    email,
+    phone,
+    address,
+    password,
+  );
 
-    res
-      .status(201)
-      .json({ message: "Create user successful", userId: result.insertId });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-
-    if (err.code === "ER_DUP_ENTRY") {
-      let field = "";
-      if (err.message.includes("email")) field = "email";
-      else if (err.message.includes("phone")) field = "phone";
-
-      return res.status(409).json({
-        message: `${field} already exists`,
-      });
-    }
-
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res
+    .status(201)
+    .json({ message: "Create user successful", userId: result.insertId });
 };
 
 const updateUserById = async (req, res) => {
   const userId = req.userId;
   const { userName, email, phone, address } = req.body;
   if (!userName || !email || !phone || !address) {
-    return res.status(400).json({ message: "Missing field" });
+    throw new BadRequestError("Missing field");
   }
-  try {
-    const result = await userService.updateUserById(
-      userId,
-      userName,
-      email,
-      phone,
-      address,
-    );
 
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "User not found" });
+  await userService.updateUserById(userId, userName, email, phone, address);
 
-    res.status(200).json({ message: "Update user successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-
-    if (err.code === "ER_DUP_ENTRY") {
-      let field = "";
-      if (err.message.includes("email")) field = "email";
-      else if (err.message.includes("phone")) field = "phone";
-
-      return res.status(409).json({
-        message: `${field} already exists`,
-      });
-    }
-
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res.status(200).json({ message: "Update user successful" });
 };
 
 const updateUserByAdmin = async (req, res) => {
   const userId = req.params.userId;
   const { isActive } = req.body;
 
-  try {
-    const result = userService.updateActiveUserById(userId, isActive);
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "User not found" });
+  await userService.updateActiveUserById(userId, isActive);
 
-    res.status(200).json({ message: "Update isActive user successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res.status(200).json({ message: "Update isActive user successful" });
 };
 
 const deleteUserById = async (req, res) => {
   const userId = req.params.userId;
-  try {
-    const result = await userService.deleteUserById(userId);
 
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "User not found" });
+  await userService.deleteUserById(userId);
 
-    res.status(200).json({ message: "Delete user successful" });
-  } catch (err) {
-    console.log(">>>>> SERVER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  res.status(200).json({ message: "Delete user successful" });
 };
 
 const getOverviewCountUser = async (req, res) => {
-  try {
-    const [countToday, countYesterday] = await Promise.all([
-      userService.countUser(pool, "today"),
-      userService.countUser(pool, "yesterday"),
-    ]);
-    const { status, percent } = statusOverview(countToday, countYesterday);
+  const [countToday, countYesterday] = await Promise.all([
+    userService.countUser(pool, "today"),
+    userService.countUser(pool, "yesterday"),
+  ]);
+  const { status, percent } = statusOverview(countToday, countYesterday);
 
-    return res.status(200).json({ countUser: countToday, status, percent });
-  } catch (error) {
-    console.log(">>>>> CONTROLLER ERROR", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
+  return res.status(200).json({ countUser: countToday, status, percent });
 };
 
 export default {
-  updateUserByAdmin,
-  getAllUsers,
-  getUserById,
-  createUser,
-  updateUserById,
-  deleteUserById,
-  getOverviewCountUser,
+  updateUserByAdmin: asyncHandler(updateUserByAdmin),
+  getAllUsers: asyncHandler(getAllUsers),
+  getUserById: asyncHandler(getUserById),
+  createUser: asyncHandler(createUser),
+  updateUserById: asyncHandler(updateUserById),
+  deleteUserById: asyncHandler(deleteUserById),
+  getOverviewCountUser: asyncHandler(getOverviewCountUser),
 };

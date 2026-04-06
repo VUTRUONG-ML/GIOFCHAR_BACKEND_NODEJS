@@ -42,4 +42,17 @@ export const LOG_EVENTS = {
       CREATE: "PAYMENT_CREATE_SUCCESS",
     },
   },
+  USER: {
+    success: {
+      CREATE: "USER_CREATE_SUCCESS",
+      UPDATE: "USER_UPDATE_SUCCESS",
+      DELETE: "USER_DELETE_SUCCESS",
+    },
+    failed: {
+      CREATE: "USER_CREATE_FAILED",
+      UPDATE: "USER_UPDATE_FAILED",
+      DELETE: "USER_DELETE_FAILED",
+      NOT_FOUND: "USER_NOT_FOUND",
+    },
+  },
 };

@@ -71,63 +71,57 @@ const register = async (
       });
       throw new ConflictError(`${field} already exists`);
     }
-    err.context = { email, action: "USER_REGISTRATION" };
     throw err;
   }
 };
 
 const login = async (email, password, guestToken = null) => {
-  try {
-    const user = await userService.getUserByEmail(email);
-    // 1. Kiểm tra email/ password
-    if (!user) {
-      logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
-        reason: "EMAIL_NOT_FOUND",
-        email,
-      });
-      throw new UnauthorizedError("Email/password không chính xác!");
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
-        reason: "WRONG_PASSWORD",
-        email,
-        userId: user.id,
-      });
-      throw new UnauthorizedError("Email/password không chính xác!");
-    }
-
-    // 2. Tạo Token
-    const payload = { userId: user.id, role: user.role };
-    const access_token = generateAccessToken(payload);
-    const refresh_token = generateRefreshToken(payload);
-
-    // 3. Lưu Refresh Token vào DB
-    await createRefreshToken({ userId: user.id, refreshToken: refresh_token });
-
-    logger.info("User login success", { userId: user.id, email });
-    const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
-
-    // 4. Đăng nhập xong thì merge giỏ hàng
-    let mergeStatus = true;
-    if (guestToken) {
-      mergeStatus = await cartService.mergeGuestCartToUser({
-        userId: user.id,
-        guestToken,
-      });
-    }
-
-    return {
-      refresh_token,
-      access_token,
-      user: userWithoutPassword,
-      mergeStatus,
-    };
-  } catch (err) {
-    err.context = { action: "LOGIN_SYSTEM_ERROR", email };
-    throw err;
+  const user = await userService.getUserByEmail(email);
+  // 1. Kiểm tra email/ password
+  if (!user) {
+    logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
+      reason: "EMAIL_NOT_FOUND",
+      email,
+    });
+    throw new UnauthorizedError("Email/password không chính xác!");
   }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
+      reason: "WRONG_PASSWORD",
+      email,
+      userId: user.id,
+    });
+    throw new UnauthorizedError("Email/password không chính xác!");
+  }
+
+  // 2. Tạo Token
+  const payload = { userId: user.id, role: user.role };
+  const access_token = generateAccessToken(payload);
+  const refresh_token = generateRefreshToken(payload);
+
+  // 3. Lưu Refresh Token vào DB
+  await createRefreshToken({ userId: user.id, refreshToken: refresh_token });
+
+  logger.info("User login success", { userId: user.id, email });
+  const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
+
+  // 4. Đăng nhập xong thì merge giỏ hàng
+  let mergeStatus = true;
+  if (guestToken) {
+    mergeStatus = await cartService.mergeGuestCartToUser({
+      userId: user.id,
+      guestToken,
+    });
+  }
+
+  return {
+    refresh_token,
+    access_token,
+    user: userWithoutPassword,
+    mergeStatus,
+  };
 };
 
 const logout = async (refreshToken, conn = pool) => {

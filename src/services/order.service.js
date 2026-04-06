@@ -22,8 +22,7 @@ import { validateOwner } from "./validators.js";
 import { deductStockForOrder } from "./variant.service.js";
 
 const getAllOrders = async () => {
-  try {
-    const [rows] = await pool.execute(`
+  const [rows] = await pool.execute(`
       SELECT
         o.id AS orderId,
         o.orderCode,
@@ -41,48 +40,34 @@ const getAllOrders = async () => {
       JOIN order_items oi  ON o.id = oi.orderID
       GROUP BY o.id
       ORDER BY o.createdAt DESC`);
-    return rows;
-  } catch (err) {
-    throw err;
-  }
+  return rows;
 };
 
 const countTodayOrders = async (conn = pool) => {
-  try {
-    const [result] = await conn.execute(
-      `
+  const [result] = await conn.execute(
+    `
       SELECT COUNT(o.id) as countOrdered
       FROM orders o
       WHERE o.createdAt >= CURDATE() AND o.createdAt < CURDATE() + INTERVAL 1 DAY
       `,
-    );
-    return result[0].countOrdered;
-  } catch (error) {
-    console.log(">>> SERVICE countTodayOrders ERROR:", error.message);
-    throw error;
-  }
+  );
+  return result[0].countOrdered;
 };
 
 const countYesterdayOrders = async (conn = pool) => {
-  try {
-    const [result] = await conn.execute(
-      `
+  const [result] = await conn.execute(
+    `
       SELECT COUNT(o.id) as countOrdered
       FROM orders o
       WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()
       `,
-    );
-    return result[0].countOrdered;
-  } catch (error) {
-    console.log(">>> SERVICE countYesterdayOrders ERROR:", error.message);
-    throw error;
-  }
+  );
+  return result[0].countOrdered;
 };
 
 const getOrderById = async (orderId, conn = pool) => {
-  try {
-    const [rows] = await conn.execute(
-      `SELECT
+  const [rows] = await conn.execute(
+    `SELECT
         o.id AS orderId,
         o.orderCode,
         o.status,
@@ -91,12 +76,9 @@ const getOrderById = async (orderId, conn = pool) => {
         o.createdAt AS time
       FROM orders o 
       WHERE id = ?`,
-      [orderId],
-    );
-    return rows[0];
-  } catch (err) {
-    throw err;
-  }
+    [orderId],
+  );
+  return rows[0];
 };
 
 const assertOrderUpdatable = async (orderId, conn = pool) => {
@@ -110,9 +92,8 @@ const assertOrderUpdatable = async (orderId, conn = pool) => {
 };
 
 const getOrdersByUserId = async (userId) => {
-  try {
-    const [rows] = await pool.execute(
-      `SELECT
+  const [rows] = await pool.execute(
+    `SELECT
         o.id AS orderId,
         o.orderCode,
         o.status,
@@ -135,13 +116,10 @@ const getOrdersByUserId = async (userId) => {
       JOIN foods f ON fv.foodID = f.id
       WHERE o.userID = ?
       ORDER BY o.createdAt DESC`,
-      [userId],
-    );
-    const newRows = groupOrders(rows);
-    return newRows;
-  } catch (err) {
-    throw err;
-  }
+    [userId],
+  );
+  const newRows = groupOrders(rows);
+  return newRows;
 };
 
 const createOrder = async (
@@ -176,7 +154,7 @@ const createOrder = async (
     orderId,
   ]);
 
-  logger.debug(LOG_EVENTS.ORDER.success.CREATE, {
+  logger.info(LOG_EVENTS.ORDER.success.CREATE, {
     orderId: result.insertId,
     customerName,
     email,
@@ -218,19 +196,15 @@ const updateOrder = async (orderId, status) => {
 };
 
 const updateOrderStatus = async (orderId, status, conn = pool) => {
-  try {
-    if (!ORDER_STATUS.includes(status))
-      throw new BadRequestError("Invalid order status");
-    await assertOrderUpdatable(orderId, conn); // check order đang ở một trạng thái cuối ko thể cập nhật lại: đã giao | đã hủy
-    const [result] = await conn.execute(
-      "UPDATE orders o SET status = ? WHERE id = ?",
-      [status, orderId],
-    );
-    if (result.affectedRows !== 1) throw new NotFoundError("Order not found");
-    return result.affectedRows === 1;
-  } catch (err) {
-    throw err;
-  }
+  if (!ORDER_STATUS.includes(status))
+    throw new BadRequestError("Invalid order status");
+  await assertOrderUpdatable(orderId, conn); // check order đang ở một trạng thái cuối ko thể cập nhật lại: đã giao | đã hủy
+  const [result] = await conn.execute( 
+    "UPDATE orders o SET status = ? WHERE id = ?",
+    [status, orderId],
+  );
+  if (result.affectedRows !== 1) throw new NotFoundError("Order not found");
+  return result.affectedRows === 1;
 };
 
 const updateOrderDeliveredCOD = async (
@@ -240,36 +214,29 @@ const updateOrderDeliveredCOD = async (
   conn = pool,
 ) => {
   if (!PAYMENT_STATUS.includes(paymentStatus))
-    throw BadRequestError("Invalid status payment");
+    throw new BadRequestError("Invalid status payment");
   if (!ORDER_STATUS.includes(orderStatus))
     throw new BadRequestError("Invalid order status");
-  try {
-    const sql = `
+
+  const sql = `
       UPDATE orders
       SET paymentStatus = ?, status = ?
       WHERE id = ?
     `;
-    const [result] = await conn.execute(sql, [
-      paymentStatus,
-      orderStatus,
-      orderId,
-    ]);
-    return result.affectedRows === 1;
-  } catch (error) {
-    throw error;
-  }
+  const [result] = await conn.execute(sql, [
+    paymentStatus,
+    orderStatus,
+    orderId,
+  ]);
+  return result.affectedRows === 1;
 };
 
 const updatePaymentStatus = async ({ orderId, paymentStatus }, conn = pool) => {
-  try {
-    const [result] = await conn.execute(
-      "UPDATE orders o SET paymentStatus = ? WHERE id = ?",
-      [paymentStatus, orderId],
-    );
-    return result;
-  } catch (err) {
-    throw err;
-  }
+  const [result] = await conn.execute(
+    "UPDATE orders o SET paymentStatus = ? WHERE id = ?",
+    [paymentStatus, orderId],
+  );
+  return result;
 };
 
 const confirmCodOrderPayment = async (
@@ -314,7 +281,7 @@ const confirmCodOrderPayment = async (
     return true;
   } catch (error) {
     await connection.rollback();
-    console.log(">>> SERVICE UPDATE DELIVERED ORDER ERROR", error);
+    logger.error("Failed to confirm COD order payment", { orderId, error: error.message });
     throw error;
   } finally {
     connection.release();
@@ -322,28 +289,20 @@ const confirmCodOrderPayment = async (
 };
 
 const deleteOrder = async (orderId) => {
-  try {
-    const [result] = await pool.execute("DELETE FROM orders WHERE id = ?", [
-      orderId,
-    ]);
+  const [result] = await pool.execute("DELETE FROM orders WHERE id = ?", [
+    orderId,
+  ]);
 
-    return result;
-  } catch (err) {
-    throw err;
-  }
+  return result;
 };
 
 const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
-  try {
-    const { field, value } = switchCustomer({ userId, guestToken });
-    const [result] = await pool.execute(
-      `SELECT * FROM orders WHERE id = ? AND ${field} = ?`,
-      [orderId, value],
-    );
-    return result.length > 0 ? result[0] : null;
-  } catch (err) {
-    throw err;
-  }
+  const { field, value } = switchCustomer({ userId, guestToken });
+  const [result] = await pool.execute(
+    `SELECT * FROM orders WHERE id = ? AND ${field} = ?`,
+    [orderId, value],
+  );
+  return result.length > 0 ? result[0] : null;
 };
 
 const tryAttachOrderToUser = async ({ email, userId }) => {
@@ -374,9 +333,8 @@ const revenue = async (conn = pool, time = "default") => {
       : time === "yesterday"
         ? "WHERE o.createdAt >= CURDATE() - INTERVAL 1 DAY AND o.createdAt < CURDATE()"
         : "";
-  try {
-    const [result] = await conn.execute(
-      `
+  const [result] = await conn.execute(
+    `
         SELECT 
           SUM(amount) as revenue
         FROM (SELECT 
@@ -386,26 +344,18 @@ const revenue = async (conn = pool, time = "default") => {
                 ${optionTime}
                 GROUP BY o.id) ordersAmount;
       `,
-    );
-    return result[0].revenue ? Number(result[0].revenue) : 0;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR revenue:", error.message);
-    throw error;
-  }
+  );
+  return result[0].revenue ? Number(result[0].revenue) : 0;
 };
+
 const getPaymentStatus = async (orderId) => {
-  try {
-    const sql = `SELECT id as orderId, paymentStatus FROM orders WHERE id = ?`;
-    const [rows] = await pool.execute(sql, [orderId]);
-    return rows.length > 0 ? rows[0] : null;
-  } catch (error) {
-    console.log(">>> SERVICE ORDER ERROR:", error.message);
-    throw error;
-  }
+  const sql = `SELECT id as orderId, paymentStatus FROM orders WHERE id = ?`;
+  const [rows] = await pool.execute(sql, [orderId]);
+  return rows.length > 0 ? rows[0] : null;
 };
+
 const getByOrderCode = async ({ orderCode }, conn = pool) => {
-  try {
-    const sql = `
+  const sql = `
       SELECT
         o.id as orderId,
         o.status,
@@ -417,27 +367,19 @@ const getByOrderCode = async ({ orderCode }, conn = pool) => {
       WHERE o.orderCode = ?
       GROUP BY  o.id
     `;
-    const [rows] = await conn.execute(sql, [orderCode]);
-    return rows.length > 0 ? rows[0] : null;
-  } catch (error) {
-    console.log(">>> SERVICE ORDER ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql, [orderCode]);
+  return rows.length > 0 ? rows[0] : null;
 };
+
 const markPaymentResultViewed = async ({ orderId }, conn = pool) => {
-  try {
-    const sql = `
+  const sql = `
       UPDATE orders o
       SET has_viewed_payment_result = TRUE, payment_result_viewed_at = CURRENT_TIMESTAMP()
       WHERE id = ? 
         AND o.has_viewed_payment_result = FALSE
     `;
-    const [rows] = await conn.execute(sql, [orderId]);
-    return rows;
-  } catch (error) {
-    console.log(">>> SERVICE markPaymentResultViewed ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql, [orderId]);
+  return rows;
 };
 
 const checkout = async (
@@ -514,9 +456,10 @@ const checkout = async (
     });
   }
   await cartService.clearCart(cartId, conn);
-  logger.info("ORDER_CHECKOUT_SUCCESS", { orderId, amount: totalPriceOrder });
+  logger.info(LOG_EVENTS.ORDER.success.CHECKOUT, {orderId, amount: totalPriceOrder });
   return { orderId, orderCode, totalPriceOrder, paymentUrl };
 };
+
 export default {
   getAllOrders,
   countTodayOrders,
