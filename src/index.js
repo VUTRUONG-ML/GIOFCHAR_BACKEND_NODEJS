@@ -28,7 +28,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_ORIGINS.split(","),
     credentials: true, // cho gửi cookie / session
-    exposedHeaders: ["X-Guest-Token"], // Cho phép frontend đọc header này
+    exposedHeaders: ["X-Guest-Token", "X-Request-ID"], // Cho phép frontend đọc header này
   }),
 );
 

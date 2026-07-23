@@ -6,3 +6,6 @@ logs/*
 !logs/.gitkeep
 
 *.log
+
+AGENTS.md
+ROADMAP.md

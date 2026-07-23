@@ -2,9 +2,26 @@ import { v4 as uuidv4 } from "uuid";
 import logger from "../config/logger.js";
 import { asyncLocalStorage } from "../utils/asyncLocalStorage.js";
 
+const isValidRequestId = (value) => {
+  return (
+    typeof value === "string" &&
+    value.length <= 36 &&
+    uuidValidate(value) &&
+    uuidVersion(value) === 4
+  );
+};
+
 export const requestLogger = (req, res, next) => {
-  const requestId = req.headers["x-request-id"] || uuidv4();
+  const incomingRequestId = req.get("X-Request-ID");
+
+  const requestId = isValidRequestId(incomingRequestId)
+    ? incomingRequestId
+    : uuidv4();
   const start = Date.now();
+
+  req.requestId = requestId;
+
+  res.setHeader("X-Request-ID", requestId);
 
   // Đưa requestId vào "kho" ALS
   asyncLocalStorage.run({ requestId, start }, () => {
