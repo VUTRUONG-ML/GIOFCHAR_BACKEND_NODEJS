@@ -1,4 +1,8 @@
-import { v4 as uuidv4 } from "uuid";
+import { 
+  v4 as uuidv4,
+  validate as uuidValidate,
+  version as uuidVersion,
+} from "uuid";
 import logger from "../config/logger.js";
 import { asyncLocalStorage } from "../utils/asyncLocalStorage.js";
 

@@ -8,8 +8,6 @@ import {
   getPromotionTarget,
 } from "./promotion.service.js";
 import { BadRequestError, ConflictError } from "../errors/AppError.js";
-import logger from "../config/logger.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
 
 export async function getVariantByFoodId(
   foodId,
@@ -288,11 +286,12 @@ export const deductStockForOrder = async (conn, cartItems) => {
   for (const item of cartItems) {
     const updated = await updateStock(conn, item.variantId, item.quantity);
     if (!updated) {
-      logger.warn(LOG_EVENTS.ORDER.failed.CHECKOUT, {
-        reason: "OUT_STOCK",
+      const error = new ConflictError("Some products are out of stock.");
+      error.context = {
+        reason: "OUT_OF_STOCK",
         variantId: item.variantId,
-      });
-      throw new ConflictError("Some products are out of stock.");
+      };
+      throw error;
     }
   }
   return true;

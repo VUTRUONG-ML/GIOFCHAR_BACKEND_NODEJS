@@ -396,7 +396,6 @@ const checkout = async (
   },
   conn = pool,
 ) => {
-  logger.info("CHECKOUT_INITIATED", { userId, guestToken, cartId });
   //Lay ve cartItem cua nguoi dung hien tai
   const cartItems = await cartItemService.getCartItemsByCartId(
     cartId,
@@ -404,13 +403,9 @@ const checkout = async (
     true,
   );
   if (cartItems.length === 0) {
-    logger.warn(LOG_EVENTS.ORDER.failed.CHECKOUT, {
-      reason: "CART_EMPTY",
-      userId,
-      guestToken,
-      cartId,
-    });
-    throw new BadRequestError("Your shopping cart is empty.");
+    const error = new BadRequestError("Your shopping cart is empty.");
+    error.context = { reason: "CART_EMPTY", cartId };
+    throw error;
   }
 
   // Kiểm tra và trừ đi quatity trước khi thêm vào orderItems
@@ -456,7 +451,6 @@ const checkout = async (
     });
   }
   await cartService.clearCart(cartId, conn);
-  logger.info(LOG_EVENTS.ORDER.success.CHECKOUT, {orderId, amount: totalPriceOrder });
   return { orderId, orderCode, totalPriceOrder, paymentUrl };
 };
 

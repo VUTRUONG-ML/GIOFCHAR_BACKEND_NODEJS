@@ -1,3 +1,15 @@
+export const LOG_ACTIONS = {
+  ORDER: {
+    CHECKOUT: "checkout",
+  },
+};
+
+export const LOG_STATUSES = {
+  STARTED: "started",
+  SUCCEEDED: "succeeded",
+  FAILED: "failed",
+};
+
 export const LOG_EVENTS = {
   AUTH: {
     success: {
@@ -26,11 +38,9 @@ export const LOG_EVENTS = {
   ORDER: {
     success: {
       CREATE: "ORDER_CREATED_SUCCESS",
-      CHECKOUT: "ORDER_CHECKOUT_SUCCESS",
       ATTACH_ORDER: "ORDER_ATTACH_TO_USER_SUCCESS",
     },
     failed: {
-      CHECKOUT: "ORDER_CHECKOUT_FAILED",
       ATTACH_ORDER: "ORDER_ATTACH_TO_USER_FAILED",
     },
   },
