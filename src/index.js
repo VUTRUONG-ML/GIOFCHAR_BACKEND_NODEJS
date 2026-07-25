@@ -20,6 +20,11 @@ import promotionRoutes from "./routes/promotion.route.js";
 import variantRoutes from "./routes/variant.route.js";
 import guestRoutes from "./routes/guest.route.js";
 import { requestLogger } from "./middlewares/request.middleware.js";
+import logger from "./config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "./constants/logEvents.js";
 
 const app = express();
 const port = process.env.PORT || 8081;
@@ -71,5 +76,8 @@ app.use("/", (req, res) => {
 app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  logger.info(LOG_ACTIONS.SYSTEM.SERVER, {
+    status: LOG_STATUSES.STARTED,
+    port,
+  });
 });

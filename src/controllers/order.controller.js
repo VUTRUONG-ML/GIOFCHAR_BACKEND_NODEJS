@@ -105,12 +105,29 @@ const createOrder = async (req, res) => {
           conn,
         );
       },
+      { operation: LOG_ACTIONS.ORDER.CHECKOUT },
     );
 
-    const { orderId, orderCode, totalPriceOrder, paymentUrl } = result;
+    const {
+      orderId,
+      orderCode,
+      totalPriceOrder,
+      paymentUrl,
+      paymentId,
+      paymentStatus,
+    } = result;
+
+    logger.info(LOG_ACTIONS.PAYMENT.CREATE, {
+      status: LOG_STATUSES.CREATED,
+      paymentId,
+      orderId,
+      amount: totalPriceOrder,
+      paymentMethod,
+      paymentStatus,
+    });
 
     logger.info(LOG_ACTIONS.ORDER.CHECKOUT, {
-      status: LOG_STATUSES.SUCCEEDED,
+      status: LOG_STATUSES.COMPLETED,
       orderId,
       amount: totalPriceOrder,
       paymentMethod,

@@ -4,15 +4,14 @@ import cartItemService from "./cartItem.service.js";
 import { getVariantById } from "./variant.service.js";
 import { BadRequestError, NotFoundError } from "../errors/AppError.js";
 import logger from "../config/logger.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 const getAllCarts = async () => {
-  try {
-    const [carts] = await pool.execute("SELECT * FROM carts");
-    return carts;
-  } catch (err) {
-    throw err;
-  }
+  const [carts] = await pool.execute("SELECT * FROM carts");
+  return carts;
 };
 
 const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
@@ -20,17 +19,12 @@ const getCart = async ({ userId, guestToken }, { conn, forUpdate = false }) => {
   const isLock = forUpdate ? "FOR UPDATE" : "";
   const field = userId ? "userID" : "guestToken";
   const value = userId ?? guestToken;
-  try {
-    const [carts] = await conn.execute(
-      `SELECT * FROM carts WHERE ${field} = ? ${isLock}`,
-      [value],
-    );
+  const [carts] = await conn.execute(
+    `SELECT * FROM carts WHERE ${field} = ? ${isLock}`,
+    [value],
+  );
 
-    return carts.length > 0 ? carts[0] : null;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
-  }
+  return carts.length > 0 ? carts[0] : null;
 };
 
 const createCart = async ({ userId, guestToken }, conn = pool) => {
@@ -39,21 +33,16 @@ const createCart = async ({ userId, guestToken }, conn = pool) => {
   const field = userId ? "userID" : "guestToken";
   const value = userId ?? guestToken;
 
-  try {
-    const [result] = await conn.execute(
-      `INSERT INTO carts (${field}) VALUES (?)`,
-      [value],
-    );
+  const [result] = await conn.execute(
+    `INSERT INTO carts (${field}) VALUES (?)`,
+    [value],
+  );
 
-    const [rows] = await conn.execute("SELECT * FROM carts WHERE id = ?", [
-      result.insertId,
-    ]);
+  const [rows] = await conn.execute("SELECT * FROM carts WHERE id = ?", [
+    result.insertId,
+  ]);
 
-    return rows.length > 0 ? rows[0] : null;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
-  }
+  return rows.length > 0 ? rows[0] : null;
 };
 
 const addToCart = async (variantId, delta, cartId, connection) => {
@@ -62,11 +51,15 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     cartId,
     delta,
   };
-  logger.debug("Start addToCart", objLog);
+  logger.debug(LOG_ACTIONS.CART.CHANGE_ITEM, {
+    status: LOG_STATUSES.STARTED,
+    ...objLog,
+  });
   // Trước khi update item trong cart thì update version cart
   const variant = await getVariantById(variantId, true, connection);
   if (!variant) {
-    logger.warn(LOG_EVENTS.CART.ADD_ITEM_FAILED, {
+    logger.warn(LOG_ACTIONS.CART.CHANGE_ITEM, {
+      status: LOG_STATUSES.FAILED,
       reason: "VARIANT_NOT_FOUND",
       ...objLog,
     });
@@ -80,9 +73,11 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     true,
   );
   let result;
+  let operation;
   if (!cartItem) {
     if (delta <= 0) {
-      logger.warn(LOG_EVENTS.CART.ADD_ITEM_FAILED, {
+      logger.warn(LOG_ACTIONS.CART.CHANGE_ITEM, {
+        status: LOG_STATUSES.FAILED,
         reason: "NEGATIVE_QUANTITY",
         ...objLog,
       });
@@ -96,11 +91,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
       connection,
     );
 
-    logger.info(LOG_EVENTS.CART.ADD_ITEM_SUCCESS, {
-      ...objLog,
-      action: "INSERT",
-      quantity: delta,
-    });
+    operation = "insert";
 
     result = {
       message: "Added new item to cart",
@@ -114,11 +105,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     const newQuantity = cartItem.quantity + delta;
     if (newQuantity <= 0) {
       await cartItemService.deleteCartItem(cartItemId, cartId, connection);
-      logger.info(LOG_EVENTS.CART.ADD_ITEM_SUCCESS, {
-        ...objLog,
-        action: "REMOVE",
-        quantity: 0,
-      });
+      operation = "remove";
       result = {
         message: "Remove item from cart successful",
         cartId: cartId,
@@ -132,11 +119,7 @@ const addToCart = async (variantId, delta, cartId, connection) => {
         delta,
         connection,
       );
-      logger.info(LOG_EVENTS.CART.ADD_ITEM_SUCCESS, {
-        ...objLog,
-        action: "UPDATE",
-        quantity: newQuantity,
-      });
+      operation = "update";
       result = {
         message: "Updated quantity item successful",
         cartId: cartId,
@@ -147,14 +130,25 @@ const addToCart = async (variantId, delta, cartId, connection) => {
     }
   }
   const cartVersion = await updateVersion(cartId, connection);
+  logger.info(LOG_ACTIONS.CART.CHANGE_ITEM, {
+    status: LOG_STATUSES.SUCCEEDED,
+    ...objLog,
+    operation,
+    quantity: result.quantity,
+    cartVersion,
+  });
   return { ...result, cartVersion };
 };
 
 const mergeGuestCartToUser = async ({ userId, guestToken }) => {
   const connection = await pool.getConnection();
+  const transactionStartedAt = Date.now();
   try {
     await connection.beginTransaction();
-    logger.debug("CART_TX_TRY_MERGE_START", { userId, guestToken });
+    logger.debug(LOG_ACTIONS.CART.MERGE_TO_USER, {
+      status: LOG_STATUSES.STARTED,
+      userId,
+    });
     const cartUser = await getCart(
       { userId },
       { conn: connection, forUpdate: true },
@@ -164,12 +158,18 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
       { conn: connection, forUpdate: true },
     );
     if (!cartGuest) {
-      logger.warn(LOG_EVENTS.CART.TRANSACTION_ERROR, {
+      logger.warn(LOG_ACTIONS.CART.MERGE_TO_USER, {
+        status: LOG_STATUSES.FAILED,
         reason: "CART_GUEST_NOT_FOUND",
         userId,
-        guestToken,
       });
       await connection.commit();
+      logger.debug(LOG_ACTIONS.TRANSACTION, {
+        status: LOG_STATUSES.COMMITTED,
+        operation: LOG_ACTIONS.CART.MERGE_TO_USER,
+        userId,
+        durationMs: Date.now() - transactionStartedAt,
+      });
       return;
     }
     if (!cartUser) {
@@ -212,13 +212,31 @@ const mergeGuestCartToUser = async ({ userId, guestToken }) => {
       await clearCart(cartGuest.id, connection);
     }
     await connection.commit();
-    logger.debug(LOG_EVENTS.CART.MERGE_SUCCESS, { userId, guestToken });
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: LOG_ACTIONS.CART.MERGE_TO_USER,
+      userId,
+      cartId: cartUser?.id,
+      durationMs: Date.now() - transactionStartedAt,
+    });
+    logger.debug(LOG_ACTIONS.CART.MERGE_TO_USER, {
+      status: LOG_STATUSES.SUCCEEDED,
+      userId,
+    });
     return true;
   } catch (error) {
     await connection.rollback();
-    logger.warn(LOG_EVENTS.CART.TRANSACTION_ERROR, {
-      action: "CART_MERGE",
-      reason: error.message,
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation: LOG_ACTIONS.CART.MERGE_TO_USER,
+      reason: error.code || "UNEXPECTED_ERROR",
+      userId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
+    logger.warn(LOG_ACTIONS.CART.MERGE_TO_USER, {
+      status: LOG_STATUSES.FAILED,
+      reason: error.code || "UNEXPECTED_ERROR",
+      userId,
     });
     return false;
   } finally {
@@ -231,7 +249,11 @@ const clearCart = async (cartId, conn = pool) => {
     cartId,
   ]);
   if (result.affectedRows === 0) {
-    logger.warn("CART_CLEAR_FAILED", { reason: "CART_NOT_FOUND", cartId });
+    logger.warn(LOG_ACTIONS.CART.CLEAR, {
+      status: LOG_STATUSES.FAILED,
+      reason: "CART_NOT_FOUND",
+      cartId,
+    });
     throw new NotFoundError("Cart not found");
   }
   return true;
@@ -239,19 +261,19 @@ const clearCart = async (cartId, conn = pool) => {
 
 const ensureCart = async ({ userId, guestToken }, conn = pool) => {
   validateOwner({ userId, guestToken });
-  try {
-    let cart = await getCart({ userId, guestToken }, { conn, forUpdate: true });
-    if (!cart) cart = await createCart({ userId, guestToken }, conn);
-    return cart;
-  } catch (error) {
-    console.log(">>>> SERVICE ERROR", error.message);
-    throw error;
-  }
+  let cart = await getCart({ userId, guestToken }, { conn, forUpdate: true });
+  if (!cart) cart = await createCart({ userId, guestToken }, conn);
+  return cart;
 };
 
-async function withCart(context, handler) {
+async function withCart(
+  context,
+  handler,
+  { operation = "cart_operation" } = {},
+) {
   const { guestToken: incomingGuestToken, userId } = context ?? {};
   const conn = await pool.getConnection();
+  const transactionStartedAt = Date.now();
 
   let currentCartId = null; // Biến tạm để cứu hộ khi lỗi
 
@@ -259,16 +281,17 @@ async function withCart(context, handler) {
     await conn.beginTransaction();
 
     let cart;
-    let guestToken = incomingGuestToken;
     if (userId) {
       cart = await ensureCart({ userId }, conn);
     } else {
-      cart = await ensureCart({ guestToken }, conn);
+      cart = await ensureCart({ guestToken: incomingGuestToken }, conn);
     }
     currentCartId = cart.id;
-    logger.debug(LOG_EVENTS.CART.TRANSACTION_START, {
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.STARTED,
+      operation,
       cartId: currentCartId,
-      incomingGuestToken,
+      actorType: userId ? "user" : "guest",
       userId,
     });
 
@@ -279,14 +302,35 @@ async function withCart(context, handler) {
     });
 
     await conn.commit();
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation,
+      cartId: currentCartId,
+      orderId: result?.orderId,
+      actorType: userId ? "user" : "guest",
+      userId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     return result;
   } catch (err) {
+    const reason = err.context?.reason || err.code || "UNEXPECTED_ERROR";
+
     await conn.rollback();
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation,
+      reason,
+      cartId: currentCartId,
+      orderId: err.context?.orderId,
+      actorType: userId ? "user" : "guest",
+      userId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     err.context = {
       ...err.context,
-      action: "CART_TRANSACTION",
+      operation,
       cartId: currentCartId, // để biết giỏ hàng nào bị lỗi transaction
-      incomingGuestToken,
+      actorType: userId ? "user" : "guest",
       userId,
     };
     throw err;
@@ -296,8 +340,7 @@ async function withCart(context, handler) {
 }
 
 async function updateVersion(cartId, conn = pool) {
-  try {
-    const sqlUpdateVersion = `
+  const sqlUpdateVersion = `
       UPDATE carts
       SET cartVersion = cartVersion + 1
       WHERE id = ?
@@ -307,15 +350,12 @@ async function updateVersion(cartId, conn = pool) {
       FROM carts
       WHERE id = ?
     `;
-    const [result] = await conn.execute(sqlUpdateVersion, [cartId]);
-    if (result.affectedRows !== 1) throw new NotFoundError("Cart not found");
+  const [result] = await conn.execute(sqlUpdateVersion, [cartId]);
+  if (result.affectedRows !== 1) throw new NotFoundError("Cart not found");
 
-    const [rows] = await conn.execute(sqlGetVersion, [cartId]);
-    const version = rows[0].cartVersion;
-    return version;
-  } catch (error) {
-    throw error;
-  }
+  const [rows] = await conn.execute(sqlGetVersion, [cartId]);
+  const version = rows[0].cartVersion;
+  return version;
 }
 export default {
   withCart,

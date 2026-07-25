@@ -19,27 +19,17 @@ const getAllFoods = asyncHandler(async (req, res) => {
   return res.status(200).json({ quantity: foods.length, foods });
 });
 
-const getAllBestSelling = async (req, res) => {
-  try {
-    const foods = await foodService.getBestSellingFoods();
-    return res.status(200).json({ quantity: foods.length, foods });
-  } catch (error) {
-    console.log(">>>>> CONTROLLER ERROR", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+const getAllBestSelling = asyncHandler(async (req, res) => {
+  const foods = await foodService.getBestSellingFoods();
+  return res.status(200).json({ quantity: foods.length, foods });
+});
 
-const getFoodsPromotion = async (req, res) => {
-  try {
-    const foods = await foodService.getPromotionFoods();
-    return res.status(200).json({ quantity: foods.length, foods });
-  } catch (error) {
-    console.log(">>>>> CONTROLLER ERROR", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+const getFoodsPromotion = asyncHandler(async (req, res) => {
+  const foods = await foodService.getPromotionFoods();
+  return res.status(200).json({ quantity: foods.length, foods });
+});
 
-const createFood = async (req, res) => {
+const createFood = asyncHandler(async (req, res) => {
   const {
     foodName,
     foodDescription,
@@ -79,45 +69,31 @@ const createFood = async (req, res) => {
       .status(201)
       .json({ message: "Create food successful", foodId: result.insertId });
   } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-
     if (err.code === "ER_DUP_ENTRY")
       return res.status(409).json({ message: "Food name already exists" });
 
-    res.status(500).json({ message: "Server error", error: err.message });
+    throw err;
   }
-};
+});
 
-const getFoodById = async (req, res) => {
+const getFoodById = asyncHandler(async (req, res) => {
   const foodId = req.params.foodId;
   const { role } = req.user;
-  try {
-    const food = await foodService.getFoodById(foodId);
+  const food = await foodService.getFoodById(foodId);
 
-    if (!food) return res.status(404).json({ message: "Food not found" });
+  if (!food) return res.status(404).json({ message: "Food not found" });
 
-    res.status(200).json(food);
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+  res.status(200).json(food);
+});
 
-const getDetailFood = async (req, res) => {
+const getDetailFood = asyncHandler(async (req, res) => {
   const foodId = req.params.foodId;
-  try {
-    const food = await foodService.getDetailFood(foodId);
-    if (!food) return res.status(404).json({ message: "Food not found" });
-    return res.status(200).json(food);
-  } catch (error) {
-    console.log(">>> CONTROLLER get detail food ERROR:", error.message);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
-};
+  const food = await foodService.getDetailFood(foodId);
+  if (!food) return res.status(404).json({ message: "Food not found" });
+  return res.status(200).json(food);
+});
 
-const updateFoodById = async (req, res) => {
+const updateFoodById = asyncHandler(async (req, res) => {
   const foodId = req.params.foodId;
   const {
     foodName,
@@ -173,16 +149,14 @@ const updateFoodById = async (req, res) => {
 
     res.status(200).json({ message: "Update food successful" });
   } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-
     if (err.code === "ER_DUP_ENTRY")
       return res.status(409).json({ message: "Food name already exists" });
 
-    res.status(500).json({ message: "Server error", error: err.message });
+    throw err;
   }
-};
+});
 
-const deleteFoodById = async (req, res) => {
+const deleteFoodById = asyncHandler(async (req, res) => {
   const foodId = req.params.foodId;
   const publicId = req.food?.imagePublicId;
   try {
@@ -196,15 +170,14 @@ const deleteFoodById = async (req, res) => {
     }
     res.status(200).json({ message: "Delete food successful" });
   } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
     if (err.code === "ER_ROW_IS_REFERENCED_2") {
       return res
         .status(400)
         .json({ message: "The food has been used in the order" });
     }
-    res.status(500).json({ message: "Server error", error: err.message });
+    throw err;
   }
-};
+});
 
 export default {
   getAllFoods,

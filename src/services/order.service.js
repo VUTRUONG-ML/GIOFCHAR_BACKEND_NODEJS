@@ -1,7 +1,10 @@
 import pool from "../config/db.js";
 import logger from "../config/logger.js";
 import { ORDER_STATUS, PAYMENT_STATUS } from "../constants/field.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 import {
   BadRequestError,
   ConflictError,
@@ -154,10 +157,11 @@ const createOrder = async (
     orderId,
   ]);
 
-  logger.info(LOG_EVENTS.ORDER.success.CREATE, {
+  logger.info(LOG_ACTIONS.ORDER.CREATE, {
+    status: LOG_STATUSES.SUCCEEDED,
     orderId: result.insertId,
-    customerName,
-    email,
+    actorType: userId ? "user" : "guest",
+    userId,
   });
   return { orderId: result.insertId, orderCode };
 };
@@ -166,6 +170,7 @@ const updateOrder = async (orderId, status) => {
   if (!ORDER_STATUS.includes(status))
     throw new BadRequestError("Invalid order status");
   const connection = await pool.getConnection();
+  const transactionStartedAt = Date.now();
 
   try {
     await connection.beginTransaction();
@@ -173,6 +178,13 @@ const updateOrder = async (orderId, status) => {
     if (status !== "delivered") {
       await updateOrderStatus(orderId, status, connection);
       await connection.commit();
+      logger.debug(LOG_ACTIONS.TRANSACTION, {
+        status: LOG_STATUSES.COMMITTED,
+        operation: "update_order",
+        orderId,
+        orderStatus: status,
+        durationMs: Date.now() - transactionStartedAt,
+      });
       return true;
     }
 
@@ -186,9 +198,24 @@ const updateOrder = async (orderId, status) => {
     }
 
     await connection.commit();
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: "update_order",
+      orderId,
+      orderStatus: status,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     return true;
   } catch (err) {
     await connection.rollback();
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation: "update_order",
+      reason: err.code || "UNEXPECTED_ERROR",
+      orderId,
+      orderStatus: status,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     throw err;
   } finally {
     connection.release();
@@ -244,48 +271,37 @@ const confirmCodOrderPayment = async (
   status = "delivered",
   conn = pool,
 ) => {
-  const connection = await conn.getConnection();
-  try {
-    if (status !== "delivered")
-      throw new BadRequestError("Invalid status order.");
+  if (status !== "delivered")
+    throw new BadRequestError("Invalid status order.");
 
-    await connection.beginTransaction();
-    const payment = await paymentService.getByOrderId(orderId, connection);
-    if (!payment) throw new NotFoundError("Payment not found for this order.");
+  const payment = await paymentService.getByOrderId(orderId, conn);
+  if (!payment) throw new NotFoundError("Payment not found for this order.");
 
-    const { paymentId, paymentType } = payment;
-    if (paymentType !== "COD")
-      throw new BadRequestError("Only COD orders can be confirmed manually"); // không thể update trạng thái payment cho order CARD được
+  const { paymentId, paymentType } = payment;
+  if (paymentType !== "COD")
+    throw new BadRequestError("Only COD orders can be confirmed manually"); // không thể update trạng thái payment cho order CARD được
 
-    await assertOrderUpdatable(orderId, connection);
+  await assertOrderUpdatable(orderId, conn);
 
-    const newPaymentStatus = "success";
-    const updatedOrder = await updateOrderDeliveredCOD(
-      orderId,
-      newPaymentStatus,
-      status,
-      connection,
-    );
-    if (!updatedOrder) throw new NotFoundError("Order not found");
+  const newPaymentStatus = "success";
+  const updatedOrder = await updateOrderDeliveredCOD(
+    orderId,
+    newPaymentStatus,
+    status,
+    conn,
+  );
+  if (!updatedOrder) throw new NotFoundError("Order not found");
 
-    await paymentService.updatePaymentById(
-      {
-        paymentId,
-        paymentStatus: newPaymentStatus,
-        paymentType,
-        transactionId: "COD",
-      },
-      connection,
-    );
-    await connection.commit();
-    return true;
-  } catch (error) {
-    await connection.rollback();
-    logger.error("Failed to confirm COD order payment", { orderId, error: error.message });
-    throw error;
-  } finally {
-    connection.release();
-  }
+  await paymentService.updatePaymentById(
+    {
+      paymentId,
+      paymentStatus: newPaymentStatus,
+      paymentType,
+      transactionId: "COD",
+    },
+    conn,
+  );
+  return true;
 };
 
 const deleteOrder = async (orderId) => {
@@ -307,21 +323,25 @@ const getOrderByIdAndUser = async (orderId, { userId, guestToken }) => {
 
 const tryAttachOrderToUser = async ({ email, userId }) => {
   try {
-    await pool.execute(
+    const [result] = await pool.execute(
       `
     UPDATE orders
     SET userID = ?, guestToken = NULL
     WHERE email = ? 
-    `,
+      `,
       [userId, email],
     );
-    logger.debug(LOG_EVENTS.ORDER.success.ATTACH_ORDER, { email, userId });
+    logger.debug(LOG_ACTIONS.ORDER.ATTACH_TO_USER, {
+      status: LOG_STATUSES.SUCCEEDED,
+      userId,
+      affectedOrders: result.affectedRows,
+    });
   } catch (error) {
     //ignore
-    logger.warn(LOG_EVENTS.AUTH.failed.ATTACH_ORDER, {
-      email,
+    logger.warn(LOG_ACTIONS.ORDER.ATTACH_TO_USER, {
+      status: LOG_STATUSES.FAILED,
       userId,
-      reason: error.message,
+      reason: error.code || "UNKNOWN_DATABASE_ERROR",
     });
   }
 };
@@ -426,15 +446,13 @@ const checkout = async (
     cartItems,
     orderId,
   );
-  logger.debug("CHECKOUT_AMOUNT", { orderId, amount: totalPriceOrder });
-
   await order_itemService.createOrderItem(conn, orderValues);
 
   // Nếu paymentMethod = card | ? => build url return để trả về thêm field paymentUrl => Fe kiểm tra nếu có trường này -> redirect sang url đó .
   const transactionDefault = paymentMethod === "COD" ? "COD" : "";
   const paymentStatusDefault = "pending";
 
-  await paymentService.createPayment(
+  const paymentResult = await paymentService.createPayment(
     conn,
     orderId,
     paymentMethod,
@@ -451,7 +469,14 @@ const checkout = async (
     });
   }
   await cartService.clearCart(cartId, conn);
-  return { orderId, orderCode, totalPriceOrder, paymentUrl };
+  return {
+    orderId,
+    orderCode,
+    totalPriceOrder,
+    paymentUrl,
+    paymentId: paymentResult.insertId,
+    paymentStatus: paymentStatusDefault,
+  };
 };
 
 export default {

@@ -1,6 +1,11 @@
 import { signVnpayParams } from "../services/payments/vnpay.service.js";
 import orderService from "../services/order.service.js";
 import paymentService from "../services/payment.service.js";
+import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 export function verifyVnpaySignature(req, res, next) {
   let vnp_Params = { ...req.query };
@@ -14,7 +19,10 @@ export function verifyVnpaySignature(req, res, next) {
   const signed = signVnpayParams(vnp_Params);
 
   if (secureHash !== signed) {
-    console.log("INVALID SIGNATURE");
+    logger.warn(LOG_ACTIONS.PAYMENT.VERIFY_CALLBACK, {
+      status: LOG_STATUSES.FAILED,
+      reason: "INVALID_SIGNATURE",
+    });
     return res.status(200).json({ RspCode: "97", Message: "Checksum failed" });
   }
 
@@ -28,18 +36,30 @@ export async function checkVnpayOrder(req, res, next) {
 
   const order = await orderService.getByOrderCode({ orderCode: vnp_TxnRef });
   if (!order) {
-    console.log(">>> Payment for order not found");
+    logger.warn(LOG_ACTIONS.PAYMENT.VALIDATE_CALLBACK, {
+      status: LOG_STATUSES.FAILED,
+      reason: "ORDER_NOT_FOUND",
+      orderCode: vnp_TxnRef,
+    });
     return res.json({ RspCode: "01", Message: "Order not found" });
   }
 
   const payment = await paymentService.getByOrderId(order.orderId);
   if (!payment) {
-    console.log(">>> Payment not found");
+    logger.warn(LOG_ACTIONS.PAYMENT.VALIDATE_CALLBACK, {
+      status: LOG_STATUSES.FAILED,
+      reason: "PAYMENT_NOT_FOUND",
+      orderId: order.orderId,
+    });
     return res.json({ RspCode: "01", Message: "Payment not found" });
   }
 
   if (Number(order.amount) !== amount || Number(payment.amount) !== amount) {
-    console.log(">>> Invalid amount");
+    logger.warn(LOG_ACTIONS.PAYMENT.VALIDATE_CALLBACK, {
+      status: LOG_STATUSES.FAILED,
+      reason: "AMOUNT_MISMATCH",
+      orderId: order.orderId,
+    });
     return res.json({ RspCode: "04", Message: "Amount invalid" });
   }
 

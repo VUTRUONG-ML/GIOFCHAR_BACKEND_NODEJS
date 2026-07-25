@@ -1,29 +1,23 @@
 import pool from "../config/db.js";
 import logger from "../config/logger.js";
 import { PAYMENT_STATUS } from "../constants/field.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 import { BadRequestError } from "../errors/AppError.js";
 
 const getAllPayments = async () => {
-  try {
-    const [rows] = await pool.execute("SELECT * FROM payments");
-
-    return rows;
-  } catch (err) {
-    throw err;
-  }
+  const [rows] = await pool.execute("SELECT * FROM payments");
+  return rows;
 };
 
 const getPaymentById = async (paymentId) => {
-  try {
-    const [rows] = await pool.execute(
-      "SELECT id as paymentId, paymentType, status, amount  FROM payments WHERE id = ?",
-      [paymentId],
-    );
-    return rows;
-  } catch (err) {
-    throw err;
-  }
+  const [rows] = await pool.execute(
+    "SELECT id as paymentId, paymentType, status, amount  FROM payments WHERE id = ?",
+    [paymentId],
+  );
+  return rows;
 };
 
 const updatePaymentById = async (
@@ -32,17 +26,13 @@ const updatePaymentById = async (
 ) => {
   if (!PAYMENT_STATUS.includes(paymentStatus))
     throw new BadRequestError("Invalid payment status.");
-  try {
-    const [result] = await conn.execute(
-      `UPDATE payments p 
+  const [result] = await conn.execute(
+    `UPDATE payments p
         SET paymentType = ?, status = ?, transactionID = ? 
         WHERE id = ?`,
-      [paymentType, paymentStatus, transactionId, paymentId],
-    );
-    return result.affectedRows === 1;
-  } catch (err) {
-    throw err;
-  }
+    [paymentType, paymentStatus, transactionId, paymentId],
+  );
+  return result.affectedRows === 1;
 };
 
 const createPayment = async (
@@ -54,7 +44,12 @@ const createPayment = async (
   paymentStatus,
 ) => {
   if (!PAYMENT_STATUS.includes(paymentStatus)) {
-    logger.warn("PAYMENT_CREATE_FAILED", { reason: "INVALID_STATUS" });
+    logger.warn(LOG_ACTIONS.PAYMENT.CREATE, {
+      status: LOG_STATUSES.FAILED,
+      reason: "INVALID_STATUS",
+      orderId: orderID,
+      paymentType,
+    });
     throw new BadRequestError("Invalid payment status.");
   }
 
@@ -78,28 +73,18 @@ const createPayment = async (
     ];
   }
   const [result] = await conn.execute(sql, values);
-  logger.debug(LOG_EVENTS.PAYMENT.success.CREATE, {
-    paymentId: result.insertId,
-    amount,
-    paymentStatus,
-  });
   return result;
 };
 
 const deletePayment = async (paymentId) => {
-  try {
-    const [result] = await pool.execute("DELETE FROM payments WHERE id = ?", [
-      paymentId,
-    ]);
-    return result;
-  } catch (err) {
-    throw err;
-  }
+  const [result] = await pool.execute("DELETE FROM payments WHERE id = ?", [
+    paymentId,
+  ]);
+  return result;
 };
 
 const getByOrderId = async (orderId) => {
-  try {
-    const sql = `
+  const sql = `
       SELECT 
         p.id as paymentId,
         p.amount,
@@ -108,12 +93,8 @@ const getByOrderId = async (orderId) => {
         p.status as paymentStatus
       FROM  payments p
       WHERE p.orderID  = ?`;
-    const [rows] = await pool.execute(sql, [orderId]);
-    return rows.length > 0 ? rows[0] : null;
-  } catch (error) {
-    console.log(">>> SERVICE payment ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await pool.execute(sql, [orderId]);
+  return rows.length > 0 ? rows[0] : null;
 };
 
 const revenue = async (time = "default", conn = pool) => {
@@ -126,8 +107,7 @@ const revenue = async (time = "default", conn = pool) => {
 
   if (time !== "today" && time !== "yesterday" && time !== "default")
     throw new Error("INVALID_TIME_REVENUE");
-  try {
-    const sql = `
+  const sql = `
       SELECT 
         p.amount as revenue,	
         p.createdAt 
@@ -135,12 +115,8 @@ const revenue = async (time = "default", conn = pool) => {
       WHERE p.status = "success"
       ${optionTime}
     `;
-    const [rows] = await conn.execute(sql);
-    return rows[0] ? Number(rows[0].revenue) : 0;
-  } catch (error) {
-    console.log(">>> SERVICE get revenue payments ERROR", error);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql);
+  return rows[0] ? Number(rows[0].revenue) : 0;
 };
 export default {
   getAllPayments,

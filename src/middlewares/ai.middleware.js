@@ -1,4 +1,10 @@
 import aiService from "../services/ai.service.js";
+import logger from "../config/logger.js";
+import { asyncHandler } from "../errors/errorHandler.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 export const validateInputMessage = (req, res, next) => {
   if (!req.body.message)
@@ -27,26 +33,20 @@ export const validateInputMessage = (req, res, next) => {
   next();
 };
 
-export const detectUserMessage = async (req, res, next) => {
+export const detectUserMessage = asyncHandler(async (req, res, next) => {
   const { message } = req.body;
   const { chat } = req.session;
 
   // Nếu vẫn còn trong phiên chat trước đó chưa kết thúc
   if (chat.intent) return next();
 
-  try {
-    const intentResult = await aiService.detectIntent(message);
-    chat.intent = intentResult.intent;
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
+  const intentResult = await aiService.detectIntent(message);
+  chat.intent = intentResult.intent;
 
-  next();
-};
+  return next();
+});
 
-export const handleIntent_goi_y_mon = async (req, res, next) => {
+export const handleIntent_goi_y_mon = asyncHandler(async (req, res, next) => {
   const { chat } = req.session;
   const { intent } = chat;
   const CHAT_HISTORY = req.session.chat.history;
@@ -55,14 +55,12 @@ export const handleIntent_goi_y_mon = async (req, res, next) => {
 
   let agentRes = null;
 
-  try {
-    agentRes = await aiService.slotFillingAgent(CHAT_HISTORY);
-    console.log(">>> ai res", agentRes);
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
-  }
+  agentRes = await aiService.slotFillingAgent(CHAT_HISTORY);
+  logger.debug(LOG_ACTIONS.AI.SLOT_FILLING, {
+    status: LOG_STATUSES.SUCCEEDED,
+    completed: agentRes.done,
+    reason: agentRes.reason,
+  });
 
   if (agentRes.ask) {
     chat.history.push({
@@ -78,5 +76,5 @@ export const handleIntent_goi_y_mon = async (req, res, next) => {
     reason: agentRes.reason,
   };
 
-  next();
-};
+  return next();
+});

@@ -1,18 +1,11 @@
-import logger from "../config/logger.js";
 import { BadRequestError } from "../errors/AppError.js";
 export function validateOwner({ userId, guestToken }) {
   if (userId && guestToken) {
-    logger.warn("ORDER_VALIDATE_OWNER_FAILED", {
-      reason: "ASSET_BELONG_USER_GUEST",
-    });
-    throw new Error("Asset cannot belong to both user and guest");
+    throw new BadRequestError("Asset cannot belong to both user and guest");
   }
 
   if (!userId && !guestToken) {
-    logger.warn("ORDER_VALIDATE_OWNER_FAILED", {
-      reason: "ASSET_NOT_OWNER",
-    });
-    throw new Error("Asset must have an owner");
+    throw new BadRequestError("Asset must have an owner");
   }
 }
 

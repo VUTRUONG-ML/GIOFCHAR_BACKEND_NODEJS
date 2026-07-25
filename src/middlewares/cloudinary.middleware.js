@@ -1,19 +1,35 @@
 import { FOOD_IMAGE_OPTIONS } from "../constants/cloudinaryOptions.js";
 import { uploadImage, deleteImage } from "../services/cloudinary.service.js";
 import fs from "fs";
+import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 export const uploadToCloudinary = async (req, res, next) => {
   if (!req.file) {
-    console.log("No image upload");
+    logger.debug(LOG_ACTIONS.CLOUDINARY.UPLOAD_IMAGE, {
+      status: LOG_STATUSES.SKIPPED,
+      reason: "FILE_NOT_PROVIDED",
+    });
     return next();
   }
   try {
     const result = await uploadImage(req.file.path, FOOD_IMAGE_OPTIONS);
     req.cloudinaryImage = result; // secure_url,public_id
   } catch (err) {
-    console.error("Cloudinary upload failed:", err);
+    logger.error(LOG_ACTIONS.CLOUDINARY.UPLOAD_IMAGE, {
+      status: LOG_STATUSES.FAILED,
+      reason: err.code || "CLOUDINARY_UPLOAD_FAILED",
+    });
   } finally {
     fs.unlink(req.file.path, (err) => {
-      if (err) console.error("Error deleting temp file:", err);
+      if (err) {
+        logger.warn(LOG_ACTIONS.FILE.DELETE_TEMPORARY, {
+          status: LOG_STATUSES.FAILED,
+          reason: err.code || "TEMP_FILE_DELETE_FAILED",
+        });
+      }
     });
   }
   next();
@@ -23,9 +39,12 @@ export const deleteFromCloudinary = async (req, res, next) => {
   const publicId = req.food.imagePublicId;
   if (!publicId) return next();
   try {
-    const result = await deleteImage(publicId);
+    await deleteImage(publicId);
   } catch (err) {
-    console.error(err);
+    logger.error(LOG_ACTIONS.CLOUDINARY.DELETE_IMAGE, {
+      status: LOG_STATUSES.FAILED,
+      reason: err.code || "CLOUDINARY_DELETE_FAILED",
+    });
   }
   next();
 };
@@ -38,9 +57,14 @@ export const cleanupCloudinary = async (req, res, next) => {
     if (res.statusCode >= 400 && publicIdImg) {
       try {
         await deleteImage(publicIdImg);
-        console.log(">>>>> Rollback cleanup successful");
+        logger.info(LOG_ACTIONS.CLOUDINARY.CLEANUP_IMAGE, {
+          status: LOG_STATUSES.SUCCEEDED,
+        });
       } catch (error) {
-        console.error("Rollback failed:", error.message);
+        logger.error(LOG_ACTIONS.CLOUDINARY.CLEANUP_IMAGE, {
+          status: LOG_STATUSES.FAILED,
+          reason: error.code || "CLOUDINARY_CLEANUP_FAILED",
+        });
       }
     }
 

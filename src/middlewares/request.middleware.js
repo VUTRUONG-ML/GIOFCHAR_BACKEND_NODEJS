@@ -5,6 +5,10 @@ import {
 } from "uuid";
 import logger from "../config/logger.js";
 import { asyncLocalStorage } from "../utils/asyncLocalStorage.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 const isValidRequestId = (value) => {
   return (
@@ -30,7 +34,8 @@ export const requestLogger = (req, res, next) => {
   // Đưa requestId vào "kho" ALS
   asyncLocalStorage.run({ requestId, start }, () => {
     // Log khi request vừa đến (Winston sẽ tự lấy requestId từ ALS)
-    logger.info("Incoming request", {
+    logger.info(LOG_ACTIONS.SYSTEM.HTTP_REQUEST, {
+      status: LOG_STATUSES.STARTED,
       method: req.method,
       url: req.originalUrl,
     });
@@ -39,9 +44,10 @@ export const requestLogger = (req, res, next) => {
     res.on("finish", () => {
       const duration = Date.now() - start;
 
-      logger.info("Request completed", {
+      logger.info(LOG_ACTIONS.SYSTEM.HTTP_REQUEST, {
+        status: LOG_STATUSES.COMPLETED,
         statusCode: res.statusCode,
-        duration: `${duration}ms`,
+        durationMs: duration,
       });
     });
 

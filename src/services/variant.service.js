@@ -8,14 +8,18 @@ import {
   getPromotionTarget,
 } from "./promotion.service.js";
 import { BadRequestError, ConflictError } from "../errors/AppError.js";
+import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 export async function getVariantByFoodId(
   foodId,
   forAdmin = false,
   conn = pool,
 ) {
-  try {
-    const sql = `
+  const sql = `
         SELECT
             fv.id as variantId,
             fv.weight_gram,
@@ -33,14 +37,10 @@ export async function getVariantByFoodId(
         WHERE fv.foodID = ?  AND fv.isActive = true AND fv.stock > 0
         ORDER BY fv.weight_gram 
     `; // Nếu bỏ AND NOW() BETWEEN p.start_at AND p.end_at và AND p.isActive = TRUE xuống dưới where thì nó sẽ không khớp đk where nên nó sẽ bỏ các dòng mà promotion null
-    const [rows] = await conn.execute(sql, [foodId]);
-    const res = groupVariant(rows);
-    if (forAdmin) return rows;
-    return res;
-  } catch (error) {
-    console.log(">>> SERVICE ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql, [foodId]);
+  const res = groupVariant(rows);
+  if (forAdmin) return rows;
+  return res;
 }
 
 export async function createVariant(
@@ -55,7 +55,6 @@ export async function createVariant(
     const [result] = await conn.execute(sql, values);
     return result.insertId;
   } catch (error) {
-    console.log(">>> SERVICE create variant ERROR:", error.message);
     if (error.code === "ER_DUP_ENTRY")
       throw new ConflictError("Weight gram already exists on food");
     throw error;
@@ -77,7 +76,6 @@ export async function updateVariant(
     const [result] = await conn.execute(sql, values);
     return result.affectedRows === 1;
   } catch (error) {
-    console.log(">>> SERVICE update variant ERROR:", error.message);
     if (error.code === "ER_DUP_ENTRY")
       throw new ConflictError("Weight gram already exists on food");
     throw error;
@@ -140,6 +138,8 @@ export async function createVariantWithPromotion({
   promotionId = null,
 }) {
   const conn = await pool.getConnection();
+  const transactionStartedAt = Date.now();
+  let createdVariantId;
 
   try {
     await conn.beginTransaction();
@@ -149,6 +149,7 @@ export async function createVariantWithPromotion({
       { foodId, weight_gram, originalPrice, stock },
       conn,
     );
+    createdVariantId = variantId;
 
     // 2. Nếu có promotion thì gán promotion cho variant
     let promotionType = null;
@@ -163,6 +164,13 @@ export async function createVariantWithPromotion({
     }
 
     await conn.commit();
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: "create_variant_with_promotion",
+      variantId,
+      promotionId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     return {
       variantId,
       promotionType,
@@ -170,7 +178,14 @@ export async function createVariantWithPromotion({
     };
   } catch (error) {
     await conn.rollback();
-    console.log(">>> SERVICE createVariantWithPromotion ERROR:", error.message);
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation: "create_variant_with_promotion",
+      reason: error.code || "UNEXPECTED_ERROR",
+      variantId: createdVariantId,
+      promotionId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     throw error;
   } finally {
     conn.release();
@@ -186,6 +201,7 @@ export async function updateVariantWithPromotion({
   promotionId = null,
 }) {
   const conn = await pool.getConnection();
+  const transactionStartedAt = Date.now();
   try {
     await conn.beginTransaction();
     // 1 cập nhật thông tin variant trước
@@ -240,9 +256,23 @@ export async function updateVariantWithPromotion({
       await createPromotionTarget({ promotionId, variantId }, conn);
     }
     await conn.commit();
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: "update_variant_with_promotion",
+      variantId,
+      promotionId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
   } catch (error) {
     await conn.rollback();
-    console.log("SERVICE updateVariantWithPromotion ERROR:", error.message);
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation: "update_variant_with_promotion",
+      reason: error.code || "UNEXPECTED_ERROR",
+      variantId,
+      promotionId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     throw error;
   } finally {
     conn.release();
@@ -256,7 +286,6 @@ export async function deleteVariant(variantId, conn = pool) {
     const [result] = await conn.execute(sql, values);
     return result.affectedRows === 1;
   } catch (error) {
-    console.log(">>> SERVICE delete variant ERROR:", error.message);
     if (error.code === "ER_ROW_IS_REFERENCED_2")
       throw new ConflictError("RESOURCE_IN_USE");
     throw error;
@@ -264,22 +293,17 @@ export async function deleteVariant(variantId, conn = pool) {
 }
 
 const updateStock = async (conn, variantId, quantityOrder) => {
-  try {
-    if (quantityOrder <= 0)
-      throw new BadRequestError("The order quantity must be greater than zero");
-    const [result] = await conn.execute(
-      `
+  if (quantityOrder <= 0)
+    throw new BadRequestError("The order quantity must be greater than zero");
+  const [result] = await conn.execute(
+    `
       UPDATE food_variants
       SET stock = stock - ?
       WHERE id = ? AND stock >= ?
       `,
-      [quantityOrder, variantId, quantityOrder],
-    );
-    return result.affectedRows === 1;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR update stock:", error.message);
-    throw error;
-  }
+    [quantityOrder, variantId, quantityOrder],
+  );
+  return result.affectedRows === 1;
 };
 
 export const deductStockForOrder = async (conn, cartItems) => {

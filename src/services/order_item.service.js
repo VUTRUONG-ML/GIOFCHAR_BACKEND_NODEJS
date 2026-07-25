@@ -1,11 +1,14 @@
 import pool from "../config/db.js";
 import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 import { NotFoundError } from "../errors/AppError.js";
 import { groupOrderDetail } from "../utils/order.util.js";
 
 const getOrderItemsByOrderId = async (orderId) => {
-  try {
-    const [rows] = await pool.execute(
+  const [rows] = await pool.execute(
       `SELECT
         o.id AS orderId,
         o.orderCode,
@@ -39,14 +42,11 @@ const getOrderItemsByOrderId = async (orderId) => {
       WHERE o.id = ?`,
       [orderId],
     );
-    const order = groupOrderDetail(rows);
+  const order = groupOrderDetail(rows);
 
-    if (!order) throw new NotFoundError("Order not found");
+  if (!order) throw new NotFoundError("Order not found");
 
-    return order;
-  } catch (err) {
-    throw err;
-  }
+  return order;
 };
 
 const createOrderItem = async (connection, orderValues) => {
@@ -57,9 +57,9 @@ const createOrderItem = async (connection, orderValues) => {
     "INSERT INTO order_items (orderID, food_variantID, item_name, weight_gram, originalPrice, discount_type, discount_value, discount_amount, unitPrice, quantity, totalPrice) VALUES ?",
     [orderValues],
   );
-  logger.debug("BULK_INSERT_ORDER_ITEMS", {
+  logger.debug(LOG_ACTIONS.ORDER.CREATE_ITEMS, {
+    status: LOG_STATUSES.SUCCEEDED,
     count: orderValues.length,
-    sample: orderValues[0],
   });
   return result.insertId;
 };

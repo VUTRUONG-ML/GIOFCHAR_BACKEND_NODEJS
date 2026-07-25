@@ -1,6 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 import mysql from "mysql2/promise";
+import logger from "./logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -22,11 +27,17 @@ const pool = mysql.createPool({
 async function checkDBConnection() {
   try {
     const connection = await pool.getConnection();
-    console.log(">>>>> MySQL connected:", process.env.DB_HOST);
+    logger.info(LOG_ACTIONS.SYSTEM.DATABASE_CONNECTION, {
+      status: LOG_STATUSES.SUCCEEDED,
+      databaseType: "mysql",
+    });
     connection.release();
   } catch (err) {
-    console.error(">>>>> MySQL connection failed");
-    console.error(err);
+    logger.error(LOG_ACTIONS.SYSTEM.DATABASE_CONNECTION, {
+      status: LOG_STATUSES.FAILED,
+      databaseType: "mysql",
+      reason: err.code || "CONNECTION_FAILED",
+    });
     process.exit(1); // fail fast
   }
 }

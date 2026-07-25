@@ -5,9 +5,8 @@ import { getPriceRange } from "../utils/variant.js";
 import { getVariantByFoodId } from "./variant.service.js";
 
 const getAllFoodsAdmin = async () => {
-  try {
-    // For pool initialization, see above
-    const [foods] = await pool.execute(`
+  // For pool initialization, see above
+  const [foods] = await pool.execute(`
       SELECT 
         f.id as foodId,
         foodName, 
@@ -21,16 +20,11 @@ const getAllFoodsAdmin = async () => {
         c.categoryName
       FROM foods f
       JOIN categories c ON f.categoryID = c.id`);
-    return foods;
-  } catch (err) {
-    console.log(">>>>> Service error", err.message);
-    throw err;
-  }
+  return foods;
 };
 
 const getAllFoods = async (conn = pool) => {
-  try {
-    const [rows] = await conn.execute(`
+  const [rows] = await conn.execute(`
       SELECT
         f.id           AS foodId,
         f.foodName,
@@ -59,17 +53,12 @@ const getAllFoods = async (conn = pool) => {
       WHERE f.isActive = true
       ORDER BY f.id, fv.weight_gram;
     `);
-    const newRows = buildPreview(rows);
-    return newRows;
-  } catch (err) {
-    console.log(">>>>> Service getAllFoods error", err);
-    throw err;
-  }
+  const newRows = buildPreview(rows);
+  return newRows;
 };
 const limitRow = 8;
 const getBestSellingFoods = async (conn = pool) => {
-  try {
-    const sql = `   
+  const sql = `
       SELECT
             f.id           AS foodId,
             f.foodName,
@@ -106,16 +95,12 @@ const getBestSellingFoods = async (conn = pool) => {
         WHERE f.isActive = TRUE
         ORDER BY fs.totalSold DESC
     `;
-    const [rows] = await conn.execute(sql);
-    const bestSelling = buildPreview(rows);
-    return bestSelling;
-  } catch (error) {
-    throw error;
-  }
+  const [rows] = await conn.execute(sql);
+  const bestSelling = buildPreview(rows);
+  return bestSelling;
 };
 const getPromotionFoods = async (conn = pool) => {
-  try {
-    const sql = `
+  const sql = `
       SELECT
         f.id           AS foodId,
         f.foodName,
@@ -151,12 +136,9 @@ const getPromotionFoods = async (conn = pool) => {
             AND NOW() BETWEEN p2.start_at AND p2.end_at
           )
     `; // trước WHERE thì  query lấy ra toàn bộ danh sách food đang giảm giá hoặc không, sau khi áp dụng WHERE thì nó sẽ lọc theo điều kiện ràng buộc EXISTS chắc chắn phải có ít nhất 1 variant giảm giá
-    const [rows] = await conn.execute(sql);
-    const onSale = buildPreview(rows);
-    return onSale;
-  } catch (error) {
-    throw error;
-  }
+  const [rows] = await conn.execute(sql);
+  const onSale = buildPreview(rows);
+  return onSale;
 };
 const createFood = async (
   foodName,
@@ -168,8 +150,7 @@ const createFood = async (
   image,
   imagePublicId,
 ) => {
-  try {
-    const sql = `
+  const sql = `
       INSERT INTO foods (
             foodName,
             foodDescription,
@@ -198,19 +179,14 @@ const createFood = async (
       image || "",
       imagePublicId || "",
     ];
-    const [result] = await pool.execute(sql, values);
+  const [result] = await pool.execute(sql, values);
 
-    return { insertId: result.insertId };
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
-  }
+  return { insertId: result.insertId };
 };
 
 const getFoodById = async (foodId, conn = pool) => {
-  try {
-    // For pool initialization, see above
-    const [foods] = await conn.execute(
+  // For pool initialization, see above
+  const [foods] = await conn.execute(
       `SELECT 
         f.id as foodId,
         f.foodName,
@@ -225,11 +201,7 @@ const getFoodById = async (foodId, conn = pool) => {
       WHERE f.id = ?`,
       [foodId],
     );
-    return foods.length > 0 ? foods[0] : null;
-  } catch (err) {
-    console.log(">>>>> Service error", err.message);
-    throw err;
-  }
+  return foods.length > 0 ? foods[0] : null;
 };
 
 const updateFoodById = async (
@@ -243,8 +215,7 @@ const updateFoodById = async (
   imagePublicId,
   foodId,
 ) => {
-  try {
-    const sql = `
+  const sql = `
       UPDATE foods 
        SET
          foodName = ?,
@@ -268,32 +239,22 @@ const updateFoodById = async (
       imagePublicId || "",
       foodId,
     ];
-    const [result] = await pool.execute(sql, values);
+  const [result] = await pool.execute(sql, values);
 
-    return result;
-  } catch (err) {
-    console.log(">>>>> SERVICE ERROR", err.message);
-    throw err;
-  }
+  return result;
 };
 
 const deleteFoodById = async (foodId) => {
-  try {
-    // For pool initialization, see above
-    const [result] = await pool.execute("DELETE FROM foods WHERE id = ?", [
-      foodId,
-    ]);
-    return result;
-  } catch (err) {
-    console.log(">>>>> Service error", err.message);
-    throw err;
-  }
+  // For pool initialization, see above
+  const [result] = await pool.execute("DELETE FROM foods WHERE id = ?", [
+    foodId,
+  ]);
+  return result;
 };
 
 const searchFood = async (key = "") => {
   const normalizedKeyword = normalizeVN(key);
-  try {
-    const [result] = await pool.execute(
+  const [result] = await pool.execute(
       `
       SELECT 
        f.id as foodId,
@@ -312,22 +273,17 @@ const searchFood = async (key = "") => {
       WHERE f.isActive = 1
             AND f.stock > 0`,
     );
-    if (!normalizedKeyword) return result;
-    return result.filter((row) => {
-      return (
-        normalizeVN(row.foodName).includes(normalizedKeyword) ||
-        normalizeVN(row.foodDescription || "").includes(normalizedKeyword)
-      );
-    });
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR", error.message);
-    throw error;
-  }
+  if (!normalizedKeyword) return result;
+  return result.filter((row) => {
+    return (
+      normalizeVN(row.foodName).includes(normalizedKeyword) ||
+      normalizeVN(row.foodDescription || "").includes(normalizedKeyword)
+    );
+  });
 };
 
 const filterFood = async (preference, budget, quantity) => {
-  try {
-    const [foods] = await pool.execute(
+  const [foods] = await pool.execute(
       `
       SELECT
         f.id as foodId,
@@ -344,25 +300,16 @@ const filterFood = async (preference, budget, quantity) => {
     `,
       [preference, preference, budget, quantity],
     );
-    return foods.length > 0 ? foods : null;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR:", error.message);
-    throw error;
-  }
+  return foods.length > 0 ? foods : null;
 };
 
 const getStock = async (conn, foodId, { forUpdate = false }) => {
-  try {
-    const isLock = forUpdate ? "FOR UPDATE" : "";
-    const [result] = await conn.execute(
+  const isLock = forUpdate ? "FOR UPDATE" : "";
+  const [result] = await conn.execute(
       `SELECT stock FROM foods WHERE id = ? ${isLock}`,
       [foodId],
     );
-    return result.length > 0 ? result[0] : null;
-  } catch (error) {
-    console.log(">>>>> SERVICE ERROR get stock:", error.message);
-    throw error;
-  }
+  return result.length > 0 ? result[0] : null;
 };
 
 const getDetailFood = async (foodId) => {
@@ -376,9 +323,6 @@ const getDetailFood = async (foodId) => {
     const priceRange = getPriceRange(variants);
     const newFood = { ...food, variants, ...priceRange };
     return newFood;
-  } catch (error) {
-    console.log(">>> SERVICE get detail food ERROR:", error.message);
-    throw error;
   } finally {
     connection.release();
   }

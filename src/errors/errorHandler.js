@@ -1,4 +1,8 @@
 import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 export function errorHandler(err, req, res, next) {
   // IPN VNPAY: luôn trả 200
@@ -10,7 +14,8 @@ export function errorHandler(err, req, res, next) {
   }
   const statusCode = err.statusCode || 500;
   if (statusCode === 500) {
-    logger.error("Unhandled error", {
+    logger.error(LOG_ACTIONS.SYSTEM.UNHANDLED_ERROR, {
+      status: LOG_STATUSES.FAILED,
       requestId: req.requestId,
       message: err.message,
       stack: err.stack,

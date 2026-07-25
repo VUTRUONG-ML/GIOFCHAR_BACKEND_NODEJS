@@ -7,6 +7,10 @@ import { sortObject } from "../../utils/payment.js";
 import orderService from "../order.service.js";
 import paymentService from "../payment.service.js";
 import logger from "../../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../../constants/logEvents.js";
 
 export function buildVnpayPaymentUrl({
   orderId,
@@ -45,7 +49,11 @@ export function buildVnpayPaymentUrl({
   const url = `${vnpayConfig.vnpUrl}?${qs.stringify(vnp_Params, {
     encode: false,
   })}`;
-  logger.debug("BUILD_VNPAY_URL_SUCCESS", { orderId, amount, ipAddr });
+  logger.debug(LOG_ACTIONS.PAYMENT.BUILD_URL, {
+    status: LOG_STATUSES.SUCCEEDED,
+    orderId,
+    amount,
+  });
   return url;
 }
 
