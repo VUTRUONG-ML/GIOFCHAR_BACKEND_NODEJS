@@ -39,6 +39,14 @@ app.use(
 
 app.use(requestLogger);
 
+app.get("/health", (req, res) => {
+  return res.status(200).json({
+    status: "ok",
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -69,6 +77,7 @@ app.use("/api/carts", cartRoutes);
 app.use("/api/foods", foodRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
+
 app.use("/", (req, res) => {
   res.send("Hello world, this is GIOFCHAR WEBSITE");
 });
