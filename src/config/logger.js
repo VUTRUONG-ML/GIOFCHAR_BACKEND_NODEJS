@@ -5,6 +5,28 @@ dotenv.config();
 
 const isProd = process.env.NODE_ENV === "production";
 
+const REDACTED_VALUE = "[REDACTED]";
+const SENSITIVE_LOG_KEYS = new Set([
+  "password",
+  "currentpassword",
+  "newpassword",
+  "confirmpassword",
+  "authorization",
+  "cookie",
+  "cookies",
+  "set-cookie",
+  "accesstoken",
+  "access_token",
+  "refreshtoken",
+  "refresh_token",
+  "jwt",
+  "secret",
+  "secretkey",
+  "clientsecret",
+  "apikey",
+  "api_key",
+]);
+
 const addRequestId = format((info) => {
   const store = asyncLocalStorage.getStore();
 
@@ -15,6 +37,26 @@ const addRequestId = format((info) => {
   return info;
 });
 
+export const redactSensitiveData = format((info) => {
+  const visited = new WeakSet();
+
+  const redact = (value) => {
+    if (!value || typeof value !== "object" || visited.has(value)) return;
+    visited.add(value);
+
+    for (const [key, childValue] of Object.entries(value)) {
+      if (SENSITIVE_LOG_KEYS.has(key.toLowerCase())) {
+        value[key] = REDACTED_VALUE;
+      } else {
+        redact(childValue);
+      }
+    }
+  };
+
+  redact(info);
+  return info;
+});
+
 const logger = createLogger({
   level: isProd ? "info" : "debug",
 
@@ -22,6 +64,7 @@ const logger = createLogger({
     addRequestId(),
     format.timestamp(),
     format.errors({ stack: true }), // log stack trace
+    redactSensitiveData(),
     isProd ? format.json() : format.combine(format.colorize(), format.simple()),
   ),
 

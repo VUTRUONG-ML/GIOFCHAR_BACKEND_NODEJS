@@ -37,7 +37,7 @@ export const requestLogger = (req, res, next) => {
     logger.info(LOG_ACTIONS.SYSTEM.HTTP_REQUEST, {
       status: LOG_STATUSES.STARTED,
       method: req.method,
-      url: req.originalUrl,
+      path: req.path,
     });
 
     // Lắng nghe khi request kết thúc

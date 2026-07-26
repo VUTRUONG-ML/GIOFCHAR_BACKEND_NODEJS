@@ -51,6 +51,7 @@ export const LOG_ACTIONS = {
     BUILD_URL: "build_payment_url",
     VERIFY_CALLBACK: "verify_payment_callback",
     VALIDATE_CALLBACK: "validate_payment_callback",
+    PROCESS_CALLBACK: "process_payment_callback",
   },
   TRANSACTION: "transaction",
 };

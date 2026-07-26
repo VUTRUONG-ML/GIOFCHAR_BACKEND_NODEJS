@@ -81,11 +81,20 @@ const deletePayment = asyncHandler(async (req, res) => {
 const handleIpn = async (req, res, next) => {
   const connection = await pool.getConnection();
   const order = req.order;
-  const payment = req.payment;
+  let payment = req.payment;
   const vnpayParams = req.vnpayParams;
   const transactionStartedAt = Date.now();
   try {
     await connection.beginTransaction();
+    payment = await paymentService.getByOrderId(order.orderId, connection, {
+      forUpdate: true,
+    });
+    if (!payment) {
+      const error = new Error("Payment not found");
+      error.code = "PAYMENT_NOT_FOUND";
+      throw error;
+    }
+
     const result = await processIpn({
       order,
       payment,
@@ -100,18 +109,49 @@ const handleIpn = async (req, res, next) => {
       paymentId: payment.paymentId,
       durationMs: Date.now() - transactionStartedAt,
     });
-    return res.status(200).json(result);
-  } catch (error) {
-    await connection.rollback();
-    logger.warn(LOG_ACTIONS.TRANSACTION, {
-      status: LOG_STATUSES.ROLLED_BACK,
-      operation: "process_vnpay_ipn",
-      reason: error.code || "UNEXPECTED_ERROR",
+    logger.info(LOG_ACTIONS.PAYMENT.PROCESS_CALLBACK, {
+      status:
+        result.outcome === "duplicate"
+          ? LOG_STATUSES.SKIPPED
+          : LOG_STATUSES.COMPLETED,
+      reason:
+        result.outcome === "duplicate"
+          ? "PAYMENT_ALREADY_PROCESSED"
+          : undefined,
       orderId: order.orderId,
       paymentId: payment.paymentId,
-      durationMs: Date.now() - transactionStartedAt,
+      paymentStatus: result.paymentStatus,
+      providerResponseCode: result.providerResponseCode,
+      responseCode: result.RspCode,
     });
-    next(error);
+    return res.status(200).json({
+      RspCode: result.RspCode,
+      Message: result.Message,
+    });
+  } catch (error) {
+    try {
+      await connection.rollback();
+      logger.warn(LOG_ACTIONS.TRANSACTION, {
+        status: LOG_STATUSES.ROLLED_BACK,
+        operation: "process_vnpay_ipn",
+        reason: error.code || "UNEXPECTED_ERROR",
+        orderId: order.orderId,
+        paymentId: payment?.paymentId,
+        durationMs: Date.now() - transactionStartedAt,
+      });
+    } catch (rollbackError) {
+      logger.error(LOG_ACTIONS.TRANSACTION, {
+        status: LOG_STATUSES.FAILED,
+        operation: "process_vnpay_ipn",
+        phase: "rollback",
+        reason: rollbackError.code || "ROLLBACK_FAILED",
+        originalReason: error.code || "UNEXPECTED_ERROR",
+        orderId: order.orderId,
+        paymentId: payment?.paymentId,
+        durationMs: Date.now() - transactionStartedAt,
+      });
+    }
+    return next(error);
   } finally {
     connection.release();
   }

@@ -83,7 +83,11 @@ const deletePayment = async (paymentId) => {
   return result;
 };
 
-const getByOrderId = async (orderId) => {
+const getByOrderId = async (
+  orderId,
+  conn = pool,
+  { forUpdate = false } = {},
+) => {
   const sql = `
       SELECT 
         p.id as paymentId,
@@ -92,8 +96,9 @@ const getByOrderId = async (orderId) => {
         p.paymentType,
         p.status as paymentStatus
       FROM  payments p
-      WHERE p.orderID  = ?`;
-  const [rows] = await pool.execute(sql, [orderId]);
+      WHERE p.orderID = ?
+      ${forUpdate ? "FOR UPDATE" : ""}`;
+  const [rows] = await conn.execute(sql, [orderId]);
   return rows.length > 0 ? rows[0] : null;
 };
 

@@ -7,6 +7,14 @@ import {
 export function errorHandler(err, req, res, next) {
   // IPN VNPAY: luôn trả 200
   if (req.originalUrl.includes("/vnpay/ipn")) {
+    logger.error(LOG_ACTIONS.PAYMENT.PROCESS_CALLBACK, {
+      status: LOG_STATUSES.FAILED,
+      reason: err.code || "UNEXPECTED_ERROR",
+      requestId: req.requestId,
+      orderId: req.order?.orderId,
+      paymentId: req.payment?.paymentId,
+      message: err.message,
+    });
     return res.status(200).json({
       RspCode: "99",
       Message: "Internal server error",

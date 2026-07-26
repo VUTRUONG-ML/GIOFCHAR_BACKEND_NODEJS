@@ -71,6 +71,9 @@ export async function processIpn({ order, payment, vnp_Params, connection }) {
     return {
       RspCode: "02",
       Message: "This payment has been updated to the payment status",
+      outcome: "duplicate",
+      paymentStatus: payment.paymentStatus,
+      providerResponseCode: vnp_Params.vnp_ResponseCode,
     };
   }
   const rspCode = vnp_Params.vnp_ResponseCode;
@@ -95,5 +98,11 @@ export async function processIpn({ order, payment, vnp_Params, connection }) {
     connection,
   );
 
-  return { RspCode: "00", Message: "Success" };
+  return {
+    RspCode: "00",
+    Message: "Success",
+    outcome: "processed",
+    paymentStatus: newPaymentStatus,
+    providerResponseCode: rspCode,
+  };
 }
