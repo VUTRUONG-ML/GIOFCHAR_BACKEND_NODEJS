@@ -141,19 +141,26 @@ const createOrder = async (req, res) => {
       paymentUrl,
     });
   } catch (error) {
-    const logLevel =
-      !error.statusCode || error.statusCode >= 500 ? "error" : "warn";
-
-    logger[logLevel](LOG_ACTIONS.ORDER.CHECKOUT, {
-      status: LOG_STATUSES.FAILED,
-      reason: error.context?.reason || error.code || "UNEXPECTED_ERROR",
-      statusCode: error.statusCode || 500,
+    const statusCode = error.statusCode || 500;
+    error.context = {
+      ...error.context,
       userId,
       paymentMethod,
       cartId: error.context?.cartId,
       variantId: error.context?.variantId,
-    });
+    };
 
+    if (statusCode < 500) {
+      logger.warn(LOG_ACTIONS.ORDER.CHECKOUT, {
+        status: LOG_STATUSES.FAILED,
+        reason: error.context?.reason || error.code || "UNEXPECTED_ERROR",
+        statusCode,
+        userId,
+        paymentMethod,
+        cartId: error.context?.cartId,
+        variantId: error.context?.variantId,
+      });
+    }
     throw error;
   }
 };

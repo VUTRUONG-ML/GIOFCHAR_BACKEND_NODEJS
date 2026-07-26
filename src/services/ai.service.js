@@ -56,11 +56,11 @@ const detectIntent = async (message) => {
           nextKeyIndex: currkey,
         });
       } else {
-        logger.error(LOG_ACTIONS.AI.REQUEST, {
-          status: LOG_STATUSES.FAILED,
+        error.context = {
+          ...error.context,
           operation: "detect_intent",
           reason: error.code || "PROVIDER_ERROR",
-        });
+        };
         throw error;
       }
     }
@@ -151,11 +151,11 @@ const slotFillingAgent = async (CHAT_HISTORY) => {
           nextKeyIndex: currkey,
         });
       } else {
-        logger.error(LOG_ACTIONS.AI.REQUEST, {
-          status: LOG_STATUSES.FAILED,
+        error.context = {
+          ...error.context,
           operation: "slot_filling",
           reason: error.code || "PROVIDER_ERROR",
-        });
+        };
         throw error;
       }
     }
@@ -188,11 +188,11 @@ const answer = async ({ intent, data }) => {
           nextKeyIndex: currkey,
         });
       } else {
-        logger.error(LOG_ACTIONS.AI.REQUEST, {
-          status: LOG_STATUSES.FAILED,
+        error.context = {
+          ...error.context,
           operation: "answer",
           reason: error.code || "PROVIDER_ERROR",
-        });
+        };
         throw error;
       }
     }
