@@ -4,6 +4,10 @@ export const LOG_ACTIONS = {
     DATABASE_CONNECTION: "database_connection",
     HTTP_REQUEST: "http_request",
     UNHANDLED_ERROR: "unhandled_error",
+
+    APPLICATION_STARTUP: "application_startup",
+    APPLICATION_SHUTDOWN: "application_shutdown",
+    PROCESS_ERROR: "process_error",
   },
   AUTH: {
     REGISTER: "register",

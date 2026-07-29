@@ -24,24 +24,18 @@ const pool = mysql.createPool({
   dateStrings: true,
 });
 
-async function checkDBConnection() {
+export async function checkDBConnection() {
+  let connection;
   try {
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
+    await connection.ping();
     logger.info(LOG_ACTIONS.SYSTEM.DATABASE_CONNECTION, {
       status: LOG_STATUSES.SUCCEEDED,
       databaseType: "mysql",
     });
-    connection.release();
-  } catch (err) {
-    logger.error(LOG_ACTIONS.SYSTEM.DATABASE_CONNECTION, {
-      status: LOG_STATUSES.FAILED,
-      databaseType: "mysql",
-      reason: err.code || "CONNECTION_FAILED",
-    });
-    process.exit(1); // fail fast
+  } finally {
+    connection?.release();
   }
 }
-
-checkDBConnection();
 
 export default pool;
