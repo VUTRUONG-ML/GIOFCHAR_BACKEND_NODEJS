@@ -31,7 +31,7 @@ export function errorHandler(err, req, res, next) {
     });
     return res.status(statusCode).json({
       message: "Server error",
-      error: err.message,
+      requestId: req.requestId,
     });
   }
   return res.status(statusCode).json({

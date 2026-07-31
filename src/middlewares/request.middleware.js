@@ -26,6 +26,8 @@ export const requestLogger = (req, res, next) => {
     ? incomingRequestId
     : uuidv4();
   const start = Date.now();
+  let responseFinished = false;
+  let abortedLogged = false;
 
   req.requestId = requestId;
 
@@ -42,6 +44,7 @@ export const requestLogger = (req, res, next) => {
 
     // Lắng nghe khi request kết thúc
     res.on("finish", () => {
+      responseFinished = true;
       const duration = Date.now() - start;
 
       logger.info(LOG_ACTIONS.SYSTEM.HTTP_REQUEST, {
@@ -49,6 +52,27 @@ export const requestLogger = (req, res, next) => {
         statusCode: res.statusCode,
         durationMs: duration,
       });
+    });
+
+    const logAbortedRequest = (reason) => {
+      if (responseFinished || abortedLogged) return;
+      abortedLogged = true;
+
+      logger.warn(LOG_ACTIONS.SYSTEM.HTTP_REQUEST, {
+        status: LOG_STATUSES.ABORTED,
+        reason,
+        method: req.method,
+        path: req.path,
+        durationMs: Date.now() - start,
+      });
+    };
+
+    req.on("aborted", () => {
+      logAbortedRequest("REQUEST_ABORTED_BY_CLIENT");
+    });
+
+    res.on("close", () => {
+      logAbortedRequest("CONNECTION_CLOSED_BEFORE_RESPONSE_FINISHED");
     });
 
     next();

@@ -73,4 +73,5 @@ export const LOG_STATUSES = {
   RETRYING: "retrying",
   PREPARED: "prepared",
   SKIPPED: "skipped",
+  ABORTED: "aborted",
 };

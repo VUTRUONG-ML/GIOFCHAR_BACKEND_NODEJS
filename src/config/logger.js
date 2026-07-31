@@ -76,8 +76,17 @@ const logger = createLogger({
     // chỉ ghi file khi dev
     ...(!isProd
       ? [
-          new transports.File({ filename: "logs/error.log", level: "error" }),
-          new transports.File({ filename: "logs/combined.log" }),
+          new transports.File({
+            filename: "logs/error.log",
+            level: "error",
+            maxsize: 5 * 1024 * 1024,
+            maxFiles: 2,
+          }),
+          new transports.File({
+            filename: "logs/combined.log",
+            maxsize: 10 * 1024 * 1024,
+            maxFiles: 3,
+          }),
         ]
       : []),
   ],
