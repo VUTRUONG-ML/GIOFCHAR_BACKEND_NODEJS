@@ -4,6 +4,7 @@ import { asyncLocalStorage } from "../utils/asyncLocalStorage.js";
 dotenv.config();
 
 const isProd = process.env.NODE_ENV === "production";
+const isTest = process.env.NODE_ENV === "test";
 
 const REDACTED_VALUE = "[REDACTED]";
 const SENSITIVE_LOG_KEYS = new Set([
@@ -74,7 +75,7 @@ const logger = createLogger({
     new transports.Console(),
 
     // chỉ ghi file khi dev
-    ...(!isProd
+    ...(!isProd && !isTest
       ? [
           new transports.File({
             filename: "logs/error.log",
