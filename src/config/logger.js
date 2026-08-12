@@ -16,6 +16,7 @@ const SENSITIVE_LOG_KEYS = new Set([
   "cookie",
   "cookies",
   "set-cookie",
+  "token",
   "accesstoken",
   "access_token",
   "refreshtoken",
