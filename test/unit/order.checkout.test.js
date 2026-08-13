@@ -26,11 +26,12 @@ vi.mock("../../src/services/order_item.service.js", () => ({
     default: {
       createOrderItem: vi.fn(),  
     }
-}))
+}));
 
 vi.mock("../../src/services/payments/vnpay.service.js", () => ({
     buildVnpayPaymentUrl: vi.fn(),
-}))
+}));
+
 import cartItemService from "../../src/services/cartItem.service.js";
 import orderService from "../../src/services/order.service.js";
 import cartService from "../../src/services/cart.service.js";
@@ -41,18 +42,37 @@ import { buildVnpayPaymentUrl } from "../../src/services/payments/vnpay.service.
 import { vnpayConfig } from "../../src/config/vnpay.js";
 
 describe("orderService.checkout", () => {
+    const MOCK_USER_ID = 20;
+    const MOCK_CART_ID = 1;
+    const MOCK_VARIANT_ID = 10;
+    const MOCK_FOOD_NAME = "Burger";
+    const MOCK_WEIGHT_GRAM = 150;
+    const MOCK_ORIGINAL_PRICE = 50000;
+    const MOCK_PRICE = 45000;
+    const MOCK_QUANTITY = 2;
+    const MOCK_DISCOUNT_FIXED = 0;
+    const MOCK_TOTAL_PRICE = MOCK_PRICE * MOCK_QUANTITY; // 90000
+
+    // COD order constants
+    const MOCK_COD_ORDER_ID = 99;
+    const MOCK_COD_PAYMENT_ID = 202;
+
+    // CARD/VNPAY order constants
+    const MOCK_CARD_ORDER_ID = 100;
+    const MOCK_CARD_PAYMENT_ID = 205;
+
     const conn = {
       execute: vi.fn(),
     };
 
     const checkoutInput = {
-      cartId: 1,
+      cartId: MOCK_CART_ID,
       customerName: "Nguyen Van A",
       email: "a@example.com",
       phone: "0900000000",
       address: "Ho Chi Minh City",
       paymentMethod: "COD",
-      userId: 20,
+      userId: MOCK_USER_ID,
       guestToken: undefined,
       ipAddr: "127.0.0.1",
     };
@@ -69,13 +89,13 @@ describe("orderService.checkout", () => {
         ).rejects.toMatchObject({
             statusCode: 400,
             context: {
-            reason: "CART_EMPTY",
-            cartId: 1,
+                reason: "CART_EMPTY",
+                cartId: MOCK_CART_ID,
             },
         });
 
         expect(cartItemService.getCartItemsByCartId).toHaveBeenCalledWith(
-            1,
+            MOCK_CART_ID,
             conn,
             true,
         );
@@ -83,40 +103,40 @@ describe("orderService.checkout", () => {
         expect(order_itemService.createOrderItem).not.toHaveBeenCalled();
         expect(paymentService.createPayment).not.toHaveBeenCalled();
         expect(cartService.clearCart).not.toHaveBeenCalled();
-        expect(conn.execute).not.toHaveBeenCalled(); // createOrder - service 
+        expect(conn.execute).not.toHaveBeenCalled();
     });
 
     it("processes COD payment successfully", async () => {
         cartItemService.getCartItemsByCartId.mockResolvedValue([
             {
-                variantId: 10,
-                foodName: "Burger",
-                weight_gram: 150,
-                originalPrice: 50000,
-                price: 45000,
-                quantity: 2,
-                discountFixed: 0,
+                variantId: MOCK_VARIANT_ID,
+                foodName: MOCK_FOOD_NAME,
+                weight_gram: MOCK_WEIGHT_GRAM,
+                originalPrice: MOCK_ORIGINAL_PRICE,
+                price: MOCK_PRICE,
+                quantity: MOCK_QUANTITY,
+                discountFixed: MOCK_DISCOUNT_FIXED,
             },
         ]);
         
         // Giả lập kết quả thực thi SQL cho createOrder
         conn.execute
-            .mockResolvedValueOnce([{ insertId: 99 }]) // INSERT order
+            .mockResolvedValueOnce([{ insertId: MOCK_COD_ORDER_ID }]) // INSERT order
             .mockResolvedValueOnce([]); // UPDATE orderCode
 
         // Giả lập tạo payment
-        paymentService.createPayment.mockResolvedValue({ insertId: 202 });
+        paymentService.createPayment.mockResolvedValue({ insertId: MOCK_COD_PAYMENT_ID });
 
         const result = await orderService.checkout(checkoutInput, conn);
 
         // 1. Kiểm tra kết quả trả về
         const currentYear = new Date().getFullYear();
         expect(result).toEqual({
-            orderId: 99,
+            orderId: MOCK_COD_ORDER_ID,
             orderCode: `DH${currentYear}-000099`,
-            totalPriceOrder: 90000, // 45000 * 2
+            totalPriceOrder: MOCK_TOTAL_PRICE,
             paymentUrl: "",
-            paymentId: 202,
+            paymentId: MOCK_COD_PAYMENT_ID,
             paymentStatus: "pending",
         });
 
@@ -126,51 +146,43 @@ describe("orderService.checkout", () => {
 
         // 3. Kiểm tra các hàm dependency được gọi với đúng tham số
         expect(deductStockForOrder).toHaveBeenCalledWith(conn, expect.any(Array));
-        //orderId, variantId, foodName, weight_gram, originalPrice, price, discountFixed, discountPercent, totalPrice, quantity, foodId
         expect(order_itemService.createOrderItem).toHaveBeenCalledWith(conn, [
-            [99, 10, "Burger", 150, 50000, null, null, 0, 45000, 2, 90000]
+            [MOCK_COD_ORDER_ID, MOCK_VARIANT_ID, MOCK_FOOD_NAME, MOCK_WEIGHT_GRAM, MOCK_ORIGINAL_PRICE, null, null, MOCK_DISCOUNT_FIXED, MOCK_PRICE, MOCK_QUANTITY, MOCK_TOTAL_PRICE]
         ]);
         expect(paymentService.createPayment).toHaveBeenCalledWith(
             conn,
-            99,
+            MOCK_COD_ORDER_ID,
             "COD",
-            90000,
+            MOCK_TOTAL_PRICE,
             "COD",
             "pending",
         );
-        expect(cartService.clearCart).toHaveBeenCalledWith(1, conn);
+        expect(cartService.clearCart).toHaveBeenCalledWith(MOCK_CART_ID, conn);
     });
 
     it("processes VNPAY payment successfully", async () => {
         cartItemService.getCartItemsByCartId.mockResolvedValue([
             {
-                variantId: 10,
-                foodName: "Burger",
-                weight_gram: 150,
-                originalPrice: 50000,
-                price: 45000,
-                quantity: 2,
-                discountFixed: 0,
+                variantId: MOCK_VARIANT_ID,
+                foodName: MOCK_FOOD_NAME,
+                weight_gram: MOCK_WEIGHT_GRAM,
+                originalPrice: MOCK_ORIGINAL_PRICE,
+                price: MOCK_PRICE,
+                quantity: MOCK_QUANTITY,
+                discountFixed: MOCK_DISCOUNT_FIXED,
             },
         ]);
         const checkoutInputCARD = {
-            cartId: 1,
-            customerName: "Nguyen Van A",
-            email: "a@example.com",
-            phone: "0900000000",
-            address: "Ho Chi Minh City",
+            ...checkoutInput,
             paymentMethod: "CARD",
-            userId: 20,
-            guestToken: undefined,
-            ipAddr: "127.0.0.1",
         };
         // Giả lập kết quả thực thi SQL cho createOrder
         conn.execute
-            .mockResolvedValueOnce([{ insertId: 100 }]) // INSERT order
+            .mockResolvedValueOnce([{ insertId: MOCK_CARD_ORDER_ID }]) // INSERT order
             .mockResolvedValueOnce([]); // UPDATE orderCode
 
         // Giả lập tạo payment
-        paymentService.createPayment.mockResolvedValue({ insertId: 205 });
+        paymentService.createPayment.mockResolvedValue({ insertId: MOCK_CARD_PAYMENT_ID });
         buildVnpayPaymentUrl.mockReturnValue(vnpayConfig.vnpUrl);
 
         const result = await orderService.checkout(checkoutInputCARD, conn);
@@ -178,11 +190,11 @@ describe("orderService.checkout", () => {
         // 1. Kiểm tra kết quả trả về
         const currentYear = new Date().getFullYear();
         expect(result).toEqual({
-            orderId: 100,
+            orderId: MOCK_CARD_ORDER_ID,
             orderCode: `DH${currentYear}-000100`,
-            totalPriceOrder: 90000, // 45000 * 2
+            totalPriceOrder: MOCK_TOTAL_PRICE,
             paymentUrl: vnpayConfig.vnpUrl,
-            paymentId: 205,
+            paymentId: MOCK_CARD_PAYMENT_ID,
             paymentStatus: "pending",
         });
 
@@ -193,34 +205,34 @@ describe("orderService.checkout", () => {
         // 3. Kiểm tra các hàm dependency được gọi với đúng tham số
         expect(deductStockForOrder).toHaveBeenCalledWith(conn, expect.any(Array));
         expect(order_itemService.createOrderItem).toHaveBeenCalledWith(conn, [
-            [100, 10, "Burger", 150, 50000, null, null, 0, 45000, 2, 90000]
+            [MOCK_CARD_ORDER_ID, MOCK_VARIANT_ID, MOCK_FOOD_NAME, MOCK_WEIGHT_GRAM, MOCK_ORIGINAL_PRICE, null, null, MOCK_DISCOUNT_FIXED, MOCK_PRICE, MOCK_QUANTITY, MOCK_TOTAL_PRICE]
         ]);
         expect(paymentService.createPayment).toHaveBeenCalledWith(
             conn,
-            100,
+            MOCK_CARD_ORDER_ID,
             "CARD",
-            90000,
+            MOCK_TOTAL_PRICE,
             "",
             "pending",
         );
         expect(buildVnpayPaymentUrl).toHaveBeenCalledWith({
             orderId: `DH${currentYear}-000100`,
-            amount: 90000,
+            amount: MOCK_TOTAL_PRICE,
             ipAddr: "127.0.0.1",
         });
-        expect(cartService.clearCart).toHaveBeenCalledWith(1, conn);
+        expect(cartService.clearCart).toHaveBeenCalledWith(MOCK_CART_ID, conn);
     });
 
     it("throws OUT_OF_STOCK error and halts execution if stock is insufficient", async () => {
         cartItemService.getCartItemsByCartId.mockResolvedValue([
             {
-                variantId: 10,
-                foodName: "Burger",
-                weight_gram: 150,
-                originalPrice: 50000,
-                price: 45000,
-                quantity: 2,
-                discountFixed: 0,
+                variantId: MOCK_VARIANT_ID,
+                foodName: MOCK_FOOD_NAME,
+                weight_gram: MOCK_WEIGHT_GRAM,
+                originalPrice: MOCK_ORIGINAL_PRICE,
+                price: MOCK_PRICE,
+                quantity: MOCK_QUANTITY,
+                discountFixed: MOCK_DISCOUNT_FIXED,
             },
         ]);
 
@@ -234,7 +246,7 @@ describe("orderService.checkout", () => {
             orderService.checkout(checkoutInput, conn)
         ).rejects.toThrow("Insufficient stock for product");
 
-        // Đảm bảo không tạo order, không tạo payment, không xóa giỏ hàng
+        // Đảm bảo không tạo order, không tạo order item, không tạo payment, không xóa giỏ hàng
         expect(conn.execute).not.toHaveBeenCalled();
         expect(order_itemService.createOrderItem).not.toHaveBeenCalled();
         expect(paymentService.createPayment).not.toHaveBeenCalled();
@@ -244,13 +256,13 @@ describe("orderService.checkout", () => {
     it("propagates database errors and halts execution if INSERT order fails", async () => {
         cartItemService.getCartItemsByCartId.mockResolvedValue([
             {
-                variantId: 10,
-                foodName: "Burger",
-                weight_gram: 150,
-                originalPrice: 50000,
-                price: 45000,
-                quantity: 2,
-                discountFixed: 0,
+                variantId: MOCK_VARIANT_ID,
+                foodName: MOCK_FOOD_NAME,
+                weight_gram: MOCK_WEIGHT_GRAM,
+                originalPrice: MOCK_ORIGINAL_PRICE,
+                price: MOCK_PRICE,
+                quantity: MOCK_QUANTITY,
+                discountFixed: MOCK_DISCOUNT_FIXED,
             },
         ]);
 
