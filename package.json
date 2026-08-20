@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon ./src/index.js",
+    "start": "node ./src/index.js",
+    "db:migrate": "node ./scripts/migrate.js",
+    "db:seed": "node ./scripts/seed.js",
+    "db:setup": "node ./scripts/migrate.js && node ./scripts/seed.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "dev": "nodemon ./src/index.js",
-    "start": "node ./src/index.js"
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "nodejs",

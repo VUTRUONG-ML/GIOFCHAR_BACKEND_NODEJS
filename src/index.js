@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { validateEnv } from "./config/env.js";
+validateEnv();
+
 import app from "./app.js";
 import pool, { checkDBConnection } from "./config/db.js";
 import logger from "./config/logger.js";
