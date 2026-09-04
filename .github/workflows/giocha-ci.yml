@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm Install
+        run: npm ci
       - name: Automated Test 
         run: npm test
       
