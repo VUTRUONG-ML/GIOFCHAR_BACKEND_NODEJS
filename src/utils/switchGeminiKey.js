@@ -2,7 +2,9 @@ import dotenv from "dotenv";
 dotenv.config();
 import { GoogleGenAI } from "@google/genai";
 
-export const keys = process.env.GEMINI_API_KEYS.split(",");
+export const keys = process.env.GEMINI_API_KEYS
+  ? process.env.GEMINI_API_KEYS.split(",")
+  : [];
 let currentKeyIndex = 0;
 
 function getCurrentKey() {

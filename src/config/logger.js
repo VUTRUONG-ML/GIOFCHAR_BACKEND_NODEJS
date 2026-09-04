@@ -4,6 +4,30 @@ import { asyncLocalStorage } from "../utils/asyncLocalStorage.js";
 dotenv.config();
 
 const isProd = process.env.NODE_ENV === "production";
+const isTest = process.env.NODE_ENV === "test";
+
+const REDACTED_VALUE = "[REDACTED]";
+const SENSITIVE_LOG_KEYS = new Set([
+  "password",
+  "currentpassword",
+  "newpassword",
+  "confirmpassword",
+  "authorization",
+  "cookie",
+  "cookies",
+  "set-cookie",
+  "token",
+  "accesstoken",
+  "access_token",
+  "refreshtoken",
+  "refresh_token",
+  "jwt",
+  "secret",
+  "secretkey",
+  "clientsecret",
+  "apikey",
+  "api_key",
+]);
 
 const addRequestId = format((info) => {
   const store = asyncLocalStorage.getStore();
@@ -15,6 +39,26 @@ const addRequestId = format((info) => {
   return info;
 });
 
+export const redactSensitiveData = format((info) => {
+  const visited = new WeakSet();
+
+  const redact = (value) => {
+    if (!value || typeof value !== "object" || visited.has(value)) return;
+    visited.add(value);
+
+    for (const [key, childValue] of Object.entries(value)) {
+      if (SENSITIVE_LOG_KEYS.has(key.toLowerCase())) {
+        value[key] = REDACTED_VALUE;
+      } else {
+        redact(childValue);
+      }
+    }
+  };
+
+  redact(info);
+  return info;
+});
+
 const logger = createLogger({
   level: isProd ? "info" : "debug",
 
@@ -22,6 +66,7 @@ const logger = createLogger({
     addRequestId(),
     format.timestamp(),
     format.errors({ stack: true }), // log stack trace
+    redactSensitiveData(),
     isProd ? format.json() : format.combine(format.colorize(), format.simple()),
   ),
 
@@ -31,10 +76,19 @@ const logger = createLogger({
     new transports.Console(),
 
     // chỉ ghi file khi dev
-    ...(!isProd
+    ...(!isProd && !isTest
       ? [
-          new transports.File({ filename: "logs/error.log", level: "error" }),
-          new transports.File({ filename: "logs/combined.log" }),
+          new transports.File({
+            filename: "logs/error.log",
+            level: "error",
+            maxsize: 5 * 1024 * 1024,
+            maxFiles: 2,
+          }),
+          new transports.File({
+            filename: "logs/combined.log",
+            maxsize: 10 * 1024 * 1024,
+            maxFiles: 3,
+          }),
         ]
       : []),
   ],

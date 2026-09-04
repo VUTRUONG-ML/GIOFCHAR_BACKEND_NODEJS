@@ -1,6 +1,10 @@
 import pool from "../config/db.js";
 import logger from "../config/logger.js";
 import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
+import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -85,24 +89,22 @@ const insertCartItem = async (cartId, variantId, quantity, conn) => {
 };
 
 const deleteCartItem = async (cartItemId, cartId, conn = pool) => {
-  try {
-    const [result] = await conn.execute(
-      "DELETE FROM cart_items WHERE id = ? AND cartID = ?",
-      [cartItemId, cartId],
-    );
-    if (!result.affectedRows) {
-      logger.warn("CART_REMOVE_ITEM_FAILED", {
-        reason: "CART_ITEM_NOT_FOUND",
-        cartId,
-        cartItemId,
-      });
-      throw new NotFoundError("Cart item not found");
-    }
-    const version = await cartService.updateVersion(cartId, conn);
-    return { cartVersion: version };
-  } catch (err) {
-    throw err;
+  const [result] = await conn.execute(
+    "DELETE FROM cart_items WHERE id = ? AND cartID = ?",
+    [cartItemId, cartId],
+  );
+  if (!result.affectedRows) {
+    logger.warn(LOG_ACTIONS.CART.CHANGE_ITEM, {
+      status: LOG_STATUSES.FAILED,
+      reason: "CART_ITEM_NOT_FOUND",
+      operation: "remove",
+      cartId,
+      cartItemId,
+    });
+    throw new NotFoundError("Cart item not found");
   }
+  const version = await cartService.updateVersion(cartId, conn);
+  return { cartVersion: version };
 };
 export default {
   getCartItemsByCartId,

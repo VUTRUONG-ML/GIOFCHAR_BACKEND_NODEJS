@@ -69,3 +69,118 @@ Dưới đây là luồng Data flow chính của các Domain/Entities cốt lõi
   - Toàn bộ flow như: *Update Stock -> Khởi tạo Order -> Tạo Order Items -> Gắn phương thức Payment -> Clear Cart* diễn ra nguyên vẹn và atomic.
   - Vấn đề quá dòng đặt hàng (Race Condition) được xử lý thông qua Row Locking (`FOR UPDATE` reads) hoặc bằng Atomic Updates tự thân của hệ CSDL quan hệ (`UPDATE food_variants SET stock = stock - ? WHERE id = ? AND stock >= ?` - nếu kho không đủ sẽ gây fail query), đảm bảo không bao giờ có hiện tượng Overselling kho.
 - **Connection Pool Management**: Không kết nối DB tùy tiện. Tận dụng `mysql2/promise` thông qua hệ đệm với `connectionLimit: 10`, `maxIdle: 10`, và auto `idleTimeout`. Vừa giúp CSDL duy trì Performance ở lượng người truy cập cao, vừa không bị sập tràn Connection.
+
+---
+
+## 5. Developer Onboarding & Quick Start Guide
+
+Dành cho Developer mới (Fresher): Bạn có thể clone repository, khởi tạo database và chạy dự án trơn tru mà **không cần phải biết trước cấu trúc database** hay tự tay gõ từng câu lệnh tạo bảng.
+
+### Yêu cầu tiền đề (Prerequisites)
+- **Node.js**: phiên bản `>= 18.x`
+- **MySQL**: phiên bản `5.7` hoặc `8.0` (Hoặc đã cài sẵn Docker & Docker Compose)
+
+---
+
+### Cách 1: Chạy Local bằng Node.js + MySQL Server
+
+#### Bước 1: Clone Repository & Cài đặt Dependencies
+```bash
+git clone <repository_url>
+cd GIOFCHAR_BACKEND_NODEJS
+npm install
+```
+
+#### Bước 2: Thao tác file Cấu hình Môi trường (`.env`)
+Tạo file `.env` từ file mẫu `.env_example`:
+```bash
+cp .env_example .env
+```
+Mở file `.env` và cập nhật thông tin kết nối MySQL Local của bạn:
+```env
+DB_HOST=127.0.0.1
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=GIOFCHAR
+DB_PORT=3306
+```
+
+> **Lưu ý kiểm tra biến môi trường**: Khi khởi chạy ứng dụng, hệ thống tự động kiểm tra các biến môi trường bắt buộc (`DB_HOST`, `ACCESS_TOKEN_SECRET`...). Nếu thiếu biến bắt buộc, ứng dụng sẽ in thông báo cảnh báo trực quan để hỗ trợ bạn khắc phục ngay.
+
+#### Bước 3: Khởi tạo Database & Seed Data
+Chạy lệnh khởi tạo tự động toàn bộ Database Schema có quản lý phiên bản (Migration) cùng bộ Seed Data tối thiểu dành cho môi trường Development:
+```bash
+# Chạy cả Migration và Seed Data
+npm run db:setup
+```
+Hoặc chạy từng lệnh riêng lẻ khi cần:
+```bash
+# Chạy Migration tạo bảng & version tracking
+npm run db:migrate
+
+# Seed dữ liệu mẫu (Admin, Test User, Danh mục, Món ăn mẫu)
+npm run db:seed
+```
+
+#### Bước 4: Khởi chạy Ứng dụng
+
+- **Môi trường Development (dùng Nodemon hot-reload)**:
+  ```bash
+  npm run dev
+  ```
+- **Môi trường Production (dùng Node.js tiêu chuẩn)**:
+  ```bash
+  npm start
+  ```
+
+---
+
+### Cách 2: Khởi chạy bằng Docker Compose (Khuyên dùng)
+
+Nếu bạn đã cài đặt Docker, bạn có thể khởi chạy toàn bộ hệ thống (MySQL DB + Express Backend) chỉ bằng 1 câu lệnh duy nhất mà không cần cài thêm MySQL trên máy local:
+
+```bash
+# 1. Tạo file .env
+cp .env_example .env
+
+# 2. Khởi chạy tất cả container
+docker-compose up --build -d
+```
+Container MySQL sẽ tự động nạp toàn bộ Schema và Seed Data khởi tạo ban đầu từ thư mục `./initdb`. Backend sẽ lắng nghe tại cổng `http://localhost:8081`.
+
+---
+
+### Tài khoản thử nghiệm (Development Seed Accounts)
+
+Sau khi chạy seed thành công, bạn có thể sử dụng các tài khoản có sẵn để test:
+
+| Quyền hạn | Email | Password | Ghi chú |
+|---|---|---|---|
+| **Admin** | `admin@giofchar.com` | `123456` | Quyền quản trị tối cao (Tạo món, đổi trạng thái đơn...) |
+| **User** | `user@giofchar.com` | `123456` | Tài khoản khách hàng cơ bản |
+
+---
+
+## 6. External Service Dependencies (Dịch vụ bên ngoài)
+
+Hệ thống kết nối và tích hợp các dịch vụ bên ngoài sau:
+
+1. **MySQL (Database Engine)**:
+   - **Phiên bản khuyến nghị**: `5.7.40` hoặc `8.0+`.
+   - **Vai trò**: CSDL quan hệ chính lưu trữ toàn bộ người dùng, món ăn, biến thể, giỏ hàng, đơn hàng, thanh toán và lịch sử giao dịch.
+
+2. **Cloudinary (Quản lý & Lưu trữ hình ảnh)**:
+   - **File cấu hình**: `src/config/cloudinary.js`
+   - **Vai trò**: Lưu trữ hình ảnh sản phẩm được upload bởi Admin.
+   - **Biến môi trường**: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+
+3. **Google Gemini AI (`@google/genai`)**:
+   - **File cấu hình**: `src/config/gemini.js`, `src/utils/switchGeminiKey.js`
+   - **Vai trò**: Tư vấn món ăn thông minh cho khách hàng, tự động đưa ra gợi ý sản phẩm phù hợp.
+   - **Biến môi trường**: `GEMINI_API_KEYS`.
+
+4. **VNPay (Cổng thanh toán điện tử)**:
+   - **File cấu hình**: `src/config/vnpay.js`
+   - **Vai trò**: Tạo liên kết thanh toán an toàn qua cổng VNPay Sandbox/Production và nhận thông báo IPN Webhook xác nhận giao dịch thành công.
+   - **Biến môi trường**: `VNP_TMN_CODE`, `VNP_HASH_SECRET`, `VNP_PAY_URL`, `VNP_RETURN_URL`, `VNP_IPN_URL`.
+

@@ -5,6 +5,10 @@ import {
   ConflictError,
   NotFoundError,
 } from "../errors/AppError.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 const getAllCategories = async () => {
   // For pool initialization, see above
@@ -42,13 +46,16 @@ const createCategory = async (name, description) => {
         VALUES (?, ?)`,
       [name, description],
     );
-    logger.debug("CATEGORY_CREATED", { categoryId: result.insertId });
+    logger.debug(LOG_ACTIONS.CATEGORY.CREATE, {
+      status: LOG_STATUSES.SUCCEEDED,
+      categoryId: result.insertId,
+    });
     return result;
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
-      logger.warn("CATEGORY_CREATE_FAILED", {
+      logger.warn(LOG_ACTIONS.CATEGORY.CREATE, {
+        status: LOG_STATUSES.FAILED,
         reason: "DUPLICATE_CATEGORY",
-        nameCategory: name,
       });
       throw new ConflictError("Category name already exists");
     }
@@ -63,7 +70,6 @@ const getCategoryById = async (categoryId) => {
     [categoryId],
   );
   if (!categories[0]) {
-    logger.warn("CATEGORY_NOT_FOUND", { categoryId });
     throw new NotFoundError("Category not found.");
   }
   return categories[0];
@@ -78,17 +84,19 @@ const updateCategoryById = async (name, description, categoryId) => {
       [name, description, categoryId],
     );
     if (result.affectedRows === 0) {
-      logger.warn("CATEGORY_NOT_FOUND", { categoryId });
       throw new NotFoundError("Category not found.");
     }
-    logger.debug("CATEGORY_UPDATED", { categoryId, name });
+    logger.debug(LOG_ACTIONS.CATEGORY.UPDATE, {
+      status: LOG_STATUSES.SUCCEEDED,
+      categoryId,
+    });
     return true;
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
-      logger.warn("CATEGORY_UPDATE_FAILED", {
+      logger.warn(LOG_ACTIONS.CATEGORY.UPDATE, {
+        status: LOG_STATUSES.FAILED,
         reason: "DUPLICATE_CATEGORY",
         categoryId,
-        nameCategory: name,
       });
       throw new ConflictError("Category name already exists");
     }
@@ -102,14 +110,17 @@ const deleteCategoryById = async (categoryId) => {
       categoryId,
     ]);
     if (result.affectedRows === 0) {
-      logger.warn("CATEGORY_NOT_FOUND", { categoryId });
       throw new NotFoundError("Category not found.");
     }
-    logger.debug("CATEGORY_DELETE_SUCCESS", { categoryId });
+    logger.debug(LOG_ACTIONS.CATEGORY.DELETE, {
+      status: LOG_STATUSES.SUCCEEDED,
+      categoryId,
+    });
     return true;
   } catch (err) {
     if (err.code === "ER_ROW_IS_REFERENCED_2") {
-      logger.warn("CATEGORY_DELETE_FAILED", {
+      logger.warn(LOG_ACTIONS.CATEGORY.DELETE, {
+        status: LOG_STATUSES.FAILED,
         reason: "CATEGORY_REFERENCED",
         categoryId,
       });

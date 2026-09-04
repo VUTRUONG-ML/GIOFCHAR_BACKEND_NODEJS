@@ -3,6 +3,7 @@ import { guidesOrder, greeting } from "../data/guides.js";
 import aiService from "../services/ai.service.js";
 import foodService from "../services/food.service.js";
 import { isSlotComplete } from "../utils/suportAi.js";
+import { asyncHandler } from "../errors/errorHandler.js";
 
 const resetChatAndReply = (req, res, response) => {
   req.session.chat = null;
@@ -15,12 +16,11 @@ const textResponse = (intent, text) => ({
   payload: { text },
 });
 
-export const handleIntentData = async (req, res) => {
+export const handleIntentData = asyncHandler(async (req, res) => {
   const chat = req.session.chat;
   const { intent, agent } = chat;
 
-  try {
-    switch (intent) {
+  switch (intent) {
       case "goi_y_mon": {
         // Chưa thu thập xong slot
         if (!agent.done) {
@@ -81,12 +81,5 @@ export const handleIntentData = async (req, res) => {
         });
         return resetChatAndReply(req, res, textResponse(intent, reply));
       }
-    }
-  } catch (error) {
-    console.error(">>>>> CONTROLLER handleIntentData ERROR:", error.message);
-    return res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
   }
-};
+});

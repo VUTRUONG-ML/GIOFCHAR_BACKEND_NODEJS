@@ -13,6 +13,11 @@ import {
   hashToken,
   verifyRefreshToken,
 } from "../utils/token.js";
+import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 dotenv.config();
 
 export const createRefreshToken = async (
@@ -43,13 +48,8 @@ export const getByTokenId = async (tokenId, conn = pool) => {
         FROM refresh_tokens
         WHERE id = ? AND revoked = FALSE
     `;
-  try {
-    const [rows] = await conn.execute(sql, [tokenId]);
-    return rows[0];
-  } catch (error) {
-    console.log(">>> SERVICE refresh token ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql, [tokenId]);
+  return rows[0];
 };
 
 export const getByUserId = async (userId, conn = pool) => {
@@ -60,27 +60,17 @@ export const getByUserId = async (userId, conn = pool) => {
         FROM refresh_tokens
         WHERE userID = ? AND revoked = FALSE
     `;
-  try {
-    const [rows] = await conn.execute(sql, [userId]);
-    return rows[0];
-  } catch (error) {
-    console.log(">>> SERVICE refresh token ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql, [userId]);
+  return rows[0];
 };
 
 export const deleteRefreshToken = async (tokenId, conn = pool) => {
   const sql = `
     DELETE FROM refresh_tokens WHERE id = ?
   `;
-  try {
-    const [result] = await conn.execute(sql, [tokenId]);
-    if (result.affectedRows !== 1) throw new NotFoundError("Token not found.");
-    return true;
-  } catch (error) {
-    console.log(">>> SERVICE Token ERROR:", error.message);
-    throw error;
-  }
+  const [result] = await conn.execute(sql, [tokenId]);
+  if (result.affectedRows !== 1) throw new NotFoundError("Token not found.");
+  return true;
 };
 
 export const markRevoked = async (tokenId, conn = pool) => {
@@ -89,23 +79,21 @@ export const markRevoked = async (tokenId, conn = pool) => {
     SET revoked = TRUE
     WHERE id = ?
   `;
-  try {
-    const [result] = await conn.execute(sql, [tokenId]);
-    if (result.affectedRows !== 1) throw new NotFoundError("Token not found.");
-    return true;
-  } catch (error) {
-    console.log(">>> SERVICE token ERROR:", error.message);
-    throw error;
-  }
+  const [result] = await conn.execute(sql, [tokenId]);
+  if (result.affectedRows !== 1) throw new NotFoundError("Token not found.");
+  return true;
 };
 
 export const refreshNewToken = async (refreshToken) => {
   const connection = await pool.getConnection();
+  const transactionStartedAt = Date.now();
+  let transactionUserId;
   try {
     await connection.beginTransaction();
     // verify token lấy ra {userId}
     const decode = verifyRefreshToken(refreshToken); // {userId, role} // đã throw lỗi nếu ko verify được
     const { userId, role } = decode;
+    transactionUserId = userId;
     // hash token
     const tokenHash = hashToken(refreshToken);
     // lấy token thông quua tokenHash và userId và xem có revoked không
@@ -128,13 +116,25 @@ export const refreshNewToken = async (refreshToken) => {
     // generate access token
     const newAccessToken = generateAccessToken(payload);
     await connection.commit();
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: "rotate_refresh_token",
+      userId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
   } catch (error) {
-    console.log(">>> SERVICE refresh token ERROR:", error.message);
     await connection.rollback();
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation: "rotate_refresh_token",
+      reason: error.code || "UNEXPECTED_ERROR",
+      userId: transactionUserId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     throw error;
   } finally {
     connection.release();
@@ -152,11 +152,6 @@ export const findValidToken = async (tokenHash, conn = pool) => {
     FROM refresh_tokens
     WHERE tokenHash = ? AND revoked = FALSE AND NOW() < expiresAt
   `;
-  try {
-    const [rows] = await conn.execute(sql, [tokenHash]);
-    return rows[0];
-  } catch (error) {
-    console.log(">>> SERVICE refresh token ERROR:", error.message);
-    throw error;
-  }
+  const [rows] = await conn.execute(sql, [tokenHash]);
+  return rows[0];
 };

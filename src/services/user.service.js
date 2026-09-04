@@ -1,7 +1,10 @@
 import pool from "../config/db.js";
 import { NotFoundError, ConflictError } from "../errors/AppError.js";
 import logger from "../config/logger.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 const getAllUsersWithOrderCount = async () => {
   const [users] = await pool.execute(`
@@ -44,8 +47,8 @@ const createUser = async (userName, email, phone, address, password) => {
                                         VALUES (?, ?, ?, ?, ?)`,
       [userName, email, phone, address, password],
     );
-    logger.info("User created successfully", {
-      event: LOG_EVENTS.USER.success.CREATE,
+    logger.info(LOG_ACTIONS.USER.CREATE, {
+      status: LOG_STATUSES.SUCCEEDED,
       userId: result.insertId,
     });
     return { insertId: result.insertId };
@@ -55,8 +58,10 @@ const createUser = async (userName, email, phone, address, password) => {
       if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
-      logger.warn(LOG_EVENTS.USER.failed.CREATE, {
-        reason: `duplicate ${field}`
+      logger.warn(LOG_ACTIONS.USER.CREATE, {
+        status: LOG_STATUSES.FAILED,
+        reason: "DUPLICATE_FIELD",
+        field,
       });
       throw new ConflictError(`${field} already exists`);
     }
@@ -75,8 +80,10 @@ const updateUserById = async (userId, userName, email, phone, address) => {
     if (result.affectedRows === 0) {
       throw new NotFoundError("User not found");
     }
-    logger.info(LOG_EVENTS.USER.success.UPDATE, {
+    logger.info(LOG_ACTIONS.USER.UPDATE, {
+      status: LOG_STATUSES.SUCCEEDED,
       userId,
+      updatedFields: ["userName", "email", "phone", "address"],
     });
     return result;
   } catch (err) {
@@ -85,8 +92,10 @@ const updateUserById = async (userId, userName, email, phone, address) => {
       if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
-      logger.warn(LOG_EVENTS.USER.failed.UPDATE, {
-        reason: `duplicate ${field}`,
+      logger.warn(LOG_ACTIONS.USER.UPDATE, {
+        status: LOG_STATUSES.FAILED,
+        reason: "DUPLICATE_FIELD",
+        field,
         userId,
       });
       throw new ConflictError(`${field} already exists`);
@@ -105,8 +114,11 @@ const updateActiveUserById = async (userId, active) => {
   if (result.affectedRows === 0) {
     throw new NotFoundError("User not found");
   }
-  logger.info(LOG_EVENTS.USER.success.UPDATE, {
+  logger.info(LOG_ACTIONS.USER.UPDATE, {
+    status: LOG_STATUSES.SUCCEEDED,
     userId,
+    updatedFields: ["isActive"],
+    isActive: active,
   });
   return result;
 };
@@ -118,7 +130,8 @@ const deleteUserById = async (userId) => {
   if (result.affectedRows === 0) {
     throw new NotFoundError("User not found");
   }
-  logger.info(LOG_EVENTS.USER.success.DELETE, {
+  logger.info(LOG_ACTIONS.USER.DELETE, {
+    status: LOG_STATUSES.SUCCEEDED,
     userId,
   });
   return result;

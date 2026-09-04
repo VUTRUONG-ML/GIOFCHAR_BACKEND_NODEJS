@@ -1,58 +1,77 @@
-export const LOG_EVENTS = {
-  AUTH: {
-    success: {
-      LOGIN: "AUTH_LOGIN_SUCCESS",
-      REGISTER: "AUTH_REGISTER_SUCCESS",
-      AUTHENTICATION: "AUTH_SUCCESS",
-      MERGE_CART: "AUTH_MERGE_CART_SUCCESS",
-    },
-    failed: {
-      LOGIN: "AUTH_LOGIN_FAILED",
-      REGISTER: "AUTH_REGISTER_FAILED",
-      AUTHENTICATION: "AUTH_FAILED",
-      LOGOUT: "AUTH_LOGOUT_FAILED",
+export const LOG_ACTIONS = {
+  SYSTEM: {
+    SERVER: "server",
+    DATABASE_CONNECTION: "database_connection",
+    HTTP_REQUEST: "http_request",
+    UNHANDLED_ERROR: "unhandled_error",
 
-      MERGE_CART: "AUTH_MERGE_CART_FAILED",
-    },
+    APPLICATION_STARTUP: "application_startup",
+    APPLICATION_SHUTDOWN: "application_shutdown",
+    PROCESS_ERROR: "process_error",
+  },
+  AUTH: {
+    REGISTER: "register",
+    LOGIN: "login",
+    LOGOUT: "logout",
+    AUTHENTICATE: "authenticate",
+    AUTHORIZE_ACCESS: "authorize_access",
   },
   CART: {
-    ADD_ITEM_FAILED: "CART_ADD_ITEM_FAILED",
-    ADD_ITEM_SUCCESS: "CART_ADD_ITEM_SUCCESS",
-    REMOVE_ITEM: "CART_REMOVE_ITEM_FAILED",
-    TRANSACTION_ERROR: "CART_TX_ERROR",
-    TRANSACTION_START: "CART_TX_START",
-    MERGE_SUCCESS: "CART_MERGE_TO_USER_SUCCESS",
+    CHANGE_ITEM: "change_cart_item",
+    CLEAR: "clear_cart",
+    MERGE_TO_USER: "merge_cart_to_user",
   },
-  ORDER: {
-    success: {
-      CREATE: "ORDER_CREATED_SUCCESS",
-      CHECKOUT: "ORDER_CHECKOUT_SUCCESS",
-      ATTACH_ORDER: "ORDER_ATTACH_TO_USER_SUCCESS",
-    },
-    failed: {
-      CHECKOUT: "ORDER_CHECKOUT_FAILED",
-      ATTACH_ORDER: "ORDER_ATTACH_TO_USER_FAILED",
-    },
+  CATEGORY: {
+    CREATE: "create_category",
+    UPDATE: "update_category",
+    DELETE: "delete_category",
   },
-  PAYMENT: {
-    failed: {
-      CREATE: "PAYMENT_CREATE_FAILED",
-    },
-    success: {
-      CREATE: "PAYMENT_CREATE_SUCCESS",
-    },
+  AI: {
+    REQUEST: "ai_request",
+    PREPARE_CONTEXT: "prepare_ai_context",
+    SLOT_FILLING: "ai_slot_filling",
+  },
+  CLOUDINARY: {
+    UPLOAD_IMAGE: "upload_cloudinary_image",
+    DELETE_IMAGE: "delete_cloudinary_image",
+    CLEANUP_IMAGE: "cleanup_cloudinary_image",
+  },
+  FILE: {
+    DELETE_TEMPORARY: "delete_temporary_file",
   },
   USER: {
-    success: {
-      CREATE: "USER_CREATE_SUCCESS",
-      UPDATE: "USER_UPDATE_SUCCESS",
-      DELETE: "USER_DELETE_SUCCESS",
-    },
-    failed: {
-      CREATE: "USER_CREATE_FAILED",
-      UPDATE: "USER_UPDATE_FAILED",
-      DELETE: "USER_DELETE_FAILED",
-      NOT_FOUND: "USER_NOT_FOUND",
-    },
+    CREATE: "create_user",
+    UPDATE: "update_user",
+    DELETE: "delete_user",
   },
+  ORDER: {
+    CHECKOUT: "checkout",
+    CREATE: "create_order",
+    ATTACH_TO_USER: "attach_order_to_user",
+    CREATE_ITEMS: "create_order_items",
+  },
+  PAYMENT: {
+    CREATE: "payment",
+    BUILD_URL: "build_payment_url",
+    VERIFY_CALLBACK: "verify_payment_callback",
+    VALIDATE_CALLBACK: "validate_payment_callback",
+    PROCESS_CALLBACK: "process_payment_callback",
+  },
+  TRANSACTION: "transaction",
+};
+
+export const LOG_STATUSES = {
+  STARTED: "started",
+  SUCCEEDED: "succeeded",
+  FAILED: "failed",
+  CREATED: "created",
+  COMPLETED: "completed",
+  COMMITTED: "committed",
+  ROLLED_BACK: "rolled_back",
+  ALLOWED: "allowed",
+  DENIED: "denied",
+  RETRYING: "retrying",
+  PREPARED: "prepared",
+  SKIPPED: "skipped",
+  ABORTED: "aborted",
 };

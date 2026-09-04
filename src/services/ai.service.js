@@ -1,6 +1,11 @@
 import { collectedFail, collectedSuccess } from "../constants/resonAgent.js";
 import { formatAiRes } from "../utils/suportAi.js";
 import cateService from "./category.service.js";
+import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 import {
   keys,
@@ -44,12 +49,18 @@ const detectIntent = async (message) => {
     } catch (error) {
       if (error.message.includes("quota") || error.status === 429) {
         const currkey = switchKey(); // thử key khác
-        console.log(
-          `>>>>> SERVICE ERROR detectIntent key${currkey}: `,
-          error.message,
-        );
+        logger.warn(LOG_ACTIONS.AI.REQUEST, {
+          status: LOG_STATUSES.RETRYING,
+          operation: "detect_intent",
+          reason: "QUOTA_EXCEEDED",
+          nextKeyIndex: currkey,
+        });
       } else {
-        console.log(">>>> SERVICE ERROR detectIntent:", error.message);
+        error.context = {
+          ...error.context,
+          operation: "detect_intent",
+          reason: error.code || "PROVIDER_ERROR",
+        };
         throw error;
       }
     }
@@ -61,7 +72,11 @@ const slotFillingAgent = async (CHAT_HISTORY) => {
     const geminiModel = createGeminiModel();
     try {
       const categories = await cateService.getNameCategory({});
-      console.log("category:", categories);
+      logger.debug(LOG_ACTIONS.AI.PREPARE_CONTEXT, {
+        status: LOG_STATUSES.PREPARED,
+        operation: "slot_filling",
+        categoryCount: categories.length,
+      });
       const prompt = `
     You are a conversation agent for a Vietnamese ecommerce system selling giò chả.
     Your ONLY task is to manage a multi-turn conversation and collect enough information
@@ -129,12 +144,18 @@ const slotFillingAgent = async (CHAT_HISTORY) => {
     } catch (error) {
       if (error.message.includes("quota") || error.status === 429) {
         const currkey = switchKey(); // thử key khác
-        console.log(
-          `>>>>> SERVICE ERROR slotFillingAgent key${currkey}: `,
-          error.message,
-        );
+        logger.warn(LOG_ACTIONS.AI.REQUEST, {
+          status: LOG_STATUSES.RETRYING,
+          operation: "slot_filling",
+          reason: "QUOTA_EXCEEDED",
+          nextKeyIndex: currkey,
+        });
       } else {
-        console.log(">>>>> SERVICE slotFillingAgent ERROR:", error.message);
+        error.context = {
+          ...error.context,
+          operation: "slot_filling",
+          reason: error.code || "PROVIDER_ERROR",
+        };
         throw error;
       }
     }
@@ -160,12 +181,18 @@ const answer = async ({ intent, data }) => {
     } catch (error) {
       if (error.message.includes("quota") || error.status === 429) {
         const currkey = switchKey(); // thử key khác
-        console.log(
-          `>>>>> SERVICE ERROR ai answer key${currkey}: `,
-          error.message,
-        );
+        logger.warn(LOG_ACTIONS.AI.REQUEST, {
+          status: LOG_STATUSES.RETRYING,
+          operation: "answer",
+          reason: "QUOTA_EXCEEDED",
+          nextKeyIndex: currkey,
+        });
       } else {
-        console.log(">>>>> SERVICE ERROR ai answer:", error.message);
+        error.context = {
+          ...error.context,
+          operation: "answer",
+          reason: error.code || "PROVIDER_ERROR",
+        };
         throw error;
       }
     }

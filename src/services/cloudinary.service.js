@@ -8,24 +8,15 @@ import cloudinary from "../config/cloudinary.js";
 //   overwrite: true,
 // };
 export const uploadImage = async (imagePath, options) => {
-  try {
-    // Upload the image
-    const result = await cloudinary.uploader.upload(imagePath, options);
-    return result;
-  } catch (error) {
-    throw error;
-  }
+  // Upload the image
+  const result = await cloudinary.uploader.upload(imagePath, options);
+  return result;
 };
 
 export const deleteImage = async (publicId) => {
-  try {
-    const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "image",
-      invalidate: true,
-    });
-    return result;
-  } catch (err) {
-    console.error("Failed to delete image from Cloudinary:", err.message);
-    throw err;
-  }
+  const result = await cloudinary.uploader.destroy(publicId, {
+    resource_type: "image",
+    invalidate: true,
+  });
+  return result;
 };

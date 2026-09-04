@@ -11,7 +11,10 @@ import { asyncHandler } from "../errors/errorHandler.js";
 
 import { ORDER_STATUS } from "../constants/field.js";
 import logger from "../config/logger.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 
 const getStatusOverview = async (req, res) => {
   const resultToday = await orderService.countTodayOrders();
@@ -61,49 +64,105 @@ const createOrder = async (req, res) => {
     address,
     paymentMethod,
   } = req.body;
-  
-  if (!address || !customerName || !email || !phone || !paymentMethod)
-    throw new BadRequestError("Missing field");
 
-  const ipAddr =
-    req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
-    
-  const result = await cartService.withCart(
-    req.user,
-    async ({ cartId, conn, cartVersion }) => {
-      if (cartVersion !== clientVersion) {
-        logger.warn(LOG_EVENTS.ORDER.failed.CHECKOUT, {
-          reason: "CART_VERSION_CHANGED",
-          cartId,
-        });
-        throw new ConflictError("CART_CHANGED");
-      }
-      return await orderService.checkout(
-        {
-          cartId,
-          customerName,
-          email,
-          phone,
-          address,
-          paymentMethod,
-          userId,
-          guestToken,
-          ipAddr,
-        },
-        conn,
-      );
-    },
-  );
-
-  const { orderId, orderCode, totalPriceOrder, paymentUrl } = result;
-
-  res.status(200).json({
-    message: "Create order successful",
-    orderCode,
-    orderId,
-    totalPriceOrder,
-    paymentUrl,
+  logger.info(LOG_ACTIONS.ORDER.CHECKOUT, {
+    status: LOG_STATUSES.STARTED,
+    actorType: userId ? "user" : "guest",
+    userId,
+    paymentMethod,
   });
+
+  try {
+    if (!address || !customerName || !email || !phone || !paymentMethod) {
+      const error = new BadRequestError("Missing field");
+      error.context = { reason: "MISSING_FIELD" };
+      throw error;
+    }
+
+    const ipAddr =
+      req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+
+    const result = await cartService.withCart(
+      req.user,
+      async ({ cartId, conn, cartVersion }) => {
+        if (cartVersion !== clientVersion) {
+          const error = new ConflictError("CART_CHANGED");
+          error.context = { reason: "CART_VERSION_CHANGED", cartId };
+          throw error;
+        }
+        return await orderService.checkout(
+          {
+            cartId,
+            customerName,
+            email,
+            phone,
+            address,
+            paymentMethod,
+            userId,
+            guestToken,
+            ipAddr,
+          },
+          conn,
+        );
+      },
+      { operation: LOG_ACTIONS.ORDER.CHECKOUT },
+    );
+
+    const {
+      orderId,
+      orderCode,
+      totalPriceOrder,
+      paymentUrl,
+      paymentId,
+      paymentStatus,
+    } = result;
+
+    logger.info(LOG_ACTIONS.PAYMENT.CREATE, {
+      status: LOG_STATUSES.CREATED,
+      paymentId,
+      orderId,
+      amount: totalPriceOrder,
+      paymentMethod,
+      paymentStatus,
+    });
+
+    logger.info(LOG_ACTIONS.ORDER.CHECKOUT, {
+      status: LOG_STATUSES.COMPLETED,
+      orderId,
+      amount: totalPriceOrder,
+      paymentMethod,
+    });
+
+    res.status(200).json({
+      message: "Create order successful",
+      orderCode,
+      orderId,
+      totalPriceOrder,
+      paymentUrl,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    error.context = {
+      ...error.context,
+      userId,
+      paymentMethod,
+      cartId: error.context?.cartId,
+      variantId: error.context?.variantId,
+    };
+
+    if (statusCode < 500) {
+      logger.warn(LOG_ACTIONS.ORDER.CHECKOUT, {
+        status: LOG_STATUSES.FAILED,
+        reason: error.context?.reason || error.code || "UNEXPECTED_ERROR",
+        statusCode,
+        userId,
+        paymentMethod,
+        cartId: error.context?.cartId,
+        variantId: error.context?.variantId,
+      });
+    }
+    throw error;
+  }
 };
 
 const updateOrderStatus = async (req, res) => {

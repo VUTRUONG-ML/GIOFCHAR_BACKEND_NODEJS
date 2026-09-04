@@ -1,33 +1,29 @@
 import pool from "../config/db.js";
 import paymentService from "../services/payment.service.js";
 import { processIpn } from "../services/payments/vnpay.service.js";
+import logger from "../config/logger.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
+import { asyncHandler } from "../errors/errorHandler.js";
 
-const getAllPayments = async (req, res) => {
-  try {
-    const payments = await paymentService.getAllPayments();
+const getAllPayments = asyncHandler(async (req, res) => {
+  const payments = await paymentService.getAllPayments();
 
-    res.status(200).json({ payments: payments });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+  res.status(200).json({ payments: payments });
+});
 
-const getPaymentById = async (req, res) => {
+const getPaymentById = asyncHandler(async (req, res) => {
   const paymentId = req.params.paymentId;
-  try {
-    const payment = await paymentService.getPaymentById(paymentId);
-    if (payment.length === 0)
-      return res.status(404).json({ message: "Payment not found" });
+  const payment = await paymentService.getPaymentById(paymentId);
+  if (payment.length === 0)
+    return res.status(404).json({ message: "Payment not found" });
 
-    res.status(200).json({ payment });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+  res.status(200).json({ payment });
+});
 
-const createPayment = async (req, res) => {
+const createPayment = asyncHandler(async (req, res) => {
   const { orderId, paymentType, amount, transactionId, paymentStatus } =
     req.body;
   if (!orderId || !amount || !transactionId)
@@ -44,66 +40,61 @@ const createPayment = async (req, res) => {
       .json({ message: "Invalid paymentType or paymentStatus" });
   }
 
-  try {
-    const result = await paymentService.createPayment(
-      orderId,
-      paymentType,
-      amount,
-      transactionId,
-      paymentStatus,
-    );
+  const result = await paymentService.createPayment(
+    orderId,
+    paymentType,
+    amount,
+    transactionId,
+    paymentStatus,
+  );
 
-    res.status(201).json({
-      message: "Create payment successful",
-      paymentId: result.insertId,
-    });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+  res.status(201).json({
+    message: "Create payment successful",
+    paymentId: result.insertId,
+  });
+});
 
-const updatePayment = async (req, res) => {
+const updatePayment = asyncHandler(async (req, res) => {
   const paymentId = req.params.paymentId;
   const { paymentStatus, paymentType } = req.body;
   if (!paymentStatus || !paymentType)
     return res.status(400).json({ message: "Missing field" });
 
-  try {
-    const result = await paymentService.updatePaymentById(
-      { paymentId, paymentStatus, paymentType },
-      pool,
-    );
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Payment not found" });
-    res.status(200).json({ message: "Update payment successful" });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+  const result = await paymentService.updatePaymentById(
+    { paymentId, paymentStatus, paymentType },
+    pool,
+  );
+  if (result.affectedRows === 0)
+    return res.status(404).json({ message: "Payment not found" });
+  res.status(200).json({ message: "Update payment successful" });
+});
 
-const deletePayment = async (req, res) => {
+const deletePayment = asyncHandler(async (req, res) => {
   const paymentId = req.params.paymentId;
-  try {
-    const result = await paymentService.deletePayment(paymentId);
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Payment not found" });
-    res
-      .status(200)
-      .json({ message: "Delete payment successful", payment: paymentId });
-  } catch (err) {
-    console.log(">>>>> CONTROLLER ERROR", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+  const result = await paymentService.deletePayment(paymentId);
+  if (result.affectedRows === 0)
+    return res.status(404).json({ message: "Payment not found" });
+  res
+    .status(200)
+    .json({ message: "Delete payment successful", payment: paymentId });
+});
 const handleIpn = async (req, res, next) => {
   const connection = await pool.getConnection();
   const order = req.order;
-  const payment = req.payment;
+  let payment = req.payment;
   const vnpayParams = req.vnpayParams;
+  const transactionStartedAt = Date.now();
   try {
     await connection.beginTransaction();
+    payment = await paymentService.getByOrderId(order.orderId, connection, {
+      forUpdate: true,
+    });
+    if (!payment) {
+      const error = new Error("Payment not found");
+      error.code = "PAYMENT_NOT_FOUND";
+      throw error;
+    }
+
     const result = await processIpn({
       order,
       payment,
@@ -111,10 +102,56 @@ const handleIpn = async (req, res, next) => {
       connection,
     });
     await connection.commit();
-    return res.status(200).json(result);
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: "process_vnpay_ipn",
+      orderId: order.orderId,
+      paymentId: payment.paymentId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
+    logger.info(LOG_ACTIONS.PAYMENT.PROCESS_CALLBACK, {
+      status:
+        result.outcome === "duplicate"
+          ? LOG_STATUSES.SKIPPED
+          : LOG_STATUSES.COMPLETED,
+      reason:
+        result.outcome === "duplicate"
+          ? "PAYMENT_ALREADY_PROCESSED"
+          : undefined,
+      orderId: order.orderId,
+      paymentId: payment.paymentId,
+      paymentStatus: result.paymentStatus,
+      providerResponseCode: result.providerResponseCode,
+      responseCode: result.RspCode,
+    });
+    return res.status(200).json({
+      RspCode: result.RspCode,
+      Message: result.Message,
+    });
   } catch (error) {
-    await connection.rollback();
-    next(error);
+    try {
+      await connection.rollback();
+      logger.warn(LOG_ACTIONS.TRANSACTION, {
+        status: LOG_STATUSES.ROLLED_BACK,
+        operation: "process_vnpay_ipn",
+        reason: error.code || "UNEXPECTED_ERROR",
+        orderId: order.orderId,
+        paymentId: payment?.paymentId,
+        durationMs: Date.now() - transactionStartedAt,
+      });
+    } catch (rollbackError) {
+      logger.error(LOG_ACTIONS.TRANSACTION, {
+        status: LOG_STATUSES.FAILED,
+        operation: "process_vnpay_ipn",
+        phase: "rollback",
+        reason: rollbackError.code || "ROLLBACK_FAILED",
+        originalReason: error.code || "UNEXPECTED_ERROR",
+        orderId: order.orderId,
+        paymentId: payment?.paymentId,
+        durationMs: Date.now() - transactionStartedAt,
+      });
+    }
+    return next(error);
   } finally {
     connection.release();
   }

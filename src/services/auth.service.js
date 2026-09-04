@@ -15,7 +15,10 @@ import {
 } from "../utils/token.js";
 import { ConflictError, UnauthorizedError } from "../errors/AppError.js";
 import logger from "../config/logger.js";
-import { LOG_EVENTS } from "../constants/logEvents.js";
+import {
+  LOG_ACTIONS,
+  LOG_STATUSES,
+} from "../constants/logEvents.js";
 import orderService from "./order.service.js";
 import cartService from "./cart.service.js";
 
@@ -47,7 +50,10 @@ const register = async (
   try {
     const [result] = await pool.execute({ ...optionExecute });
     const userId = result.insertId;
-    logger.info("User created", { userId, email });
+    logger.info(LOG_ACTIONS.AUTH.REGISTER, {
+      status: LOG_STATUSES.SUCCEEDED,
+      userId,
+    });
 
     if (guestToken) {
       await orderService.tryAttachOrderToUser({
@@ -63,11 +69,10 @@ const register = async (
       if (err.message.includes("email")) field = "email";
       else if (err.message.includes("phone")) field = "phone";
 
-      logger.warn(LOG_EVENTS.AUTH.failed.REGISTER, {
+      logger.warn(LOG_ACTIONS.AUTH.REGISTER, {
+        status: LOG_STATUSES.FAILED,
         reason: "CONFLICT",
         field,
-        email,
-        userName,
       });
       throw new ConflictError(`${field} already exists`);
     }
@@ -79,18 +84,18 @@ const login = async (email, password, guestToken = null) => {
   const user = await userService.getUserByEmail(email);
   // 1. Kiểm tra email/ password
   if (!user) {
-    logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
+    logger.warn(LOG_ACTIONS.AUTH.LOGIN, {
+      status: LOG_STATUSES.FAILED,
       reason: "EMAIL_NOT_FOUND",
-      email,
     });
     throw new UnauthorizedError("Email/password không chính xác!");
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    logger.warn(LOG_EVENTS.AUTH.failed.LOGIN, {
+    logger.warn(LOG_ACTIONS.AUTH.LOGIN, {
+      status: LOG_STATUSES.FAILED,
       reason: "WRONG_PASSWORD",
-      email,
       userId: user.id,
     });
     throw new UnauthorizedError("Email/password không chính xác!");
@@ -104,7 +109,10 @@ const login = async (email, password, guestToken = null) => {
   // 3. Lưu Refresh Token vào DB
   await createRefreshToken({ userId: user.id, refreshToken: refresh_token });
 
-  logger.info("User login success", { userId: user.id, email });
+  logger.info(LOG_ACTIONS.AUTH.LOGIN, {
+    status: LOG_STATUSES.SUCCEEDED,
+    userId: user.id,
+  });
   const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user;
 
   // 4. Đăng nhập xong thì merge giỏ hàng
@@ -126,6 +134,8 @@ const login = async (email, password, guestToken = null) => {
 
 const logout = async (refreshToken, conn = pool) => {
   const connection = await conn.getConnection();
+  const transactionStartedAt = Date.now();
+  let transactionUserId;
   try {
     await connection.beginTransaction();
     // hash token
@@ -133,20 +143,36 @@ const logout = async (refreshToken, conn = pool) => {
     // tim token
     const tokenInDB = await findValidToken(tokenHash, connection);
     if (!tokenInDB) {
-      logger.warn(LOG_EVENTS.AUTH.failed.LOGOUT, {
-        reason: "Invalid refresh token",
-        action: "logout",
-        tokenHash,
+      logger.warn(LOG_ACTIONS.AUTH.LOGOUT, {
+        status: LOG_STATUSES.FAILED,
+        reason: "INVALID_REFRESH_TOKEN",
       });
       throw new UnauthorizedError("Invalid refresh token.");
     }
+    transactionUserId = tokenInDB.userId;
     // revoke token
     await markRevoked(tokenInDB.tokenId, connection);
     await connection.commit();
-    logger.info("User logout success", { userId: tokenInDB.userId });
+    logger.debug(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.COMMITTED,
+      operation: LOG_ACTIONS.AUTH.LOGOUT,
+      userId: tokenInDB.userId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
+    logger.info(LOG_ACTIONS.AUTH.LOGOUT, {
+      status: LOG_STATUSES.SUCCEEDED,
+      userId: tokenInDB.userId,
+    });
     return true;
   } catch (error) {
     await connection.rollback();
+    logger.warn(LOG_ACTIONS.TRANSACTION, {
+      status: LOG_STATUSES.ROLLED_BACK,
+      operation: LOG_ACTIONS.AUTH.LOGOUT,
+      reason: error.code || "UNEXPECTED_ERROR",
+      userId: transactionUserId,
+      durationMs: Date.now() - transactionStartedAt,
+    });
     throw error;
   } finally {
     connection.release();
